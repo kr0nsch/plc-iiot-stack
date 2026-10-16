@@ -1,0 +1,16 @@
+# Контекст сборки образа эмулятора (BuildKit читает <Dockerfile>.dockerignore рядом с Dockerfile):
+# всё исключено, кроме пакета эмулятора и файла версий зависимостей
+*
+!emulator/
+!docker/emulator-constraints.txt
+emulator/tests
+emulator/pki
+emulator/build
+emulator/dist
+emulator/.env
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/*.egg-info

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:plc-iiot-stack:schema:alarm:1",
+  "title": "Событие тревоги: переход состояния по ISA-18.2",
+  "description": "Топик {site}/{area}/{unit}/{device}/alarm/{suffix}, QoS 1, retain = true: последнее событие тревоги — её текущее состояние. Код, номер и приоритет — из перечня тревог флагмана (iolistgen); русский текст в ПЛК не хранится (API plc-process-lib, раздел 19), его добавляет Telegraf по коду.",
+  "type": "object",
+  "required": ["schema_version", "ts", "id", "code", "priority", "state", "prev_state", "reason"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "ts": {
+      "description": "Время события в ПЛК: мс от 1970-01-01T00:00:00Z (UTC)",
+      "type": "integer",
+      "minimum": 1577836800000,
+      "maximum": 4102444800000
+    },
+    "id": {
+      "description": "Номер тревоги udiId = dev_no * 10 + слот",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 99999
+    },
+    "code": {
+      "description": "Код <DEVICE>.<SUFFIX>, например LT101.HH; DEVICE и SUFFIX совпадают с уровнями топика",
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{0,15}\\.[A-Z]{1,4}$"
+    },
+    "priority": {
+      "description": "E_AlarmPriority без None",
+      "enum": ["Low", "Medium", "High", "Critical"]
+    },
+    "state": {
+      "description": "E_AlarmState после события",
+      "enum": ["Normal", "ActiveUnack", "ActiveAck", "RtnUnack", "Shelved", "SuppressedByDesign", "OutOfService"]
+    },
+    "prev_state": {
+      "description": "E_AlarmState до события",
+      "enum": ["Normal", "ActiveUnack", "ActiveAck", "RtnUnack", "Shelved", "SuppressedByDesign", "OutOfService"]
+    },
+    "reason": {
+      "description": "E_AlarmEventReason без None",
+      "enum": ["Activated", "Cleared", "Acked", "Shelved", "Unshelved", "ShelveExpired", "Suppressed", "Unsuppressed", "OosOn", "OosOff"]
+    },
+    "value": {
+      "description": "Значение процесса в момент события (rValue в ST_AlarmEvent)",
+      "type": "number"
+    }
+  },
+  "additionalProperties": true
+}

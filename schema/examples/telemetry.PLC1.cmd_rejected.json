@@ -1,0 +1,11 @@
+{
+  "topic": "vodokanal/kns1/station/PLC1/cmd_rejected",
+  "qos": 1,
+  "retain": true,
+  "payload": {
+    "schema_version": "1.0",
+    "ts": 1792137660000,
+    "value": 3,
+    "quality": "good"
+  }
+}

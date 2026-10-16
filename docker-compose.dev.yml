@@ -1,0 +1,7 @@
+# Доступ к InfluxDB с хоста — для отчёта (report/) и интеграционных тестов (make test-stack).
+# В основном файле порт InfluxDB не публикуется: Grafana и Telegraf ходят к ней внутри сети стенда.
+#   make up DEV=1   то же, что: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+services:
+  influxdb:
+    ports:
+      - "127.0.0.1:${INFLUX_PORT:-8086}:8086"

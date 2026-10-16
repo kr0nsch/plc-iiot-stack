@@ -1,0 +1,12 @@
+{
+  "topic": "vodokanal/kns1/station/LT101/level",
+  "qos": 1,
+  "retain": true,
+  "payload": {
+    "schema_version": "1.0",
+    "ts": 1792137600250,
+    "value": 2.31,
+    "quality": "good",
+    "unit": "m"
+  }
+}

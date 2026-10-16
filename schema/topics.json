@@ -1,0 +1,67 @@
+{
+  "description": "Грамматика топиков MQTT стенда (docs/data_schema.md, раздел 2). pattern — регулярное выражение для полного топика, groups — имена групп по порядку, filter — подписка MQTT на весь класс.",
+  "schema_version": "1.0",
+  "segments": {
+    "site": "[a-z][a-z0-9_]{0,31}",
+    "area": "[a-z][a-z0-9_]{0,31}",
+    "unit": "[a-z][a-z0-9_]{0,31}",
+    "device": "[A-Z][A-Z0-9_]{0,15}",
+    "metric": "[a-z][a-z0-9_]{0,31}",
+    "suffix": "[A-Z]{1,4}",
+    "command": "[A-Za-z][A-Za-z0-9_]{0,31}"
+  },
+  "reserved_metrics": ["alarm", "cmd", "cmd_ack", "status"],
+  "classes": {
+    "telemetry": {
+      "pattern": "^([a-z][a-z0-9_]{0,31})/([a-z][a-z0-9_]{0,31})/([a-z][a-z0-9_]{0,31})/([A-Z][A-Z0-9_]{0,15})/([a-z][a-z0-9_]{0,31})$",
+      "groups": ["site", "area", "unit", "device", "metric"],
+      "filter": "vodokanal/+/+/+/+",
+      "schema": "telemetry.schema.json",
+      "qos": 1,
+      "retain": true,
+      "publisher": "plc"
+    },
+    "alarm": {
+      "pattern": "^([a-z][a-z0-9_]{0,31})/([a-z][a-z0-9_]{0,31})/([a-z][a-z0-9_]{0,31})/([A-Z][A-Z0-9_]{0,15})/alarm/([A-Z]{1,4})$",
+      "groups": ["site", "area", "unit", "device", "suffix"],
+      "filter": "vodokanal/+/+/+/alarm/+",
+      "schema": "alarm.schema.json",
+      "qos": 1,
+      "retain": true,
+      "publisher": "plc"
+    },
+    "command": {
+      "pattern": "^([a-z][a-z0-9_]{0,31})/([a-z][a-z0-9_]{0,31})/([a-z][a-z0-9_]{0,31})/([A-Z][A-Z0-9_]{0,15})/cmd/([A-Za-z][A-Za-z0-9_]{0,31})$",
+      "groups": ["site", "area", "unit", "device", "command"],
+      "filter": "vodokanal/+/+/+/cmd/+",
+      "schema": "command.schema.json",
+      "qos": 1,
+      "retain": false,
+      "publisher": "operator"
+    },
+    "command_ack": {
+      "pattern": "^([a-z][a-z0-9_]{0,31})/([a-z][a-z0-9_]{0,31})/([a-z][a-z0-9_]{0,31})/([A-Z][A-Z0-9_]{0,15})/cmd_ack/([A-Za-z][A-Za-z0-9_]{0,31})$",
+      "groups": ["site", "area", "unit", "device", "command"],
+      "filter": "vodokanal/+/+/+/cmd_ack/+",
+      "schema": "command_ack.schema.json",
+      "qos": 1,
+      "retain": false,
+      "publisher": "plc"
+    },
+    "status": {
+      "pattern": "^([a-z][a-z0-9_]{0,31})/([a-z][a-z0-9_]{0,31})/([a-z][a-z0-9_]{0,31})/([A-Z][A-Z0-9_]{0,15})/status/(connection)$",
+      "groups": ["site", "area", "unit", "device", "name"],
+      "filter": "vodokanal/+/+/+/status/+",
+      "schema": "status.schema.json",
+      "qos": 1,
+      "retain": true,
+      "publisher": "plc"
+    }
+  },
+  "station": {
+    "site": "vodokanal",
+    "area": "kns1",
+    "unit": "station",
+    "node": "PLC1"
+  }
+}

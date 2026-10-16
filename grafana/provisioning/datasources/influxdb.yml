@@ -1,0 +1,21 @@
+# Источник данных Grafana: InfluxDB 2, язык Flux. Токен — только чтение бакетов стенда; его выпускает
+# сервис influxdb-init в том influx-tokens, Grafana читает файл при загрузке ($__file).
+# $VAR подставляются из окружения контейнера (docker-compose.yml).
+apiVersion: 1
+
+datasources:
+  - name: InfluxDB КНС-1
+    uid: influx-kns
+    type: influxdb
+    access: proxy
+    url: http://influxdb:8086
+    isDefault: true
+    editable: false
+    jsonData:
+      version: Flux
+      organization: ${INFLUX_ORG}
+      defaultBucket: ${INFLUX_BUCKET}
+      timeInterval: 10s
+      httpMode: POST
+    secureJsonData:
+      token: $__file{/run/influx-tokens/grafana.token}

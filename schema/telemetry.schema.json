@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:plc-iiot-stack:schema:telemetry:1",
+  "title": "Телеметрия: одно значение метрики устройства",
+  "description": "Топик {site}/{area}/{unit}/{device}/{metric}, QoS 1, retain = true. Одна метрика — один топик; список метрик — schema/telemetry_catalog.csv. Состояния (0/1), коды перечислений и счётчики передаются числами.",
+  "type": "object",
+  "required": ["schema_version", "ts", "value", "quality"],
+  "properties": {
+    "schema_version": {
+      "description": "Версия схемы MAJOR.MINOR; получатель принимает любую MINOR своей MAJOR",
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "ts": {
+      "description": "Время значения в источнике: мс от 1970-01-01T00:00:00Z (UTC)",
+      "type": "integer",
+      "minimum": 1577836800000,
+      "maximum": 4102444800000
+    },
+    "value": {
+      "description": "Значение в единицах каталога; дискретное — 0 или 1, перечисление — код, счётчик — целое",
+      "type": "number"
+    },
+    "quality": {
+      "description": "Достоверность: good; uncertain — подмена, функциональная проверка, вне спецификации; bad — отказ, нет связи",
+      "enum": ["good", "uncertain", "bad"]
+    },
+    "unit": {
+      "description": "Необязательно: единица из каталога (ASCII), только для человека",
+      "type": "string",
+      "maxLength": 16
+    }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,12 @@
+{
+  "topic": "vodokanal/kns1/station/P101/cmd/Start",
+  "qos": 1,
+  "retain": false,
+  "payload": {
+    "schema_version": "1.0",
+    "cmd_id": "6f1c2a9e-0d4b-4c1e-9a57-2b8e5d3f7a10",
+    "ts": 1792137620000,
+    "origin": "operator1@node-red",
+    "command": "Start"
+  }
+}

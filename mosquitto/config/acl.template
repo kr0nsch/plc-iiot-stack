@@ -1,0 +1,24 @@
+# ACL Mosquitto стенда (docs/data_schema.md, раздел 2.3). @...@ подставляет docker-entrypoint.sh из
+# .env. Что не разрешено явно — запрещено. Классы топиков различаются числом уровней: телеметрия —
+# 5 уровней, остальное — 6 (…/alarm/…, …/cmd/…, …/cmd_ack/…, …/status/…).
+
+# ПЛК или эмулятор: публикует телеметрию, тревоги, ответы на команды и своё состояние, читает команды
+user @PLC_USER@
+topic write @ROOT@/+/+/+/+
+topic write @ROOT@/+/+/+/alarm/+
+topic write @ROOT@/+/+/+/cmd_ack/+
+topic write @ROOT@/+/+/+/status/+
+topic read @ROOT@/+/+/+/cmd/+
+
+# Telegraf: только чтение (команды и ответы — для журнала аудита в InfluxDB)
+user @TELEGRAF_USER@
+topic read @ROOT@/#
+
+# Оператор (HMI, Node-RED, тесты): читает всё, публикует только команды
+user @OPERATOR_USER@
+topic read @ROOT@/#
+topic write @ROOT@/+/+/+/cmd/+
+
+# Проверка здоровья брокера (healthcheck docker compose)
+user @MONITOR_USER@
+topic read $SYS/#

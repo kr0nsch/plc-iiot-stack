@@ -1,0 +1,16 @@
+# Дашборды из файлов grafana/dashboards/*.json (генерирует tools_project/gen_config.py).
+# Правки в интерфейсе Grafana не сохраняются: источник истины — генератор и файлы в git.
+apiVersion: 1
+
+providers:
+  - name: kns1
+    orgId: 1
+    folder: КНС-1
+    folderUid: kns1
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/dashboards
+      foldersFromFilesStructure: false

@@ -1,0 +1,12 @@
+{
+  "topic": "vodokanal/kns1/station/P101/cmd/SetOos",
+  "qos": 1,
+  "retain": false,
+  "payload": {
+    "schema_version": "1.0",
+    "cmd_id": "c4d9e1f2-7b3a-4d6c-9e85-1a2b3c4d5e6f",
+    "ts": 1792137622000,
+    "origin": "operator1@node-red",
+    "command": "SetOos"
+  }
+}

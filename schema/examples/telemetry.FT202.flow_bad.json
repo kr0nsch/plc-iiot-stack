@@ -1,0 +1,12 @@
+{
+  "topic": "vodokanal/kns1/station/FT202/flow",
+  "qos": 1,
+  "retain": true,
+  "payload": {
+    "schema_version": "1.0",
+    "ts": 1792137603000,
+    "value": 182.5,
+    "quality": "bad",
+    "unit": "m3/h"
+  }
+}

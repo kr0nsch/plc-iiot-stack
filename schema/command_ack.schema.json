@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:plc-iiot-stack:schema:command_ack:1",
+  "title": "Ответ на команду",
+  "description": "Топик {site}/{area}/{unit}/{device}/cmd_ack/{command}, QoS 1, retain = false. Ровно один ответ на каждую полученную команду, из которой удалось прочитать cmd_id.",
+  "type": "object",
+  "required": ["schema_version", "cmd_id", "ts", "command", "result", "reason"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "cmd_id": {
+      "description": "cmd_id из команды",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{8,36}$"
+    },
+    "ts": {
+      "description": "Время решения в ПЛК: мс от 1970-01-01T00:00:00Z (UTC)",
+      "type": "integer",
+      "minimum": 1577836800000,
+      "maximum": 4102444800000
+    },
+    "command": {
+      "description": "Последний уровень топика команды, как получен",
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+    },
+    "result": {
+      "enum": ["accepted", "rejected"]
+    },
+    "reason": {
+      "description": "ok — принята; остальное — причина отказа шлюза ПЛК или устройства (device_rejected, подробность — cmd_result)",
+      "enum": ["ok", "not_whitelisted", "out_of_range", "invalid_payload", "unsupported_version", "topic_mismatch", "retained", "expired", "duplicate", "rate_limited", "device_rejected", "timeout"]
+    },
+    "cmd_result": {
+      "description": "E_CmdResult устройства (stSts.stCommon.eCmdResult), если команда дошла до ФБ",
+      "enum": ["Accepted", "RejectedMode", "RejectedInterlock", "RejectedPermit", "RejectedInhibit", "RejectedFault", "RejectedState", "RejectedNotSupported", "RejectedCfg"]
+    }
+  },
+  "additionalProperties": true,
+  "allOf": [
+    {
+      "if": {"properties": {"result": {"const": "accepted"}}, "required": ["result"]},
+      "then": {"properties": {"reason": {"const": "ok"}}}
+    },
+    {
+      "if": {"properties": {"result": {"const": "rejected"}}, "required": ["result"]},
+      "then": {"properties": {"reason": {"not": {"const": "ok"}}}}
+    },
+    {
+      "if": {"properties": {"reason": {"const": "device_rejected"}}, "required": ["reason"]},
+      "then": {"required": ["cmd_result"], "properties": {"cmd_result": {"not": {"const": "Accepted"}}}}
+    }
+  ]
+}

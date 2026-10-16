@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:plc-iiot-stack:schema:command:1",
+  "title": "Команда устройству",
+  "description": "Топик {site}/{area}/{unit}/{device}/cmd/{command}, QoS 1, retain = false (ПЛК отклоняет сообщения с флагом retain). Схема проверяет синтаксис; какие команды разрешены устройству, решает белый список schema/command_whitelist.csv на стороне ПЛК.",
+  "type": "object",
+  "required": ["schema_version", "cmd_id", "ts", "origin", "command"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "cmd_id": {
+      "description": "Идентификатор команды (UUID или другой уникальный ASCII); ПЛК возвращает его в cmd_ack и отбрасывает повторы",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{8,36}$"
+    },
+    "ts": {
+      "description": "Время отправки: мс от 1970-01-01T00:00:00Z (UTC); ПЛК отклоняет команды старше допуска (expired)",
+      "type": "integer",
+      "minimum": 1577836800000,
+      "maximum": 4102444800000
+    },
+    "origin": {
+      "description": "Кто отправил (пользователь@приложение), для журнала; только печатный ASCII: STRING в CODESYS 3.5.17 не хранит кириллицу",
+      "type": "string",
+      "pattern": "^[ -~]{1,64}$"
+    },
+    "command": {
+      "description": "Имя поля ST_<Dev>Cmd без префикса типа; совпадает с последним уровнем топика",
+      "enum": ["SetAuto", "SetManual", "SetOos", "Start", "Stop", "SpeedSp", "ResetMaint", "SubstValue", "Ack", "Reset", "AckReq", "ShelveReq", "UnshelveReq"]
+    },
+    "value": {
+      "description": "Значение: только у SpeedSp, SubstValue (число) и масок AckReq, ShelveReq, UnshelveReq (0…65535)",
+      "type": "number"
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {"properties": {"command": {"enum": ["SpeedSp", "SubstValue"]}}, "required": ["command"]},
+      "then": {"required": ["value"]}
+    },
+    {
+      "if": {"properties": {"command": {"const": "SpeedSp"}}, "required": ["command"]},
+      "then": {"properties": {"value": {"minimum": 0, "maximum": 100}}}
+    },
+    {
+      "if": {"properties": {"command": {"enum": ["AckReq", "ShelveReq", "UnshelveReq"]}}, "required": ["command"]},
+      "then": {"required": ["value"], "properties": {"value": {"type": "integer", "minimum": 0, "maximum": 65535}}}
+    },
+    {
+      "if": {"properties": {"command": {"enum": ["SetAuto", "SetManual", "SetOos", "Start", "Stop", "ResetMaint", "Ack", "Reset"]}}, "required": ["command"]},
+      "then": {"not": {"required": ["value"]}}
+    }
+  ]
+}

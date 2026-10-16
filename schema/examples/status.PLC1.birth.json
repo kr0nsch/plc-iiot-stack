@@ -1,0 +1,15 @@
+{
+  "topic": "vodokanal/kns1/station/PLC1/status/connection",
+  "qos": 1,
+  "retain": true,
+  "payload": {
+    "schema_version": "1.0",
+    "ts": 1792137600000,
+    "node": "PLC1",
+    "state": "online",
+    "reason": "birth",
+    "source": "emulator",
+    "sw_version": "0.1.0",
+    "period_ms": 60000
+  }
+}

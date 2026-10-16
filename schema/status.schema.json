@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:plc-iiot-stack:schema:status:1",
+  "title": "Состояние узла: рождение, завещание (LWT), штатное отключение",
+  "description": "Топик {site}/{area}/{unit}/{node}/status/connection, QoS 1, retain = true. После подключения узел публикует online/birth; тот же топик с offline/lwt задаётся завещанием при подключении; при штатной остановке узел сам публикует offline/shutdown.",
+  "type": "object",
+  "required": ["schema_version", "ts", "node", "state", "reason"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "ts": {
+      "description": "Время публикации; у завещания — время подключения: текст LWT передаётся брокеру заранее",
+      "type": "integer",
+      "minimum": 1577836800000,
+      "maximum": 4102444800000
+    },
+    "node": {
+      "description": "Имя узла; совпадает с уровнем device топика",
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{0,15}$"
+    },
+    "state": {
+      "enum": ["online", "offline"]
+    },
+    "reason": {
+      "enum": ["birth", "lwt", "shutdown"]
+    },
+    "source": {
+      "description": "Кто публикует: рантайм CODESYS или эмулятор",
+      "enum": ["codesys", "emulator"]
+    },
+    "sw_version": {
+      "description": "Версия приложения ПЛК или эмулятора",
+      "type": "string",
+      "maxLength": 32
+    },
+    "period_ms": {
+      "description": "Период контрольной публикации всех метрик, мс",
+      "type": "integer",
+      "minimum": 1000,
+      "maximum": 3600000
+    }
+  },
+  "additionalProperties": true,
+  "allOf": [
+    {
+      "if": {"properties": {"state": {"const": "online"}}, "required": ["state"]},
+      "then": {"properties": {"reason": {"const": "birth"}}}
+    },
+    {
+      "if": {"properties": {"state": {"const": "offline"}}, "required": ["state"]},
+      "then": {"properties": {"reason": {"enum": ["lwt", "shutdown"]}}}
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+# Ключи и сертификаты стенда создаёт make certs (tools_project/gen_mqtt_certs.sh); в git — только этот файл
+*
+!.gitignore

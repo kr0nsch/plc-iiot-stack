@@ -1,0 +1,20 @@
+# Версии зависимостей образа эмулятора (pip install --constraint). Обновлять осознанно, с прогоном
+# make demo и tests_stack.
+# Закреплены прямые зависимости и все транзитивные (Linux, Python 3.12): иначе новый выпуск любой
+# транзитивной зависимости менял бы образ между сборками. Набор — проверенный в emulator/tests.
+asyncua==2.1.0
+paho-mqtt==2.1.0
+cryptography==50.0.2
+# транзитивные: asyncua
+aiosqlite==0.22.1
+python-dateutil==2.9.0.post0
+pytz==2026.5
+six==1.17.0
+sortedcontainers==2.4.0
+typing-extensions==4.16.0
+# транзитивные: asyncua → anyio
+anyio==4.15.1
+idna==3.20
+# транзитивные: cryptography
+cffi==2.1.1
+pycparser==3.11

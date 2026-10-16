@@ -1,0 +1,15 @@
+{
+  "topic": "vodokanal/kns1/station/P101/alarm/FTS",
+  "qos": 1,
+  "retain": true,
+  "payload": {
+    "schema_version": "1.0",
+    "ts": 1792137609000,
+    "id": 110,
+    "code": "P101.FTS",
+    "priority": "Medium",
+    "state": "ActiveAck",
+    "prev_state": "ActiveUnack",
+    "reason": "Acked"
+  }
+}

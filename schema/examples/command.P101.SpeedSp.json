@@ -1,0 +1,13 @@
+{
+  "topic": "vodokanal/kns1/station/P101/cmd/SpeedSp",
+  "qos": 1,
+  "retain": false,
+  "payload": {
+    "schema_version": "1.0",
+    "cmd_id": "b0e7c3d1-5a2f-4e8b-8c61-9d4a7f2e1b33",
+    "ts": 1792137621000,
+    "origin": "operator1@grafana",
+    "command": "SpeedSp",
+    "value": 75.0
+  }
+}

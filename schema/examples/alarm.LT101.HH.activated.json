@@ -1,0 +1,16 @@
+{
+  "topic": "vodokanal/kns1/station/LT101/alarm/HH",
+  "qos": 1,
+  "retain": true,
+  "payload": {
+    "schema_version": "1.0",
+    "ts": 1792137605000,
+    "id": 1010,
+    "code": "LT101.HH",
+    "priority": "High",
+    "state": "ActiveUnack",
+    "prev_state": "Normal",
+    "reason": "Activated",
+    "value": 4.03
+  }
+}

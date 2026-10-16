@@ -1,0 +1,11 @@
+{
+  "topic": "vodokanal/kns1/station/P101/state",
+  "qos": 1,
+  "retain": true,
+  "payload": {
+    "schema_version": "1.0",
+    "ts": 1792137601250,
+    "value": 2,
+    "quality": "good"
+  }
+}

@@ -1,0 +1,14 @@
+# Флаг TLS для MQTT: добавляет к брокеру слушатель 8883 (mosquitto/config/tls.conf).
+#   make certs                 локальный УЦ и сертификат брокера в mosquitto/certs/
+#   make up TLS=1              то же, что: docker compose -f docker-compose.yml -f docker-compose.tls.yml up -d
+# Порт 8883 публикуется на MQTT_TLS_BIND (по умолчанию 0.0.0.0): к нему подключается ПЛК из сети.
+# Порт 1883 без шифрования остаётся только на 127.0.0.1 и внутри сети стенда.
+services:
+  mosquitto:
+    environment:
+      MQTT_TLS: "true"
+    volumes:
+      - ./mosquitto/certs:/mosquitto/certs:ro
+    ports:
+      - "${MQTT_TLS_BIND:-0.0.0.0}:${MQTT_TLS_PORT:-8883}:8883"
+

@@ -1,0 +1,11 @@
+{
+  "topic": "vodokanal/kns1/station/P101/running",
+  "qos": 1,
+  "retain": true,
+  "payload": {
+    "schema_version": "1.0",
+    "ts": 1792137601250,
+    "value": 1,
+    "quality": "good"
+  }
+}

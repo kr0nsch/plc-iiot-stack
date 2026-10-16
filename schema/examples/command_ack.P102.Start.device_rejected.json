@@ -1,0 +1,14 @@
+{
+  "topic": "vodokanal/kns1/station/P102/cmd_ack/Start",
+  "qos": 1,
+  "retain": false,
+  "payload": {
+    "schema_version": "1.0",
+    "cmd_id": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+    "ts": 1792137623120,
+    "command": "Start",
+    "result": "rejected",
+    "reason": "device_rejected",
+    "cmd_result": "RejectedMode"
+  }
+}
