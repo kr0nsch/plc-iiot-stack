@@ -1,5 +1,12 @@
-# CI шаблона ПЛК-репозитория: проверки, которым не нужен CODESYS.
-# Сборка и тесты в CODESYS выполняются на Windows вручную (docs/MANUAL_STEPS.md).
+# CI стенда IIoT КНС-1.
+#   checks      — проверки шаблона ПЛК без CODESYS: ruff, mypy, pytest (схемы, конфигурация стенда),
+#                 сборка ST, st_lint, iec_checker;
+#   packages    — эмулятор ПЛК (emulator/) и суточный отчёт (report/): mypy и юнит-тесты;
+#   stack       — docker compose на Linux: make demo с нуля (эмулятор, данные на дашбордах за 5 минут),
+#                 интеграционные тесты «эмулятор → брокер → InfluxDB → запрос», проверка панелей
+#                 дашбордов, отчёт по данным стенда;
+#   iec_checker_nightly, rusty — необязательные сверки ST.
+# Сборка и тесты в CODESYS выполняются на Windows (tools/codesys/cds.py, docs/MANUAL_STEPS.md).
 name: CI
 
 on:
@@ -103,13 +110,15 @@ jobs:
         if: ${{ !cancelled() }}
         run: python tools/check/st_lint.py --strict
 
-      # run_iec_checker.py сам собирает вариант iec-checker в build/assembled/iec-checker/ и берёт
-      # бинарник из переменной IEC_CHECKER; обоснованные находки — tools/check/iec_checker_allow.toml
-      # и docs/STATIC_ANALYSIS.md
+      # Обёртка проекта над tools/check/run_iec_checker.py: тот же вариант сборки iec-checker и файл
+      # обоснований tools/check/iec_checker_allow.toml, плюс понижение конструкций CODESYS, которые
+      # iec_checker 0.4 не разбирает (длины строк из констант, a[i].b, AND_THEN); ParserError допускается
+      # только в местах из tools_project/iec_checker_parser_gaps.toml. Бинарник — из переменной
+      # IEC_CHECKER; разбор находок — docs/STATIC_ANALYSIS.md
       - name: Статанализ (iec_checker)
         id: iec_checker
         if: ${{ !cancelled() }}
-        run: python tools/check/run_iec_checker.py --tests
+        run: python tools_project/iec_checker_gate.py
 
       - name: Сводка
         if: ${{ !cancelled() }}
@@ -159,6 +168,152 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  packages:
+    name: Эмулятор и отчёт — mypy, pytest
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            requirements-dev.txt
+            docker/emulator-constraints.txt
+
+      # Версии asyncua, paho-mqtt и cryptography — те же, что в образе эмулятора
+      - name: Зависимости
+        run: |
+          python -m pip install -r requirements-dev.txt
+          python -m pip install --constraint docker/emulator-constraints.txt -e "emulator[dev]" -e "report[dev]"
+
+      # Образ эмулятора собирается с теми же версиями: все зависимости (и транзитивные) закреплены
+      - name: Закреплённые зависимости образа эмулятора
+        run: python -m pytest tests_stack/test_compose.py -k emulator_constraints -ra
+
+      - name: mypy — эмулятор
+        id: mypy_emulator
+        if: ${{ !cancelled() }}
+        working-directory: emulator
+        run: python -m mypy
+
+      - name: pytest — эмулятор (модель, шлюз команд, OPC UA и MQTT на 127.0.0.1, сообщения по схеме)
+        id: pytest_emulator
+        if: ${{ !cancelled() }}
+        working-directory: emulator
+        run: python -m pytest
+
+      - name: mypy — отчёт
+        id: mypy_report
+        if: ${{ !cancelled() }}
+        working-directory: report
+        run: python -m mypy
+
+      - name: pytest — отчёт
+        id: pytest_report
+        if: ${{ !cancelled() }}
+        working-directory: report
+        run: python -m pytest
+
+  stack:
+    # Стенд с нуля, как у пользователя: make env → make demo. Порт InfluxDB публикуется на 127.0.0.1
+    # (DEV=1): по нему идут запросы интеграционных тестов и отчёта.
+    name: Стенд docker compose — make demo, интеграционные тесты
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            requirements-dev.txt
+            docker/emulator-constraints.txt
+
+      - name: Зависимости
+        run: |
+          python -m pip install -r requirements-dev.txt
+          python -m pip install --constraint docker/emulator-constraints.txt -e report
+
+      - name: .env со случайными паролями
+        run: make env PYTHON=python
+
+      - name: Проверка compose (все файлы и профили)
+        run: |
+          docker compose -f docker-compose.yml --profile demo --profile nodered config --quiet
+          docker compose -f docker-compose.yml -f docker-compose.tls.yml -f docker-compose.dev.yml config --quiet
+
+      # stack_wait.py ждёт здоровья сервисов, телеметрии в InfluxDB, рождения PLC1 и трёх дашбордов
+      # в Grafana не дольше 300 с (критерий «make demo за 5 минут»); сборка образа эмулятора — до него
+      - name: make demo DEV=1
+        id: demo
+        run: |
+          start=$(date +%s)
+          make demo DEV=1 PYTHON=python
+          seconds=$(( $(date +%s) - start ))
+          echo "seconds=$seconds" >> "$GITHUB_OUTPUT"
+          # Критерий готовности — 5 минут с нуля, включая загрузку образов и сборку эмулятора.
+          # Превышение — предупреждение, а не ошибка: время загрузки образов зависит от сети раннера.
+          if [ "$seconds" -gt 300 ]; then
+            echo "::warning::make demo с нуля заняла ${seconds} с — больше 5 минут"
+          fi
+
+      # tests_stack/test_stack_integration.py (IIOT_STACK=1: неподнятый стенд — ошибка) и
+      # tools_project/check_dashboards.py: каждая панель трёх дашбордов возвращает данные
+      - name: Интеграционные тесты и панели дашбордов
+        id: test_stack
+        run: make test-stack DEV=1 PYTHON=python
+
+      - name: Суточный отчёт по данным стенда
+        id: report
+        working-directory: report
+        run: |
+          set -a; . ../.env; set +a
+          KNS_REPORT_INFLUX_URL=http://127.0.0.1:8086 python -m pytest -m integration -ra
+
+      - name: Сводка
+        if: ${{ !cancelled() }}
+        env:
+          DEMO_SECONDS: ${{ steps.demo.outputs.seconds }}
+          R_DEMO: ${{ steps.demo.outcome }}
+          R_TEST_STACK: ${{ steps.test_stack.outcome }}
+          R_REPORT: ${{ steps.report.outcome }}
+        run: |
+          {
+            echo "## Стенд docker compose"
+            echo ""
+            echo "| Шаг | Итог |"
+            echo "|---|---|"
+            echo "| make demo DEV=1 (с нуля, включая сборку образа эмулятора) | ${R_DEMO:-нет данных}, ${DEMO_SECONDS:-?} с |"
+            echo "| интеграционные тесты и панели дашбордов | ${R_TEST_STACK:-нет данных} |"
+            echo "| суточный отчёт по данным InfluxDB | ${R_REPORT:-нет данных} |"
+            if [ -f build/dashboards_check.md ]; then
+              echo ""
+              cat build/dashboards_check.md
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Журналы сервисов
+        if: failure()
+        run: docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile demo logs --no-color --tail 300
+
+      - name: Артефакты (build/)
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: stack-reports
+          path: build/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Остановка
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile demo --profile nodered down --volumes
+
   iec_checker_nightly:
     # Необязательная сверка: новая версия разборщика может найти больше или иначе. Расхождения
     # с v0.4 переносятся в docs/STATIC_ANALYSIS.md (столбец «решение»), падение не блокирует слияние.
@@ -178,7 +333,7 @@ jobs:
 
       - name: Статанализ (iec_checker nightly)
         id: nightly
-        run: python tools/check/run_iec_checker.py --docker "$IEC_CHECKER_IMAGE" --tests
+        run: python tools_project/iec_checker_gate.py --docker "$IEC_CHECKER_IMAGE"
 
       - name: Сводка
         if: ${{ !cancelled() }}

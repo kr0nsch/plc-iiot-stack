@@ -8,6 +8,8 @@ CODESYS (сборка текстов, линтер, статанализ), оп�
 ОВЕН) и CODESYS Control Win V3 в пользовательском процессе (16.10.2026), включая сборку, установку
 и удаление библиотек и сборку зависимостей из соседних репозиториев. Что не проверено — отмечено
 явно. Подробности об инструменте — [tools/README.md](../tools/README.md#codesyscdspy--codesys-из-консоли).
+Разделы 9–11 — ПЛК-часть IIoT-стека: библиотека MQTT, символьная конфигурация для OPC UA и
+встраивание во флагман; что в них проверено, а что нет, тоже отмечено.
 
 ## 1. Установка CODESYS 3.5.17.30
 
@@ -126,7 +128,7 @@ setx CODESYS_PROFILE "CODESYS V3.5 SP17 Patch 3"
 - `import` печатает, что создано, обновлено, удалено и перемещено. Повторный импорт без правок —
   «создано 0, обновлено 0, удалено 0». Ошибки раскладки (коды LAY) — отказ без изменений проекта.
 - `build`: ошибки и предупреждения компилятора с файлом и строкой раскладки, например
-  `src/POUs/F_Clamp/F_Clamp.impl.st:16: Error C0046 Идентификатор 'rValueX' не задан`. Сообщения
+  `src/POUs/Iiot/F_IiotTopic/F_IiotTopic.impl.st:3: Error C0046 Идентификатор 'sPrefixX' не задан`. Сообщения
   IDE — на русском. Если в IDE видны ошибки, которых нет в выводе, — скопируйте их в
   [BUILD_ERRORS.md](BUILD_ERRORS.md). Перед открытием проекта `cds.py` удаляет кэш предкомпиляции
   `build/<имя>_project.precompilecache`: с ним CODESYS 3.5.17.30 после замены объявления ФБ с
@@ -304,3 +306,218 @@ setx CODESYS_PROFILE "CODESYS V3.5 SP17 Patch 3"
    ```
 
 3. После каждого релиза повторять `git push mirror --all` и `git push mirror --tags`.
+
+## 9. Библиотека CODESYS-MQTT
+
+ПЛК-часть стека работает с транспортом через интерфейс `I_MqttClient`
+([plc_mqtt.md](plc_mqtt.md#адаптер-i_mqttclient)). Готовый адаптер написан для открытой библиотеки
+[CODESYS-MQTT](https://github.com/stefandreyer/CODESYS-MQTT) (Stefan Dreyer), но **на CODESYS 3.5.17.30
+с ней не собирается**: у библиотеки нет зависимостей. Поэтому библиотека в проект не подключена,
+адаптер лежит вне `src/` (`adapters/sd_mqtt_1_0/`), а `PRG_Iiot` по умолчанию работает с клиентом без
+транспорта.
+
+### 9.1. Что известно о библиотеке (проверено 16.10.2026)
+
+| Параметр | Значение |
+|---|---|
+| Лицензия | MIT (файл `LICENSE` в архиве релиза, «Copyright (c) 2018 stefandreyer») — совместима с репозиторием; библиотека в git не хранится |
+| Последний релиз GitHub | `stable` («Resovled static IP Problems», 26.09.2018), до него `1.0` (14.09.2018). Файлов-приложений у релизов нет — только архив исходников `CODESYS-MQTT-stable.zip` (SHA-256 `485a7de80ab42100ed39eacad4e37a6e5ff10d9011fa8112a4ab7ee74e08e7d6`) |
+| Библиотека в релизе | `MQTT.library`: Project Information — MQTT 1.0.0.0, компания Stefan Dreyer, пространство имён и плейсхолдер `SD_MQTT`, `qualified-access-only` |
+| Новые версии | в ветке `master` — файлы `MQTT 1.1.0.2…1.2.0.7.library` (последний коммит с библиотекой — 11.11.2023, README упоминает переход на 3.5.16.30). Это не релиз; по правилам проекта брались только файлы официального релиза, поэтому 1.2.x не скачивались и не проверялись |
+| Возможности (README) | QoS 0–2, will topic, retain, неограниченное число ФБ публикации и подписки, TLS без проверки сертификатов |
+| Зависимости 1.0.0.0 | OSCAT BASIC 3.3.3.0, OSCAT NETWORK 1.30, CommonTypsFunctions (Stefan Dreyer, github.com/stefandreyer), системные библиотеки точных версий: 3S Storage 3.5.13.0, CAA File 3.5.13.0, CAA Memory 3.5.12.0, CmpCrypto 3.5.11.0, MemoryUtils 3.5.13.0, StringUtils 3.5.13.0, SysMem23 3.5.13.0, SysProcess 3.5.7.0, SysSem 3.5.5.0, SysStr23 3.5.13.0, SysTarget 3.5.5.0, Time and Date 3.5.7.0 |
+
+Компиляция на 3.5.17.30 (проект с адаптером и ссылкой `MQTT, 1.0.0.0 (Stefan Dreyer)`, CODESYS
+Control Win V3): 15 предупреждений «библиотека … не найдена» (список выше) и 384 ошибки — все в коде
+библиотеки, в файлах адаптера сообщений нет. При таком числе ошибок это ещё не доказывает, что адаптер
+собирается: **адаптер с библиотекой не компилировался и на брокере не проверялся**.
+
+Библиотека 1.0.0.0 не передаёт брокеру логин и пароль, а брокер стенда анонимный доступ запрещает
+([data_schema.md, 2.3](data_schema.md#23-права-acl-брокера)): даже с зависимостями эта версия к
+стенду не подключится. Адаптер в этом случае отказывает в `Connect` (`MQTT_ERR_AUTH_UNSUPPORTED`), а не
+подключается без пароля.
+
+### 9.2. Установка (если зависимости есть)
+
+1. Скачать архив официального релиза: GitHub → Releases → `stable` → «Source code (zip)». Распаковать
+   в отдельную пустую папку (например, `%USERPROFILE%\Downloads\codesys-mqtt\stable\`), сверить
+   SHA-256 архива с таблицей выше.
+2. Установить зависимости (OSCAT BASIC и NETWORK — с oscat.de или из репозиториев автора,
+   CommonTypsFunctions — github.com/stefandreyer) и системные библиотеки нужных версий (если их нет в
+   установленном CODESYS — пакеты CODESYS тех версий). Без них дальнейшие шаги дают ошибки сборки из
+   9.1.
+3. Установить `MQTT.library` одним из способов:
+   - в IDE: «Инструменты → Репозиторий библиотек → Установить» (Tools → Library Repository → Install);
+   - или через `tools/codesys/config.json` — описание библиотеки с `install_from`, путь к файлу — в
+     переменной окружения (`setx SD_MQTT_LIBRARY "C:\...\MQTT.library"`):
+
+     ```json
+     "sd_mqtt": {
+       "label": "CODESYS-MQTT (релиз stable, SD_MQTT 1.0.0.0)",
+       "title": "MQTT",
+       "company": "Stefan Dreyer",
+       "version": "1.0.0.0",
+       "install_from": {"env": "SD_MQTT_LIBRARY", "default": null}
+     }
+     ```
+
+     и `"sd_mqtt"` в `modes.normal.libraries`; `python tools\codesys\cds.py deps` поставит файл в
+     репозиторий `System`, если этой версии ещё нет. Тест `test_codesys_config_of_this_project`
+     (`tests_stack/test_plc_contract.py`) сейчас требует, чтобы `sd_mqtt` в `config.json` не было, —
+     при подключении библиотеки поправьте его.
+4. Перенести адаптер в сборку: `adapters\sd_mqtt_1_0\src\POUs\Adapters\` → `src\POUs\Adapters\`.
+5. Задать адаптер до первого вызова `PRG_Iiot` (в `PRG_Main`):
+
+   ```
+   VAR
+       fbMqtt : FB_MqttClientSdMqtt;
+   END_VAR
+
+   PRG_Iiot.itfClientOverride := fbMqtt;
+   PRG_Iiot();
+   ```
+
+6. `python tools\codesys\cds.py build` — 0 ошибок; затем проверка на брокере стенда (раздел 9.3).
+
+Удаление: «Репозиторий библиотек» → `MQTT 1.0.0.0 (Stefan Dreyer)` → «Удалить». _На этой машине
+`MQTT.library` 1.0.0.0 из релиза `stable` установлена в репозиторий `System` скриптом
+(`librarymanager.install_library`) для проверки компиляции и не удалена — удалите её, если
+библиотека не нужна._
+
+### 9.3. Проверка на брокере (не выполнялась)
+
+1. Стенд: `make env`, `make up` (Windows — `tools_project\make.ps1`), в `.env` — `MQTT_PLC_USER`,
+   `MQTT_PLC_PASSWORD`.
+2. В IDE, в онлайн-режиме, задать `GVL_Iiot.stIiotCfg.stBroker` (`sHost` — адрес компьютера со
+   стендом, `uiPort` 1883, логин и пароль) и `xEnable := TRUE`. Пароль в проект и в git не
+   записывается — только значение в онлайн-режиме или Persistent Variables на объекте.
+3. Ожидаемо: `GVL_Iiot.stIiotSts.eConnState = Connected`, `eNe107 = Good`; в брокере —
+   `vodokanal/kns1/station/PLC1/status/connection` с `online`/`birth`, затем метрики
+   (`mosquitto_sub -v -t 'vodokanal/#'` с учётной записью оператора).
+4. Команды: `xCommandsEnable := TRUE`, команда из Node-RED или `mosquitto_pub` по
+   [data_schema.md, 5.1](data_schema.md#51-сообщение-и-проверки) — ответ в `…/cmd_ack/<Command>`.
+
+## 10. Символьная конфигурация для OPC UA
+
+Что видно клиентам OPC UA-сервера CODESYS (Telegraf, SCADA, `kns-report`), задаёт объект Symbol
+Configuration приложения с включённой опцией «Support OPC UA features». Состав — по
+[security.md](security.md) (раздел 3.3): чтение везде, кроме структур команд.
+
+| Что выгружать | Доступ | Зачем |
+|---|---|---|
+| `GVL_Devices` — все экземпляры `fb<TAG>` | чтение | состояния устройств (`stSts`), значения — узлы OPC UA Telegraf |
+| `GVL_Hmi.st<TAG>Cmd` — структуры команд | чтение и запись | команды с HMI/SCADA по OPC UA |
+| прочие переменные `GVL_Hmi` | чтение | — |
+| `GVL_IO`: `uiP101_FCODE`, `uiP102_FCODE`, `uiP103_FCODE`, `xHA1`, `xHL1`, `xK1` | чтение | коды отказа ПЧ и дискретные сигналы, которые читает Telegraf (`telegraf/`, генерируется из `schema/`) |
+| `GVL_Iiot.stIiotCfg`, `GVL_Iiot.stIiotSts` | чтение (атрибут `{attribute 'symbol' := 'read'}` в исходнике) | настройки и состояние MQTT для HMI |
+| `GVL_Const`, `GVL_IiotMap`, программы, локальные переменные | не выгружаются | — |
+
+Пароль брокера `stIiotCfg.stBroker.sPassword` помечен `{attribute 'symbol' := 'none'}` и не выгружается
+даже вместе со структурой. Узлы сервера: `ns=4;s=|var|<устройство>.Application.<GVL>.<путь>`, например
+`ns=4;s=|var|CODESYS Control Win V3.Application.GVL_Devices.fbLT101.stSts.rValue_EU` (имя устройства у
+ПЛК210 — другое, сверить по обзору сервера; [ASSUMPTIONS.md](ASSUMPTIONS.md), E11).
+
+### 10.1. В IDE
+
+1. Открыть проект (раздел 6). «Application → Добавить объект → Символьная конфигурация» (Add Object →
+   Symbol Configuration), отметить «Support OPC UA features», «Клиентская раскладка» — оптимизированная
+   (Optimized layout).
+2. «Собрать» (Build) в редакторе символьной конфигурации — появится дерево переменных.
+3. Отметить переменные по таблице выше, доступ — в столбце «Права доступа» (Access Rights).
+4. Сохранить проект, «Онлайн → Логин» и загрузка. Права пользователей рантайма на объект
+   `OPCUAServer` — [security.md](security.md), раздел 3.2.
+
+_Названия пунктов меню — сверить с русской IDE 3.5.17.30; этот путь в IDE не проходился, проверен
+скриптовый (10.2)._
+
+### 10.2. Скриптом (проверено)
+
+Символьную конфигурацию можно создать и настроить из CODESYS Scripting (`ScriptSymbolConfigObject`,
+есть с 3.5.10): `application.create_symbol_config(export_comments_to_xml, support_opc_ua,
+client_side_layout_calculator)`, доступ — свойство `configured_access` переменных из
+`get_all_signatures()`. Объект сохраняется в `.project` (`cds.py import` объекты вне раскладки не
+трогает), но не в `src/`: после пересоздания проекта — повторить.
+
+Скрипт (IronPython 2.7; проект — в переменной `IIOT_PROJECT`):
+
+```python
+# -*- coding: utf-8 -*-
+from __future__ import print_function
+import os
+from System import Guid
+
+OPTIMIZED_LAYOUT = Guid("{0141eb75-141b-4ea1-9a8c-75f952b22a6c}")  # OptimizedOutputOffsetCalculator
+GVL_IO_VARS = ("uiP101_FCODE", "uiP102_FCODE", "uiP103_FCODE", "xHA1", "xHL1", "xK1")
+
+
+def wanted(gvl, var):
+    if gvl == "GVL_Devices":
+        return SymbolAccess.Read
+    if gvl == "GVL_Hmi":
+        if var.startswith("st") and var.endswith("Cmd"):
+            return SymbolAccess.ReadWrite
+        return SymbolAccess.Read
+    if gvl == "GVL_IO" and var in GVL_IO_VARS:
+        return SymbolAccess.Read
+    return None
+
+
+proj = projects.open(os.environ["IIOT_PROJECT"], primary=True)
+app = proj.active_application
+found = [c for c in app.get_children(False) if c.is_symbol_config]
+if found:
+    sc = found[0]
+else:
+    sc = app.create_symbol_config(False, True, OPTIMIZED_LAYOUT)  # комментарии в XML — нет, OPC UA — да
+changed = 0
+for sig in sc.get_all_signatures(True):  # True — собрать приложение
+    gvl = sig.full_qualified_name.split(".")[-1]
+    for v in sig.variables:
+        access = wanted(gvl, v.name)
+        if access is not None and v.configured_access != access:
+            v.configured_access = access
+            changed += 1
+print("symbol_config: изменено переменных", changed)
+app.build()
+proj.save()
+proj.close()
+```
+
+Запуск (cmd, из корня репозитория, после `python tools\codesys\cds.py import`; IDE с проектом
+закрыта; скрипт сохранён, например, как `%TEMP%\symbol_config.py`):
+
+```bat
+set IIOT_PROJECT=%CD%\build\plc-iiot-stack.project
+"%CODESYS_EXE%" --profile="CODESYS V3.5 SP17 Patch 3" --noUI --runscript="%TEMP%\symbol_config.py"
+```
+
+Проверено 16.10.2026 на копии `build\plc-iiot-stack.project` (с заглушкой флагмана): объект создан,
+сборка — 0 ошибок, после повторного открытия настроены `GVL_Devices`, `GVL_Hmi`, `GVL_IO`. По файлу
+символов, который пишет генерация кода (`<проект>.Device.Application.xml`, настройки
+`SupportOPCUA, LayoutCalculator=OptimizedClientSideLayoutCalculator`): `GVL_Devices` — 29 переменных
+`Read`, `GVL_Hmi` — 29 структур команд `ReadWrite` и `xApplyProjectCfg` `Read`, `GVL_IO` — 6 `Read`,
+`GVL_Iiot` — 2 `Read` (по атрибутам); в типе `ST_MqttBrokerCfg` 10 полей из 11 — `sPassword` нет.
+_Не проверено: обзор узлов настоящим клиентом OPC UA (UaExpert, Telegraf) — рантайм с OPC UA-сервером
+и клиентом в этой проверке не запускались._
+
+После `cds.py import` с `--force` (или если `.project` создан заново) скрипт нужно запустить снова.
+
+## 11. Встраивание во флагман
+
+`PRG_Iiot` и `FB_IiotKnsMap` написаны с именами флагмана КНС-1, поэтому переносятся без правок текста.
+
+1. Скопировать в репозиторий флагмана `src/` этого репозитория, кроме `src/*/KnsShim/` и `PRG_Main`
+   (у флагмана свой). `GVL_Const` объединить с константами флагмана (имена не пересекаются — сверить).
+2. Типы флагмана (`PL.ST_MotorSts`, `PL.E_DeviceMode` и т. д.) `PRG_Iiot` и `FB_IiotKnsMap` по имени
+   не используют: только поля через `GVL_Devices`, `GVL_Hmi`, `GVL_IO` и числовые коды из `GVL_Const`
+   (`DEV_MODE_OOS`, `CMD_RESULT_*`, `MOT_FLT_COMM`, `MOT_WRN_COMM` — совпадают с перечислениями и
+   `GVL_Const` plc-process-lib на 16.10.2026; при обновлении библиотеки сверить). Если имена экземпляров
+   или пути во флагмане другие — поправить колонку `plc_path` в `schema/` и перегенерировать
+   `FB_IiotKnsMap` (`python tools_project/gen_plc_iiot.py`).
+3. В задаче флагмана вызвать `PRG_Iiot()` после `PRG_Devices` (тот же цикл), адаптер MQTT — раздел 9.
+4. Библиотека SysTimeRtc — в менеджер библиотек флагмана (плейсхолдер, разрешается профилем).
+5. Символьная конфигурация — раздел 10 (`GVL_Iiot` добавляется атрибутами).
+6. Тесты: наборы `tests/` этого репозитория переносятся вместе с `FB_MqttClientFake`; набор
+   `FB_KnsShim_Test` проверяет заглушку — во флагмане его заменяют проверки на настоящих ФБ.
+
+_Встраивание не выполнялось: флагман в этой проверке не собирался._

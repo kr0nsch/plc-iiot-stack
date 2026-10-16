@@ -3,3 +3,9 @@ ruff==0.17.1
 mypy==2.4.0
 pytest==9.1.1
 hypothesis==6.170.0
+# Стенд docker compose: проверка схем и конфигурации (tests_stack), интеграционный тест
+jsonschema==4.26.0
+PyYAML==6.0.3
+paho-mqtt==2.1.0
+types-jsonschema==4.26.0.20261006
+types-PyYAML==6.0.12.20260906

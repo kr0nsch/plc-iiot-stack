@@ -24,3 +24,11 @@ trim_trailing_whitespace = false
 
 [*.{bat,cmd}]
 end_of_line = crlf
+
+[Makefile]
+indent_style = tab
+
+[*.ps1]
+# Windows PowerShell 5.1 читает скрипт без BOM в кодировке ANSI: для .ps1 — UTF-8 с BOM и CRLF
+charset = utf-8-bom
+end_of_line = crlf

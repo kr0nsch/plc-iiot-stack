@@ -12,6 +12,8 @@
 *.sh    text eol=lf
 *.bat   text eol=crlf
 *.cmd   text eol=crlf
+# Скрипты PowerShell — CRLF и UTF-8 с BOM (для Windows PowerShell 5.1)
+*.ps1   text eol=crlf
 
 # Двоичные файлы: без нормализации и текстового диффа.
 # Проекты и библиотеки CODESYS в git не хранятся (.gitignore), правила — на случай вложений к релизам.

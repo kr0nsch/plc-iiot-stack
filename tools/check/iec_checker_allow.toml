@@ -1,6 +1,7 @@
-# Обоснованные находки iec_checker (tools/check/run_iec_checker.py).
-# Обоснованная находка попадает в отчёт со статусом allowed и не роняет проверку.
-# Подробный разбор каждой записи — docs/STATIC_ANALYSIS.md; при изменении кода держите их согласованными.
+# Обоснованные находки iec_checker (tools/check/run_iec_checker.py и обёртка проекта
+# tools_project/iec_checker_gate.py). Обоснованная находка попадает в отчёт со статусом allowed и не
+# роняет проверку. Подробный разбор каждой записи — docs/STATIC_ANALYSIS.md; при изменении кода держите
+# их согласованными.
 #
 # Ключи записи [[allow]]:
 #   id     — идентификатор правила iec_checker (шаблон fnmatch), например "PLCOPEN-CP3";
@@ -8,7 +9,10 @@
 #            '*' захватывает и '/';
 #   match  — необязательно: регулярное выражение по тексту сообщения;
 #   reason — обязательно: почему находка допустима.
-# ParserError и LexingError обосновать нельзя: их исправляют в коде или в понижении iec-checker.
+# ParserError и LexingError здесь обосновать нельзя: их исправляют в коде, а то, что исправить нельзя,
+# описано в tools_project/iec_checker_parser_gaps.toml (принимает только обёртка проекта).
+# UnusedVariable, у которой в коде POU есть обращение к переменной, обёртка отмечает сама (с местом
+# обращения); здесь — только переменные, которые действительно не читаются, и почему так задумано.
 
 [[allow]]
 id = "PLCOPEN-CP3"
@@ -22,44 +26,66 @@ reason = "Как для src/: значения по умолчанию типо�
 
 [[allow]]
 id = "PLCOPEN-CP9"
-file = "src/POUs/FB_Example/*"
-reason = "Сложность тела FB_Example по классической метрике — 8; iec_checker 0.4 считает её завышенно (docs/STATIC_ANALYSIS.md)"
+file = "tests/*"
+reason = "Наборы и методы-тесты — последовательные вызовы и проверки; завышенный подсчёт iec_checker 0.4 (IF ... ELSE ... END_IF прибавляет 5), метрика для тестов не показательна"
 
 [[allow]]
 id = "PLCOPEN-CP9"
+file = "src/POUs/Generated/*"
+reason = "FB_IiotKnsMap сгенерирован gen_plc_iiot.py из схемы данных: по строке на метрику, команду и устройство, без собственной логики; число операторов и ветвлений растёт с перечнем тегов, а не со сложностью"
+
+[[allow]]
+id = "PLCOPEN-CP9"
+file = "src/POUs/Json/*"
+reason = "Посимвольный разбор и сборка JSON: CASE по символу и по типу значения, проверки грамматики чисел и escape-последовательностей; ветвления — сама грамматика (docs/plc_mqtt.md, «Построение JSON»), iec_checker 0.4 считает их завышенно"
+
+[[allow]]
+id = "PLCOPEN-CP9"
+file = "src/POUs/Iiot/*"
+reason = "Шлюз команд проверяет условия в порядке контракта (docs/data_schema.md, 5.1), диагностика — конечный автомат состояния связи, тревоги — правила переходов ISA-18.2; функции текстов — CASE по значениям перечислений схемы. Логика уже разделена на методы; iec_checker 0.4 считает сложность завышенно"
+
+[[allow]]
+id = "PLCOPEN-CP9"
+file = "src/POUs/PRG_Iiot/*"
+reason = "PRG_Iiot — последовательная обвязка ФБ и тегов флагмана (инициализация таблиц, часы, связь, телеметрия, тревоги, команды); ветвления — включение и выключение частей настройками GVL_Iiot"
+
+[[allow]]
+id = "PLCOPEN-L17"
+file = "src/*"
+reason = "Решение проекта (docs/STATIC_ANALYSIS.md): IF без ELSE там, где действия «иначе» нет — охранные проверки с RETURN, счётчики, однократные события; пустая ветка ELSE только добавила бы шум"
+
+[[allow]]
+id = "PLCOPEN-L17"
 file = "tests/*"
-reason = "Наборы тестов — последовательные вызовы без ветвлений (классическая сложность — 1); завышенный подсчёт iec_checker 0.4, метрика для тестов не показательна"
+reason = "Как для src/: в подменном клиенте и помощниках тестов действия «иначе» нет"
 
 [[allow]]
-id = "PLCOPEN-L17"
-file = "src/POUs/FB_Example/FB_Example.impl.st"
-reason = "Действия «иначе» нет: в зоне гистерезиса выход сохраняет состояние, без фронта счётчик не меняется"
+id = "PLCOPEN-L10"
+file = "src/POUs/Iiot/FB_MqttCommands/FB_MqttCommands.impl.st"
+reason = "EXIT завершает ограниченный цикл приёма (не больше uiMaxPerCycle сообщений за цикл), когда очередь пуста или команда ждёт исполнения; флаг в условии цикла читался бы хуже"
 
 [[allow]]
-id = "PLCOPEN-L17"
-file = "src/POUs/PRG_Main/PRG_Main.impl.st"
-reason = "Однократная команда HMI не пришла — делать нечего; пустая ветка ELSE только добавит шум"
+id = "PLCOPEN-L10"
+file = "src/POUs/Json/FB_JsonFlatParser/*"
+reason = "EXIT завершает посимвольный цикл, ограниченный длиной строки, на конце лексемы или при ошибке разбора; флаг в условии цикла читался бы хуже"
 
 [[allow]]
-id = "UnusedVariable"
-file = "src/POUs/PRG_Main/PRG_Main.decl.st"
-match = "STCMD|STSTS"
-reason = "Ложное срабатывание iec_checker 0.4: обращения к полям структуры (stCmd.xAck, stSts.xOut) он не считает использованием"
+id = "PLCOPEN-L10"
+file = "tests/POUs/F_TestContains/*"
+reason = "Помощник тестов: EXIT при первом совпадении подстроки"
 
 [[allow]]
-id = "UnusedVariable"
-file = "tests/POUs/*_Test/*_Test.decl.st"
-match = "variable: [A-Z][A-Z0-9]*(_[A-Z0-9]+)+$"
-reason = "Артефакт понижения: константы набора (VAR CONSTANT, UPPER_SNAKE_CASE) используются в методах-тестах, которые сборка выносит в отдельные функции"
-
-[[allow]]
-id = "UnusedVariable"
-file = "tests/POUs/FB_Example_Test/*.method.decl.st"
-match = "FBDUT"
-reason = "Ложное срабатывание iec_checker 0.4: экземпляр ФБ используется вызовом fbDut(...), чтением выходов и вызовом методов — это он не считает использованием (как stCmd/stSts в PRG_Main)"
+id = "OutOfBounds"
+file = "src/POUs/Generated/FB_IiotKnsMap/*"
+match = 'out of range \[0 \.\. 0\]'
+reason = "Артефакт понижения: параметр ARRAY[*] (массив переменной длины CODESYS) вариант сборки iec-checker заменяет на ARRAY[0..0]. Индексы — константы 1..POINT_COUNT и 1..ALARM_WORDS_COUNT из генератора; массив короче перечня методы не заполняют (проверка LOWER_BOUND/UPPER_BOUND, тест MapIgnoresTooSmallTable)"
 
 [[allow]]
 id = "UnusedVariable"
-file = "tests/POUs/PRG_Tests/PRG_Tests.decl.st"
-match = "FBF_CLAMPTEST|FBEXAMPLETEST"
-reason = "Экземпляры наборов регистрируются в coUnit самим объявлением и используются вызовом AreAllTestsFinished()"
+file = "src/POUs/Iiot/FB_MqttClientNone/*.method.decl.st"
+reason = "Клиент без транспорта (нулевой объект I_MqttClient): сигнатуры методов заданы интерфейсом, параметры намеренно не используются — методы возвращают отказ «нет соединения»"
+
+[[allow]]
+id = "UnusedVariable"
+file = "src/POUs/KnsShim/*.decl.st"
+reason = "Заглушки ФБ флагмана без логики: входы с именами выходов настоящих ФБ пишут тесты, а читает PRG_Iiot снаружи (GVL_Devices.fb<TAG>.<имя>); внутри ФБ они не нужны"

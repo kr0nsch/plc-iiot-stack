@@ -13,7 +13,7 @@ line-length = 120
 target-version = "py311"
 extend-exclude = ["build"]
 # Каталоги модулей проекта (для сортировки импортов: first-party)
-src = ["tools", "tools/codesys", "tools/check", "tools/tests"]
+src = ["tools", "tools/codesys", "tools/check", "tools/tests", "tools_project", "tests_stack"]
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "B", "UP", "SIM", "C4", "RUF"]
@@ -35,8 +35,9 @@ exclude = ["tools/codesys/*.py"]
 
 [tool.mypy]
 python_version = "3.11"
-files = ["tools"]
-mypy_path = ["tools", "tools/codesys", "tools/check"]
+# tools_project, tests_stack — инструменты и тесты стенда docker compose
+files = ["tools", "tools_project", "tests_stack"]
+mypy_path = ["tools", "tools/codesys", "tools/check", "tools_project", "tests_stack"]
 strict = true
 warn_unreachable = true
 # Скрипты CODESYS (IronPython 2.7) используют глобальные объекты среды CODESYS (projects,
@@ -47,9 +48,14 @@ exclude = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["tools/tests"]
-pythonpath = ["tools", "tools/codesys", "tools/check"]
-addopts = "-ra --strict-markers"
+testpaths = ["tools/tests", "tests_stack"]
+pythonpath = ["tools", "tools/codesys", "tools/check", "tools_project", "tests_stack"]
+# Вместо test_integration_repository_sources шаблона (прямой запуск run_iec_checker.py) src/ и tests/
+# проверяются через обёртку tools_project/iec_checker_gate.py — tests_stack/test_iec_checker_gate.py;
+# разбор находок — docs/STATIC_ANALYSIS.md.
+addopts = """-ra --strict-markers
+    --deselect=tools/tests/test_run_iec_checker.py::test_integration_repository_sources"""
 markers = [
     "integration: проверки с настоящими plc (RuSTy) и iec_checker; пропускаются, если инструмента нет",
+    "stack: интеграционные тесты на поднятом стенде docker compose (make test-stack, IIOT_STACK=1)",
 ]

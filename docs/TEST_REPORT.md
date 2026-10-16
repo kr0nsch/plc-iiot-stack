@@ -8,12 +8,12 @@
 <!-- cds:test-report:begin (раздел обновляет `python tools/codesys/cds.py report`) -->
 ## Последний прогон в CODESYS
 
-Проверено в CODESYS 3.5.17.30 / CODESYS Control Win V3 (пользовательский процесс) — 2026-10-16 01:03:11. Итог: **все тесты пройдены**.
+Проверено в CODESYS 3.5.17.30 / CODESYS Control Win V3 (пользовательский процесс) — 2026-10-16 10:09:05. Итог: **все тесты пройдены**.
 
 | Параметр | Значение |
 |---|---|
-| Дата прогона | 2026-10-16 01:03:11 |
-| Коммит | e3e7513-dirty |
+| Дата прогона | 2026-10-16 10:09:05 |
+| Коммит | caf87bb-dirty |
 | CODESYS | 3.5.17.30 (профиль `CODESYS V3.5 SP17 Patch 3`) |
 | Устройство в проекте | CODESYS Control Win V3 (4096 / 0000 0001 / 3.5.17.30) |
 | Рантайм | CODESYS Control Win V3 (пользовательский процесс) |
@@ -23,32 +23,107 @@
 
 | Набор | Тестов | Пройдено | Упало | Пропущено | Итог |
 |---|---|---|---|---|---|
-| `PRG_Tests.fbF_ClampTest` | 7 | 7 | 0 | 0 | пройдено |
-| `PRG_Tests.fbExampleTest` | 11 | 11 | 0 | 0 | пройдено |
-| **Всего** | 18 | 18 | 0 | 0 | **пройдено** |
+| `PRG_Tests.fbJsonBuilderTest` | 9 | 9 | 0 | 0 | пройдено |
+| `PRG_Tests.fbJsonFlatParserTest` | 13 | 13 | 0 | 0 | пройдено |
+| `PRG_Tests.fbIiotFunctionsTest` | 12 | 12 | 0 | 0 | пройдено |
+| `PRG_Tests.fbMqttTelemetryTest` | 11 | 11 | 0 | 0 | пройдено |
+| `PRG_Tests.fbMqttAlarmsTest` | 9 | 9 | 0 | 0 | пройдено |
+| `PRG_Tests.fbMqttCommandsTest` | 15 | 15 | 0 | 0 | пройдено |
+| `PRG_Tests.fbMqttDiagTest` | 12 | 12 | 0 | 0 | пройдено |
+| `PRG_Tests.fbKnsShimTest` | 6 | 6 | 0 | 0 | пройдено |
+| **Всего** | 87 | 87 | 0 | 0 | **пройдено** |
 
 ### Результаты тестов
 
 | Набор | Тест | Итог |
 |---|---|---|
-| `PRG_Tests.fbF_ClampTest` | `InsideRangeReturnsValue` | пройден |
-| `PRG_Tests.fbF_ClampTest` | `BelowLowReturnsLow` | пройден |
-| `PRG_Tests.fbF_ClampTest` | `AboveHighReturnsHigh` | пройден |
-| `PRG_Tests.fbF_ClampTest` | `AtLowBoundaryReturnsLow` | пройден |
-| `PRG_Tests.fbF_ClampTest` | `AtHighBoundaryReturnsHigh` | пройден |
-| `PRG_Tests.fbF_ClampTest` | `EqualBoundsReturnsBound` | пройден |
-| `PRG_Tests.fbF_ClampTest` | `LowGreaterThanHighSwapsBounds` | пройден |
-| `PRG_Tests.fbExampleTest` | `AutoSwitchesOnBelowThreshold` | пройден |
-| `PRG_Tests.fbExampleTest` | `AutoThresholdsAreInclusive` | пройден |
-| `PRG_Tests.fbExampleTest` | `AutoHoldsStateInsideHysteresis` | пройден |
-| `PRG_Tests.fbExampleTest` | `InvalidValueLatchesFault` | пройден |
-| `PRG_Tests.fbExampleTest` | `AcknowledgeClearsFaultWhenValid` | пройден |
-| `PRG_Tests.fbExampleTest` | `AcknowledgeKeepsFaultWhileInvalid` | пройден |
-| `PRG_Tests.fbExampleTest` | `ManualFollowsCommand` | пройден |
-| `PRG_Tests.fbExampleTest` | `LocalAndOutOfServiceSwitchOff` | пройден |
-| `PRG_Tests.fbExampleTest` | `DefaultModeIsOutOfService` | пройден |
-| `PRG_Tests.fbExampleTest` | `ParametersAreClamped` | пройден |
-| `PRG_Tests.fbExampleTest` | `CountsSwitchOnsAndResetClears` | пройден |
+| `PRG_Tests.fbJsonBuilderTest` | `BuildsFlatObjectWithAllTypes` | пройден |
+| `PRG_Tests.fbJsonBuilderTest` | `EmptyObjectAndRestart` | пройден |
+| `PRG_Tests.fbJsonBuilderTest` | `EscapesSpecialCharacters` | пройден |
+| `PRG_Tests.fbJsonBuilderTest` | `RealFormattingRoundsAndTrimsZeros` | пройден |
+| `PRG_Tests.fbJsonBuilderTest` | `RealFromRealIsRoundedLikeTheValueShown` | пройден |
+| `PRG_Tests.fbJsonBuilderTest` | `NotFiniteBecomesNull` | пройден |
+| `PRG_Tests.fbJsonBuilderTest` | `IntExtremes` | пройден |
+| `PRG_Tests.fbJsonBuilderTest` | `OverflowIsReportedNotTruncatedSilently` | пройден |
+| `PRG_Tests.fbJsonBuilderTest` | `BufferHoldsExactlyItsSize` | пройден |
+| `PRG_Tests.fbJsonFlatParserTest` | `ParsesFlatObjectWithAllTypes` | пройден |
+| `PRG_Tests.fbJsonFlatParserTest` | `TracksIntegerLiterals` | пройден |
+| `PRG_Tests.fbJsonFlatParserTest` | `AcceptsWhitespaceAndEmptyObject` | пройден |
+| `PRG_Tests.fbJsonFlatParserTest` | `RejectsNestedObjectsAndArrays` | пройден |
+| `PRG_Tests.fbJsonFlatParserTest` | `RejectsDuplicateKeys` | пройден |
+| `PRG_Tests.fbJsonFlatParserTest` | `RejectsSyntaxErrors` | пройден |
+| `PRG_Tests.fbJsonFlatParserTest` | `RejectsTrailingCharacters` | пройден |
+| `PRG_Tests.fbJsonFlatParserTest` | `ValidatesNumberGrammarAndRange` | пройден |
+| `PRG_Tests.fbJsonFlatParserTest` | `DecodesEscapes` | пройден |
+| `PRG_Tests.fbJsonFlatParserTest` | `RejectsRawControlCharacters` | пройден |
+| `PRG_Tests.fbJsonFlatParserTest` | `LimitsKeyAndValueLength` | пройден |
+| `PRG_Tests.fbJsonFlatParserTest` | `LimitsFieldCount` | пройден |
+| `PRG_Tests.fbJsonFlatParserTest` | `FailedParseClearsPreviousFields` | пройден |
+| `PRG_Tests.fbIiotFunctionsTest` | `DeadbandIsStrictlyGreater` | пройден |
+| `PRG_Tests.fbIiotFunctionsTest` | `ZeroNegativeOrNanDeadbandMeansAnyChange` | пройден |
+| `PRG_Tests.fbIiotFunctionsTest` | `NonFiniteTransitionsAreChanges` | пройден |
+| `PRG_Tests.fbIiotFunctionsTest` | `QualityPerSchema` | пройден |
+| `PRG_Tests.fbIiotFunctionsTest` | `CommandNamesKindsAndTexts` | пройден |
+| `PRG_Tests.fbIiotFunctionsTest` | `SchemaMajorParsing` | пройден |
+| `PRG_Tests.fbIiotFunctionsTest` | `CmdIdNameAndOriginPatterns` | пройден |
+| `PRG_Tests.fbIiotFunctionsTest` | `AlarmStateFromWords` | пройден |
+| `PRG_Tests.fbIiotFunctionsTest` | `AlarmReasonByTransition` | пройден |
+| `PRG_Tests.fbIiotFunctionsTest` | `TopicJoinAndLimit` | пройден |
+| `PRG_Tests.fbIiotFunctionsTest` | `ClockValidityRange` | пройден |
+| `PRG_Tests.fbIiotFunctionsTest` | `NowIsMonotonic` | пройден |
+| `PRG_Tests.fbMqttTelemetryTest` | `PublishesAllAfterBirthWithExactJson` | пройден |
+| `PRG_Tests.fbMqttTelemetryTest` | `WaitsForBirthAndClock` | пройден |
+| `PRG_Tests.fbMqttTelemetryTest` | `DeadbandAndMinInterval` | пройден |
+| `PRG_Tests.fbMqttTelemetryTest` | `QualityChangeIsImmediate` | пройден |
+| `PRG_Tests.fbMqttTelemetryTest` | `IntegerAnyChangeAndPeriodicOnly` | пройден |
+| `PRG_Tests.fbMqttTelemetryTest` | `PeriodRepublishesAll` | пройден |
+| `PRG_Tests.fbMqttTelemetryTest` | `BudgetLimitsPublishesPerCallRoundRobin` | пройден |
+| `PRG_Tests.fbMqttTelemetryTest` | `RepublishesAllAfterReconnect` | пройден |
+| `PRG_Tests.fbMqttTelemetryTest` | `ClientRefusalIsCountedAndRetried` | пройден |
+| `PRG_Tests.fbMqttTelemetryTest` | `NegativeAndLargeValues` | пройден |
+| `PRG_Tests.fbMqttTelemetryTest` | `NotFiniteValueSendsLastFiniteAsBad` | пройден |
+| `PRG_Tests.fbMqttAlarmsTest` | `SnapshotAfterBirthExactJson` | пройден |
+| `PRG_Tests.fbMqttAlarmsTest` | `EventsFollowWordChanges` | пройден |
+| `PRG_Tests.fbMqttAlarmsTest` | `ReturnUnackedThenAck` | пройден |
+| `PRG_Tests.fbMqttAlarmsTest` | `ShelvedAndOutOfService` | пройден |
+| `PRG_Tests.fbMqttAlarmsTest` | `SnapshotAfterReconnectShowsCurrentState` | пройден |
+| `PRG_Tests.fbMqttAlarmsTest` | `ReconnectRepeatsLastEventWithItsTs` | пройден |
+| `PRG_Tests.fbMqttAlarmsTest` | `ChangeWhileOfflineIsEventAfterReconnect` | пройден |
+| `PRG_Tests.fbMqttAlarmsTest` | `BudgetAndDisabledPriority` | пройден |
+| `PRG_Tests.fbMqttAlarmsTest` | `WordsOutOfTableMeanNormal` | пройден |
+| `PRG_Tests.fbMqttCommandsTest` | `SubscribesToCommandTopicsAndResubscribes` | пройден |
+| `PRG_Tests.fbMqttCommandsTest` | `AcceptedStartWaitsForDeviceThenOk` | пройден |
+| `PRG_Tests.fbMqttCommandsTest` | `DeviceRejectedCarriesCmdResult` | пройден |
+| `PRG_Tests.fbMqttCommandsTest` | `DeviceSilenceIsTimeout` | пройден |
+| `PRG_Tests.fbMqttCommandsTest` | `SpeedSetpointIsOkAfterWrite` | пройден |
+| `PRG_Tests.fbMqttCommandsTest` | `MissingArmMeansTimeout` | пройден |
+| `PRG_Tests.fbMqttCommandsTest` | `RejectsRetainedCommand` | пройден |
+| `PRG_Tests.fbMqttCommandsTest` | `RejectsInvalidPayloads` | пройден |
+| `PRG_Tests.fbMqttCommandsTest` | `RejectsUnsupportedVersionAndTopicMismatch` | пройден |
+| `PRG_Tests.fbMqttCommandsTest` | `RejectsNotWhitelisted` | пройден |
+| `PRG_Tests.fbMqttCommandsTest` | `RejectsOutOfRange` | пройден |
+| `PRG_Tests.fbMqttCommandsTest` | `RejectsExpired` | пройден |
+| `PRG_Tests.fbMqttCommandsTest` | `RejectsDuplicateIncludingRejectedIds` | пройден |
+| `PRG_Tests.fbMqttCommandsTest` | `RateLimitTenPerTenSeconds` | пройден |
+| `PRG_Tests.fbMqttCommandsTest` | `DropsWithoutAckWhenNoCmdId` | пройден |
+| `PRG_Tests.fbMqttDiagTest` | `DisabledIsCheckFunctionWithoutConnect` | пройден |
+| `PRG_Tests.fbMqttDiagTest` | `ConnectSetsLwtAndPublishesBirth` | пройден |
+| `PRG_Tests.fbMqttDiagTest` | `BirthRefusedMeansNotReady` | пройден |
+| `PRG_Tests.fbMqttDiagTest` | `NoClockNoConnect` | пройден |
+| `PRG_Tests.fbMqttDiagTest` | `ConnectTimeoutGoesToBackoff` | пройден |
+| `PRG_Tests.fbMqttDiagTest` | `BackoffDoublesUpToMaximum` | пройден |
+| `PRG_Tests.fbMqttDiagTest` | `RejectedConnectUsesClientErrorCode` | пройден |
+| `PRG_Tests.fbMqttDiagTest` | `FailureAfterThresholdAndResetAfterStableLink` | пройден |
+| `PRG_Tests.fbMqttDiagTest` | `ConnectionLossCountsAndReconnects` | пройден |
+| `PRG_Tests.fbMqttDiagTest` | `DegradedWhenPublishFailuresGrow` | пройден |
+| `PRG_Tests.fbMqttDiagTest` | `DisableWhileConnectedPublishesShutdown` | пройден |
+| `PRG_Tests.fbMqttDiagTest` | `TimeGoingBackwardsRestartsTimeout` | пройден |
+| `PRG_Tests.fbKnsShimTest` | `StsSizesMatchExchangeLayout` | пройден |
+| `PRG_Tests.fbKnsShimTest` | `MapTablesFollowSchema` | пройден |
+| `PRG_Tests.fbKnsShimTest` | `PrgIiotPublishesFlagshipTagsAndAppliesCommands` | пройден |
+| `PRG_Tests.fbKnsShimTest` | `PrgIiotWithoutTransportReportsFailure` | пройден |
+| `PRG_Tests.fbKnsShimTest` | `MapIgnoresTooSmallTable` | пройден |
+| `PRG_Tests.fbKnsShimTest` | `VfdCommLossMeansBadQuality` | пройден |
 
 ### Упавшие тесты
 
@@ -59,26 +134,99 @@ _Нет._
 
 ## Что проверяют тесты
 
+Наборы coUnit в `tests/` (8 наборов, 87 тестов). Логика MQTT проверяется с подменным
+клиентом `FB_MqttClientFake` (публикации, входящие сообщения, отказы подключения и очереди); ожидаемые
+сообщения — точные строки JSON по [data_schema.md](data_schema.md).
+
 | Набор | Тест | Что проверяет |
 |---|---|---|
-| `FB_F_Clamp_Test` | `InsideRangeReturnsValue` | значение внутри диапазона не меняется |
-| `FB_F_Clamp_Test` | `BelowLowReturnsLow` | значение ниже диапазона → нижняя граница |
-| `FB_F_Clamp_Test` | `AboveHighReturnsHigh` | значение выше диапазона → верхняя граница |
-| `FB_F_Clamp_Test` | `AtLowBoundaryReturnsLow` | значение на нижней границе не меняется |
-| `FB_F_Clamp_Test` | `AtHighBoundaryReturnsHigh` | значение на верхней границе не меняется |
-| `FB_F_Clamp_Test` | `EqualBoundsReturnsBound` | вырожденный диапазон `rLow = rHigh` |
-| `FB_F_Clamp_Test` | `LowGreaterThanHighSwapsBounds` | `rLow > rHigh`: границы меняются местами |
-| `FB_Example_Test` | `AutoSwitchesOnBelowThreshold` | авторежим: значение ниже порога включения (уставка − гистерезис) включает выход, отказа нет |
-| `FB_Example_Test` | `AutoThresholdsAreInclusive` | авторежим: на пороге включения выход включается, на уставке — отключается |
-| `FB_Example_Test` | `AutoHoldsStateInsideHysteresis` | авторежим: в зоне гистерезиса выход сохраняет состояние (после включения и после отключения) |
-| `FB_Example_Test` | `InvalidValueLatchesFault` | недостоверное измерение в авторежиме: отказ, выход отключён; отказ держится после восстановления измерения |
-| `FB_Example_Test` | `AcknowledgeClearsFaultWhenValid` | `Acknowledge()` при достоверном измерении снимает отказ и возвращает TRUE, выход снова управляется |
-| `FB_Example_Test` | `AcknowledgeKeepsFaultWhileInvalid` | `Acknowledge()` при недостоверном измерении возвращает FALSE, отказ остаётся |
-| `FB_Example_Test` | `ManualFollowsCommand` | ручной режим: выход повторяет `xManualOn`, недостоверное измерение отказа не даёт |
-| `FB_Example_Test` | `LocalAndOutOfServiceSwitchOff` | `Local` и `OutOfService` отключают выход при любых измерении и команде |
-| `FB_Example_Test` | `DefaultModeIsOutOfService` | режим по умолчанию — `OutOfService`: выход отключён |
-| `FB_Example_Test` | `ParametersAreClamped` | уставка и гистерезис вне диапазона ограничиваются `EXAMPLE_SP_MAX_PCT` и `EXAMPLE_HYST_MIN_PCT` |
-| `FB_Example_Test` | `CountsSwitchOnsAndResetClears` | счётчик `Count` считает только фронты включения; `Reset()` через `I_Resettable` отключает выход и обнуляет счётчик |
+| `FB_JsonBuilder_Test` | `BuildsFlatObjectWithAllTypes` | объект со строкой, целым, логическим, null и числом — точный текст |
+| `FB_JsonBuilder_Test` | `EmptyObjectAndRestart` | пустой объект; Begin очищает предыдущий текст |
+| `FB_JsonBuilder_Test` | `EscapesSpecialCharacters` | экранирование кавычки, обратной косой черты и управляющих символов |
+| `FB_JsonBuilder_Test` | `RealFormattingRoundsAndTrimsZeros` | числа: округление до знаков, без хвостовых нулей, -0 как 0, предел знаков |
+| `FB_JsonBuilder_Test` | `RealFromRealIsRoundedLikeTheValueShown` | REAL 2.35 (в двоичном виде 2.3499999) с тремя знаками — 2.35 |
+| `FB_JsonBuilder_Test` | `NotFiniteBecomesNull` | NaN, бесконечность и слишком большие числа пишутся как null |
+| `FB_JsonBuilder_Test` | `IntExtremes` | целые: 0, максимум и минимум LINT, отметка времени в мс |
+| `FB_JsonBuilder_Test` | `OverflowIsReportedNotTruncatedSilently` | переполнение буфера: xOverflow, Finish = FALSE, длина не больше буфера |
+| `FB_JsonBuilder_Test` | `BufferHoldsExactlyItsSize` | объект ровно на размер буфера — полный, на байт больше — переполнение |
+| `FB_JsonFlatParser_Test` | `ParsesFlatObjectWithAllTypes` | строка, число с порядком, true, false, null; поиск по ключу, ключ по номеру |
+| `FB_JsonFlatParser_Test` | `TracksIntegerLiterals` | целое JSON — без дробной части и порядка: 1792137621000 — да, 1.0 и 1e3 — нет |
+| `FB_JsonFlatParser_Test` | `AcceptsWhitespaceAndEmptyObject` | пробелы, табуляции и переводы строк между токенами; пустой объект |
+| `FB_JsonFlatParser_Test` | `RejectsNestedObjectsAndArrays` | вложенный объект и массив — Nested |
+| `FB_JsonFlatParser_Test` | `RejectsDuplicateKeys` | повторяющийся ключ — Duplicate (неоднозначная команда) |
+| `FB_JsonFlatParser_Test` | `RejectsSyntaxErrors` | пустой вход, не объект, незакрытый объект, нет двоеточия, лишняя запятая, ключ без кавычек |
+| `FB_JsonFlatParser_Test` | `RejectsTrailingCharacters` | символы после объекта — Trailing с позицией |
+| `FB_JsonFlatParser_Test` | `ValidatesNumberGrammarAndRange` | числа: ведущий ноль, точка без цифр, знак без цифр, порядок без цифр, вне REAL, много цифр |
+| `FB_JsonFlatParser_Test` | `DecodesEscapes` | Escape-последовательности JSON; код вне ASCII и неизвестные — BadEscape |
+| `FB_JsonFlatParser_Test` | `RejectsRawControlCharacters` | управляющий символ внутри строки без экранирования — Syntax |
+| `FB_JsonFlatParser_Test` | `LimitsKeyAndValueLength` | ключ до 31 и строка до 64 символов; длиннее — KeyTooLong, ValueTooLong |
+| `FB_JsonFlatParser_Test` | `LimitsFieldCount` | полей не больше 12; 13-е — TooManyFields |
+| `FB_JsonFlatParser_Test` | `FailedParseClearsPreviousFields` | после неудачного разбора поля прошлого объекта не видны |
+| `FB_IiotFunctions_Test` | `DeadbandIsStrictlyGreater` | зона нечувствительности: изменение ровно на зону — нет, больше — да |
+| `FB_IiotFunctions_Test` | `ZeroNegativeOrNanDeadbandMeansAnyChange` | зона <= 0 или не число — любое изменение |
+| `FB_IiotFunctions_Test` | `NonFiniteTransitionsAreChanges` | переход между числом и NaN/бесконечностью — изменение; два неконечных — нет |
+| `FB_IiotFunctions_Test` | `QualityPerSchema` | качество по data_schema 3.2: F — bad; S, C — uncertain; Good, M — good или bad по xValid |
+| `FB_IiotFunctions_Test` | `CommandNamesKindsAndTexts` | имена команд (enum схемы, с учётом регистра), вид value, тексты reason и cmd_result |
+| `FB_IiotFunctions_Test` | `SchemaMajorParsing` | мажорная версия из MAJOR.MINOR; не по формату — -1 |
+| `FB_IiotFunctions_Test` | `CmdIdNameAndOriginPatterns` | шаблоны схемы: cmd_id [A-Za-z0-9_-]{8,36}, устройство, команда, origin |
+| `FB_IiotFunctions_Test` | `AlarmStateFromWords` | состояние тревоги по словам: OOS, отложена, активна/неквитирована, вернулась, норма |
+| `FB_IiotFunctions_Test` | `AlarmReasonByTransition` | причина события по переходу состояний и для снимка |
+| `FB_IiotFunctions_Test` | `TopicJoinAndLimit` | топик <префикс>/<хвост>; без префикса — хвост; длиннее 127 — пустая строка |
+| `FB_IiotFunctions_Test` | `ClockValidityRange` | часы ПЛК пригодны для ts: 2020-01-01 .. 2100-01-01 UTC включительно |
+| `FB_IiotFunctions_Test` | `NowIsMonotonic` | монотонное время: время с запуска больше нуля, повторный вызов не возвращает меньшее значение |
+| `FB_MqttTelemetry_Test` | `PublishesAllAfterBirthWithExactJson` | после рождения узла — все метрики; точный JSON, QoS 1, retain |
+| `FB_MqttTelemetry_Test` | `WaitsForBirthAndClock` | до рождения узла и без часов ПЛК — ничего; потом — всё |
+| `FB_MqttTelemetry_Test` | `DeadbandAndMinInterval` | зона нечувствительности и не чаще раза в секунду на метрику |
+| `FB_MqttTelemetry_Test` | `QualityChangeIsImmediate` | смена качества публикуется сразу, без ожидания интервала |
+| `FB_MqttTelemetry_Test` | `IntegerAnyChangeAndPeriodicOnly` | целые — при любом изменении; время работы узла — только контрольно |
+| `FB_MqttTelemetry_Test` | `PeriodRepublishesAll` | по истечении периода — все метрики, раньше — нет |
+| `FB_MqttTelemetry_Test` | `BudgetLimitsPublishesPerCallRoundRobin` | не больше uiMaxPerCycle за вызов, остальные — в следующих, по кругу |
+| `FB_MqttTelemetry_Test` | `RepublishesAllAfterReconnect` | связь пропала и вернулась с новым рождением — все метрики заново |
+| `FB_MqttTelemetry_Test` | `ClientRefusalIsCountedAndRetried` | клиент не принял — udiFailed, метрики ждут и уходят позже |
+| `FB_MqttTelemetry_Test` | `NegativeAndLargeValues` | отрицательное Analog и большой счётчик Integer — без потери знака и разрядов |
+| `FB_MqttTelemetry_Test` | `NotFiniteValueSendsLastFiniteAsBad` | значение NaN — последнее конечное значение с quality bad (схема: value — число), конечное — снова good |
+| `FB_MqttAlarms_Test` | `SnapshotAfterBirthExactJson` | после рождения узла — снимок всех тревог; точный JSON, QoS 1, retain |
+| `FB_MqttAlarms_Test` | `EventsFollowWordChanges` | появление, квитирование, снятие: Activated, Acked, Cleared |
+| `FB_MqttAlarms_Test` | `ReturnUnackedThenAck` | условие ушло без квитирования — RtnUnack/Cleared, затем квитирование — Normal/Acked |
+| `FB_MqttAlarms_Test` | `ShelvedAndOutOfService` | отложена/возвращена и вывод устройства из работы: Shelved, Unshelved, OosOn |
+| `FB_MqttAlarms_Test` | `SnapshotAfterReconnectShowsCurrentState` | после переподключения — текущее состояние повтором первой публикации с её ts, а не событие |
+| `FB_MqttAlarms_Test` | `ReconnectRepeatsLastEventWithItsTs` | сработавшая тревога после переподключения — то же событие Activated с исходными ts и prev_state (в InfluxDB та же точка, не второе срабатывание) |
+| `FB_MqttAlarms_Test` | `ChangeWhileOfflineIsEventAfterReconnect` | тревога сработала без связи — после переподключения событие с текущим ts |
+| `FB_MqttAlarms_Test` | `BudgetAndDisabledPriority` | не больше uiMaxPerCycle за вызов; приоритет None — тревога пропускается |
+| `FB_MqttAlarms_Test` | `WordsOutOfTableMeanNormal` | строка слов вне таблицы — тревога в норме, без выхода за массив |
+| `FB_MqttCommands_Test` | `SubscribesToCommandTopicsAndResubscribes` | подписка <site>/<area>/<unit>/+/cmd/+ с QoS 1; заново после переподключения |
+| `FB_MqttCommands_Test` | `AcceptedStartWaitsForDeviceThenOk` | Start прошёл шлюз: stCmd, ответа нет до обработки устройством, затем ok |
+| `FB_MqttCommands_Test` | `DeviceRejectedCarriesCmdResult` | устройство отказало — device_rejected и cmd_result по E_CmdResult |
+| `FB_MqttCommands_Test` | `DeviceSilenceIsTimeout` | устройство не обработало команду за 3 с — timeout; новое сообщение ждёт |
+| `FB_MqttCommands_Test` | `SpeedSetpointIsOkAfterWrite` | SpeedSp: ok сразу после записи (ФБ устройства значения не квитирует); границы 0 и 100 |
+| `FB_MqttCommands_Test` | `MissingArmMeansTimeout` | команда прошла шлюз, но Arm() не вызван — ответ timeout в следующем вызове |
+| `FB_MqttCommands_Test` | `RejectsRetainedCommand` | команда с флагом retain — retained |
+| `FB_MqttCommands_Test` | `RejectsInvalidPayloads` | не по command.schema.json — invalid_payload: лишние поля, ts, origin, command, value |
+| `FB_MqttCommands_Test` | `RejectsUnsupportedVersionAndTopicMismatch` | schema_version 2.0 — unsupported_version; команда не та, что в топике |
+| `FB_MqttCommands_Test` | `RejectsNotWhitelisted` | пары (устройство, команда) нет в белом списке — not_whitelisted |
+| `FB_MqttCommands_Test` | `RejectsOutOfRange` | SpeedSp вне 0..100 % — out_of_range |
+| `FB_MqttCommands_Test` | `RejectsExpired` | ts дальше 30 с от часов ПЛК (в прошлое или будущее) или часов нет — expired |
+| `FB_MqttCommands_Test` | `RejectsDuplicateIncludingRejectedIds` | повтор cmd_id среди последних 16 (и отклонённых тоже) — duplicate |
+| `FB_MqttCommands_Test` | `RateLimitTenPerTenSeconds` | не больше 10 команд за 10 с — rate_limited; после окна — снова принимаются |
+| `FB_MqttCommands_Test` | `DropsWithoutAckWhenNoCmdId` | не своя станция, не JSON, нет или неверный cmd_id, обрезано — без ответа |
+| `FB_MqttDiag_Test` | `DisabledIsCheckFunctionWithoutConnect` | выключено: Disabled, статус C, подключений нет |
+| `FB_MqttDiag_Test` | `ConnectSetsLwtAndPublishesBirth` | подключение: завещание offline/lwt, рождение online/birth (QoS 1, retain), xReady |
+| `FB_MqttDiag_Test` | `BirthRefusedMeansNotReady` | рождение не принято клиентом — связь есть, но публиковать нельзя; повтор |
+| `FB_MqttDiag_Test` | `NoClockNoConnect` | часы ПЛК не установлены: подключения нет, код -5, статус C |
+| `FB_MqttDiag_Test` | `ConnectTimeoutGoesToBackoff` | нет CONNACK за tConnectTimeout — неудача, код -2, разрыв, пауза, статус S |
+| `FB_MqttDiag_Test` | `BackoffDoublesUpToMaximum` | пауза между попытками: 1, 2, 4 с и дальше 4 с (tBackoffMax) |
+| `FB_MqttDiag_Test` | `RejectedConnectUsesClientErrorCode` | Connect() отклонён: код ошибки клиента, без него — -3 |
+| `FB_MqttDiag_Test` | `FailureAfterThresholdAndResetAfterStableLink` | три неудачи подряд — F; после tStable связи счётчик и пауза сбрасываются |
+| `FB_MqttDiag_Test` | `ConnectionLossCountsAndReconnects` | потеря связи: разрыв, код -4, пауза 1 с, переподключение и новое рождение |
+| `FB_MqttDiag_Test` | `DegradedWhenPublishFailuresGrow` | рост отказов публикаций за окно — M; нет роста — снова Good |
+| `FB_MqttDiag_Test` | `DisableWhileConnectedPublishesShutdown` | выключение при связи: offline/shutdown, затем разрыв в следующем вызове |
+| `FB_MqttDiag_Test` | `TimeGoingBackwardsRestartsTimeout` | время пошло назад — отсчёт тайм-аута заново, без зависания |
+| `FB_KnsShim_Test` | `StsSizesMatchExchangeLayout` | размеры заглушек Sts совпадают с таблицей API 4.6 (карта обмена флагмана) |
+| `FB_KnsShim_Test` | `MapTablesFollowSchema` | таблицы GVL_IiotMap совпадают со схемой данных (каталог, белый список, тревоги) |
+| `FB_KnsShim_Test` | `PrgIiotPublishesFlagshipTagsAndAppliesCommands` | PRG_Iiot с подменным клиентом: рождение, метрики и тревоги тегов флагмана, команда до ответа ok |
+| `FB_KnsShim_Test` | `PrgIiotWithoutTransportReportsFailure` | PRG_Iiot с клиентом без транспорта: отказ подключения с кодом -1 |
+| `FB_KnsShim_Test` | `MapIgnoresTooSmallTable` | FB_IiotKnsMap: массив меньше перечня метрик или слов тревог не заполняется (нет выхода за границы) |
+| `FB_KnsShim_Test` | `VfdCommLossMeansBadQuality` | потеря связи с ПЧ — quality bad у метрик ПЧ: и как отказ (wFault), и как предупреждение (wWarning) |
 
 ## Проверки без CODESYS
 
@@ -86,8 +234,19 @@ _Нет._
 
 | Проверка | Итог | Примечание |
 |---|---|---|
-| `ruff check`, `ruff format --check`, `mypy`, `pytest` | пройдено, 2026-10-16, локально | pytest: все тесты, включая интеграционные с настоящими `plc` и iec_checker |
-| `tools/assemble.py` (все варианты, с `--tests` и без) | пройдено, 2026-10-16, локально | 8 объектов `src/` + 3 объекта `tests/` |
-| `tools/check/st_lint.py --strict` | пройдено, 2026-10-16, локально | 60 файлов, 0 замечаний |
-| iec_checker 0.4 (локально, `run_iec_checker.py --tests`) | пройдено, 2026-10-16 | 11 файлов, ошибок разбора нет; необоснованных находок 0, обоснованных 100 — разбор в [STATIC_ANALYSIS.md](STATIC_ANALYSIS.md) |
-| RuSTy 1.0.6 (локально, `run_rusty.py`) | пройдено, 2026-10-16 | 11 файлов (`src/` и `tests/` с прокладкой coUnit), исключений нет, 0 ошибок, 0 предупреждений |
+| `ruff check`, `ruff format --check`, `mypy --strict`, `pytest` (корень) | пройдено, 2026-10-16, локально | pytest: 675 пройдено при поднятом локальном стенде (из них 12 интеграционных), 10 отключено (тесты шаблона, `pyproject.toml`); без стенда интеграционные пропускаются; интеграционные с настоящим iec_checker выполнялись |
+| эмулятор `emulator/`: mypy, pytest | пройдено, 2026-10-16, локально | 93 теста |
+| отчёт `report/`: mypy, pytest | пройдено, 2026-10-16, локально | 89 пройдено, 1 пропущен без стенда (`test_live_influx.py`); на локальном стенде — 90 из 90 |
+| `tools_project/gen_plc_iiot.py --check`, `gen_config.py --check` | пройдено, 2026-10-16, локально | таблицы ПЛК, узлы OPC UA, тексты тревог, дашборды и таблицы `data_schema.md` совпадают со `schema/` |
+| `tools/check/st_lint.py --strict` | пройдено, 2026-10-16, локально | 506 файлов `src/` и `tests/`, 0 замечаний; адаптер `adapters/sd_mqtt_1_0` — 20 файлов, 0 замечаний |
+| iec_checker 0.4 через `tools_project/iec_checker_gate.py` | пройдено, 2026-10-16, локально | 94 объекта `src/` и `tests/`; необоснованных 0, известных пробелов разборщика 2, обоснованных 1732 — разбор в [STATIC_ANALYSIS.md](STATIC_ANALYSIS.md) |
+| RuSTy 1.0.6 (локально, `run_rusty.py`, необязательно) | 414 ошибок, 19 предупреждений | расширения CODESYS, которых нет в RuSTy (`VAR_IN_OUT CONSTANT`, `s[i]`, `ARRAY[*]`) и в прокладках шаблона — [STATIC_ANALYSIS.md](STATIC_ANALYSIS.md#rusty-plc---check) |
+
+## Стенд: сквозной путь данных
+
+| Проверка | Итог | Примечание |
+|---|---|---|
+| локальный стенд без Docker (`tools_project/local_stack.ps1 start -Emulator`): InfluxDB 2.9.1, Telegraf 1.39.3, Grafana 12.4.12 (сборки для Windows), брокер amqtt 0.12.1, эмулятор | пройдено, 2026-10-16 | данные на дашбордах через 5 с после запуска эмулятора; отличия от compose — [ARCHITECTURE.md](ARCHITECTURE.md#10-локальный-стенд-без-docker) |
+| `python -m pytest -m stack tests_stack` на локальном стенде | 12 из 12, 2026-10-16 | все 115 метрик каталога по MQTT, путь OPC UA (115 узлов, `StatusGood`), ACL, фильтр мажорной версии, завещание (LWT), аудит команд, отказ `not_whitelisted` сквозь базу, `out_of_range`, принятая команда, задача прореживания (среднее, взвешенное по времени, против расчёта по сырым точкам) |
+| `tools_project/check_dashboards.py` на локальном стенде | 42 из 42, 2026-10-16 | без отказов — 39–41 панель с данными и 1–3 пустых списка отклонений (сколько отклонений есть в данный момент); с отказами, включёнными через OPC UA (`Simulation.Inject`), данные у всех 42 |
+| `make demo DEV=1`, `make test-stack`, отчёт по данным стенда в docker compose | ждёт CI | задание `stack` в `.github/workflows/ci.yml` (Linux); на машине разработки Docker нет |
