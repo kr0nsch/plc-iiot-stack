@@ -2,6 +2,9 @@
 версии и идентичность библиотек (cds_common), имена ссылок, задания library/deps/uninstall, сборка
 зависимостей в соседних репозиториях (команда, окружение, проверки), учёт установок и рабочие копии
 (git worktree): переменные рабочей копии не читаются из реестра, блокировки и build/ — свои у каждой копии.
+
+Настройки — эталон tools/tests/fixtures/config_template.json (conftest.template_config), а не
+config.json репозитория: у проекта свои библиотеки, задачи и библиотека репозитория (раздел library).
 """
 
 from __future__ import annotations
@@ -17,14 +20,11 @@ import pytest
 
 import cds_common as C
 from cdshost import cli
-from conftest import REPO_ROOT
-
-CONFIG = REPO_ROOT / "tools" / "codesys" / "config.json"
+from conftest import template_config
 
 
 def base_config() -> dict[str, Any]:
-    data: dict[str, Any] = json.loads(CONFIG.read_text(encoding="utf-8"))
-    return data
+    return template_config()
 
 
 def settings_for(root: Path, env: dict[str, str] | None = None, config: dict[str, Any] | None = None) -> cli.Settings:
@@ -237,6 +237,64 @@ def test_missing_dependencies_recursive() -> None:
     assert C.missing_dependencies(lib("x", "1.0.0.0"), []) == []  # без поля dependencies
 
 
+STANDARD = {"title": "Standard", "company": "System", "version": "3.5.17.0", "namespace": "Standard"}
+
+
+def standard_spec(key: str, **extra: Any) -> dict[str, Any]:
+    spec: dict[str, Any] = {"key": key, "title": "Standard", "company": "System", "version": "*"}
+    spec.update(extra)
+    return spec
+
+
+def test_dedupe_libraries_same_reference_is_one() -> None:
+    """Проект описал Standard своим ключом, шаблон — своим: ссылка одна, явные настройки сливаются."""
+    pl = lib("plc-process-lib", "1.0.0.0")
+    resolved = [
+        (standard_spec("std", placeholder="standard"), dict(STANDARD)),
+        ({"key": "pl", "title_contains": "plc-process-lib", "version": "1.0.0.0"}, pl),
+        (standard_spec("standard", placeholder="Standard", qualified_only=False), dict(STANDARD)),
+    ]
+    kept, notes = C.dedupe_libraries(resolved)
+    assert [spec["key"] for spec, _ in kept] == ["std", "pl"]
+    assert kept[0][0]["qualified_only"] is False  # явное значение второго описания дополняет первое
+    assert len(notes) == 1 and "libraries.std и libraries.standard" in notes[0]
+    assert "#standard -> Standard, * (System)" in notes[0]
+    # совпадение — по найденной библиотеке, а не по тексту описания (title_contains, namespace)
+    by_namespace = [(standard_spec("a"), dict(STANDARD)), ({"key": "b", "namespace": "Standard"}, dict(STANDARD))]
+    assert [spec["key"] for spec, _ in C.dedupe_libraries(by_namespace)[0]] == ["a"]
+    assert C.dedupe_libraries([]) == ([], [])
+
+
+@pytest.mark.parametrize(
+    ("second", "fragment"),
+    [
+        (standard_spec("standard"), "ссылки #Standard -> Standard, * (System) и Standard, * (System)"),
+        (standard_spec("standard", placeholder="Standard", version="3.5.17.0"), "Standard, 3.5.17.0 (System)"),
+        (standard_spec("standard", placeholder="Standard", qualified_only=True), "qualified_only: False и True"),
+        (standard_spec("standard", placeholder="Standard", namespace="Std"), "namespace: Standard и Std"),
+    ],
+)
+def test_dedupe_libraries_conflict(second: dict[str, Any], fragment: str) -> None:
+    """Разные ссылки на одну библиотеку: импорт заменял бы одну другой при каждом запуске — отказ."""
+    first = standard_spec("std", placeholder="Standard", qualified_only=False, namespace="Standard")
+    with pytest.raises(C.StepError) as err:
+        C.dedupe_libraries([(first, dict(STANDARD)), (second, dict(STANDARD))])
+    text = str(err.value)
+    assert err.value.code == C.EXIT_FAILED and "libraries.std и libraries.standard" in text
+    assert "одну библиотеку Standard (System)" in text and fragment in text
+
+
+def test_resolve_libraries_dedupes(monkeypatch: pytest.MonkeyPatch) -> None:
+    steps: Any = importlib.import_module("import_sources")  # скрипт CODESYS, без CODESYS импортируется
+    std = dep_lib("Standard", "3.5.17.0", [], company="System")
+    monkeypatch.setattr(C, "installed_libraries", lambda: [std])
+    log = C.Log(None)
+    specs = [standard_spec("standard", placeholder="Standard"), standard_spec("Standard", placeholder="Standard")]
+    resolved = steps.resolve_libraries(specs, "System", log)
+    assert [spec["key"] for spec, _ in resolved] == ["standard"]
+    assert len(log.warnings) == 1 and "ссылка одна" in log.warnings[0]
+
+
 class FakeManagedLib:
     """ManagedLib репозитория CODESYS: только нужные свойства."""
 
@@ -349,9 +407,8 @@ def test_run_main_merges_step_error_data(tmp_path: Path, monkeypatch: pytest.Mon
 
 
 def repo_library_raw() -> dict[str, Any]:
-    """Секция library из config.json этой рабочей копии (в проектах она своя)."""
-    cfg_path = Path(__file__).resolve().parents[1] / "codesys" / "config.json"
-    raw: dict[str, Any] = json.loads(cfg_path.read_text(encoding="utf-8"))["library"]
+    """Раздел library эталона настроек (config.json шаблона)."""
+    raw: dict[str, Any] = base_config()["library"]
     return raw
 
 
@@ -366,7 +423,9 @@ def test_repo_library_config(tmp_path: Path) -> None:
     assert info["released"] is raw["released"] and info["placeholder"] == raw["placeholder"]
     assert lib_cfg["path"] == root / "build" / f"{root.name}.library"
     assert lib_cfg["compiled_path"] == root / "build" / f"{root.name}.compiled-library"
-    assert lib_cfg["exclude"] == raw["exclude"] and lib_cfg["libraries"] == raw["libraries"]
+    assert lib_cfg["exclude"] == raw["exclude"]
+    assert [x["key"] for x in lib_cfg["libraries"]] == raw["libraries"] == ["standard"]
+    assert lib_cfg["libraries"][0]["placeholder"] == "Standard"
     assert lib_cfg["label"] == f"{raw['title']}, {version} ({raw['company']})"
     # название и компания не зависят от каталога рабочей копии (git worktree)
     assert settings_for(tmp_path / "wt-feature").library_config()["info"]["title"] == raw["title"]
@@ -425,7 +484,7 @@ def test_doc_keys_are_not_libraries(tmp_path: Path) -> None:
     s = settings_for(tmp_path)
     with pytest.raises(cli.CdsError):
         s.library_spec("_doc")
-    assert s.referenced_library_keys() == ["counit"]
+    assert s.referenced_library_keys() == ["counit", "standard"]
 
 
 def test_referenced_library_keys_and_repository(tmp_path: Path) -> None:
@@ -448,7 +507,7 @@ def test_import_step_carries_repository(tmp_path: Path) -> None:
     s = settings_for(tmp_path, {"CDS_LIBRARY_REPOSITORY": "Mine"}, config=consumer_config())
     step = cli.import_step(s, False, s.project_path(False))
     assert step["library_repository"] == "Mine"
-    assert [x["key"] for x in step["mode_config"]["libraries"]] == ["plc-process-lib"]
+    assert [x["key"] for x in step["mode_config"]["libraries"]] == ["plc-process-lib", "standard"]
     assert [x["key"] for x in step["other_libraries"]] == ["counit"]
 
 
@@ -864,6 +923,13 @@ def deps_result(found: bool) -> dict[str, Any]:
             "displayname": "coUnit",
             "version": "1.2.0.0",
             "installed_versions": ["1.2.0.0"],
+        },
+        {
+            "key": "standard",
+            "found": True,
+            "displayname": "Standard, 3.5.17.0 (System)",
+            "version": "3.5.17.0",
+            "installed_versions": ["3.5.17.0"],
         },
     ]
     return {"ok": True, "exit_code": 0, "steps": [{"action": "deps", "ok": True, "libraries": entries}]}

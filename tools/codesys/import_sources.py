@@ -584,7 +584,8 @@ def resolve_libraries(specs, repository, log, install=True):
     отсутствующие (и библиотеки без своих зависимостей) — одна StepError (код 3) со списком
     missing_libraries: по нему cds.py собирает библиотеки из соседних репозиториев (build_from_repo;
     сборка библиотеки там же ставит и её зависимости) и повторяет шаг. Проект при этом не меняется:
-    разрешение идёт до открытия проекта.
+    разрешение идёт до открытия проекта. Описания, которые нашли одну и ту же библиотеку, сливаются
+    в одно (C.dedupe_libraries): ссылка на библиотеку в проекте всегда одна.
     """
     if not specs:
         return []
@@ -622,6 +623,10 @@ def resolve_libraries(specs, repository, log, install=True):
             C.EXIT_INTERNAL,
             data={'missing_libraries': keys},
         )
+    # одна библиотека — одна ссылка, даже если её описывают два ключа config.json (свой и шаблона)
+    resolved, notes = C.dedupe_libraries(resolved)
+    for note in notes:
+        log.warn(note)
     return resolved
 
 
@@ -774,6 +779,7 @@ def run(ctx, step):
     # type: (C.Context, Dict[str, Any]) -> Dict[str, Any]
     log = C.Log(step.get('log'))
     report = Report(log)
+    references = []  # type: List[str]
     try:
         repo_root = step['repo_root']
         with_tests = bool(step.get('with_tests'))
@@ -810,7 +816,10 @@ def run(ctx, step):
                 wanted_paths.add(tuple(p.lower() for p in folder_path[:i]))
         syncer.remove_empty_folders(wanted_paths)
         sync_tasks(app, mode_cfg.get('tasks') or [], log, report)
-        sync_libraries(find_library_manager(app), resolved, step.get('other_libraries') or [], log, report)
+        libman = find_library_manager(app)
+        sync_libraries(libman, resolved, step.get('other_libraries') or [], log, report)
+        references.extend(C._text(r.name) for r in libman.references)
+        log.info('ссылки Library Manager: %s' % ', '.join(references))
         proj.save()
         log.info(
             'проект сохранён: создано %d, обновлено %d, удалено %d, перемещено %d, без изменений %d'
@@ -824,6 +833,7 @@ def run(ctx, step):
                 'mode': step.get('mode'),
                 'with_tests': with_tests,
                 'objects': len(wanted),
+                'references': references,
                 'installed_libraries': installed_from_files(resolved),
                 'warnings': log.warnings,
                 'errors': log.errors,
@@ -839,7 +849,8 @@ def run(ctx, step):
     finally:
         if step.get('report'):
             data = report.as_dict()
-            data.update({'warnings': log.warnings, 'errors': log.errors, 'project': step.get('project')})
+            data.update({'warnings': log.warnings, 'errors': log.errors, 'project': step.get('project'),
+                         'references': references})
             try:
                 C.write_json(step['report'], data)
             except Exception:

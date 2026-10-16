@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -14,6 +16,18 @@ FIXTURES = TESTS_DIR / "fixtures"
 SAMPLE = FIXTURES / "sample"
 GOLDEN = TESTS_DIR / "golden"
 REPO_ROOT = TESTS_DIR.parent.parent
+# Эталон настроек cds.py для тестов инструментов — копия tools/codesys/config.json шаблона. Тесты не читают
+# config.json репозитория: в проектах он свой (библиотеки, задачи, библиотека репозитория). Живой config.json
+# проверяет только test_cds_config.py — на уровне схемы (те же разделы и ключи, что у эталона).
+CONFIG_TEMPLATE = FIXTURES / "config_template.json"
+LIVE_CONFIG = REPO_ROOT / "tools" / "codesys" / "config.json"
+
+
+def template_config() -> dict[str, Any]:
+    """Свежая копия эталона настроек (тесты могут её менять)."""
+    data: dict[str, Any] = json.loads(CONFIG_TEMPLATE.read_text(encoding="utf-8"))
+    return data
+
 
 MakeTree = Callable[[dict[str, str]], Path]
 

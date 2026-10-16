@@ -1,32 +1,35 @@
 """Тесты хост-части инструментов CODESYS (tools/codesys/cdshost/cli.py, cds_common.py) — без CODESYS.
 
 Проверяются: строка запуска CODESYS, разрешение config.json и переменных окружения, файл задания,
-шаги заданий, JUnit, отчёт TEST_REPORT.md, блокировки, защита проекта от перезаписи, сравнение
-деревьев roundtrip, привязка сообщений компилятора к файлам, разбор процессов рантайма и чистые
-функции cds_common (значения ПЛК, интервалы задач, GUID типов).
+шаги заданий, команда check, JUnit, отчёт TEST_REPORT.md, блокировки, защита проекта от перезаписи,
+сравнение деревьев roundtrip, привязка сообщений компилятора к файлам, разбор процессов рантайма и
+чистые функции cds_common (значения ПЛК, интервалы задач, GUID типов).
+
+Настройки — эталон tools/tests/fixtures/config_template.json (conftest.template_config), а не
+config.json репозитория: в проектах он свой, и тесты инструментов от него не зависят.
 """
 
 from __future__ import annotations
 
+import importlib
 import json
 import os
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
 
 import cds_common as C
 from cdshost import cli
-from conftest import REPO_ROOT, MakeTree
-
-CONFIG = REPO_ROOT / "tools" / "codesys" / "config.json"
+from conftest import REPO_ROOT, MakeTree, template_config
 
 
 def settings_for(root: Path, env: dict[str, str] | None = None, config: dict[str, Any] | None = None) -> cli.Settings:
-    data = config if config is not None else json.loads(CONFIG.read_text(encoding="utf-8"))
+    data = config if config is not None else template_config()
     environ = {"USERPROFILE": str(root / "home"), "HOME": str(root / "home")}
     environ.update(env or {})
     return cli.Settings(data, root, cli.make_getenv(environ, registry=False))
@@ -65,17 +68,22 @@ def test_write_job_is_utf8_lf(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_config_is_valid_json_without_user_paths() -> None:
-    text = CONFIG.read_text(encoding="utf-8")
-    data = json.loads(text)
-    user = os.environ.get("USERNAME") or os.environ.get("USER")
-    assert not user or f"/{user.lower()}/" not in text.lower().replace("\\\\", "/")
-    assert "C:\\\\Users" not in text and "C:/Users" not in text
+def test_template_config_defaults() -> None:
+    """Значения по умолчанию эталона (config.json шаблона); живой config.json — test_cds_config.py."""
+    data = template_config()
     assert data["device"]["type"]["default"] == 4096
     assert data["device"]["id"]["default"] == "0000 0001"
     assert data["modes"]["normal"]["tasks"][0] == {"name": "MainTask", "interval_ms": 20, "pous": ["PRG_Main"]}
     assert data["modes"]["test"]["tasks"][0] == {"name": "TestTask", "interval_ms": 10, "pous": ["PRG_Tests"]}
     assert data["modes"]["test"]["libraries"] == ["counit"]
+    # Standard — плейсхолдер #Standard, как в проектах IDE: версию задаёт профиль, доступны TON и Standard.TON
+    assert data["libraries"]["standard"]["placeholder"] == "Standard"
+    assert data["libraries"]["standard"]["version"] == "*"
+    # явные namespace и qualified_only: импорт возвращает их, если ссылку поменяли в IDE, а свой ключ
+    # проекта с другим пространством имён — отказ, а не тихая подмена (код опирается на Standard.TON)
+    assert data["libraries"]["standard"]["namespace"] == "Standard"
+    assert data["libraries"]["standard"]["qualified_only"] is False
+    assert data["library"]["libraries"] == ["standard"]
 
 
 def test_defaults_resolve_relative_to_repo(tmp_path: Path) -> None:
@@ -160,10 +168,32 @@ def test_mode_config_resolves_libraries(tmp_path: Path) -> None:
     assert spec["version"] == "1.2.0.0"
     assert spec["install_from"] == str(lib)
     assert spec["install_env"] == "COUNIT_LIBRARY"
-    assert s.mode_config("normal")["libraries"] == []
+    # Standard (library.libraries) — во всех режимах, coUnit — только в test
+    assert [x["key"] for x in mode["libraries"]] == ["counit", "standard"]
+    normal = s.mode_config("normal")["libraries"]
+    assert [x["key"] for x in normal] == ["standard"]
+    assert normal[0]["placeholder"] == "Standard" and normal[0]["install_from"] is None
     assert [x["namespace"] for x in s.other_libraries("normal")] == ["coUnit"]
     assert s.other_libraries("test") == []
     assert settings_for(tmp_path).mode_config("test")["libraries"][0]["install_from"] is None
+
+
+def test_mode_libraries_without_standard(tmp_path: Path) -> None:
+    """Проект, который убрал Standard из library.libraries, получает только библиотеки режима."""
+    data = template_config()
+    data["library"]["libraries"] = []
+    s = settings_for(tmp_path, config=data)
+    assert s.mode_config("normal")["libraries"] == []
+    assert [x["key"] for x in s.mode_config("test")["libraries"]] == ["counit"]
+
+
+def test_same_key_in_mode_and_library_is_one_reference(tmp_path: Path) -> None:
+    """Standard и в modes.normal.libraries (так его подключали проекты раньше), и в library.libraries — один ключ."""
+    data = template_config()
+    data["modes"]["normal"]["libraries"] = ["standard"]
+    s = settings_for(tmp_path, config=data)
+    assert [x["key"] for x in s.mode_config("normal")["libraries"]] == ["standard"]
+    assert s.referenced_library_keys() == ["standard", "counit"]
 
 
 def test_unknown_mode_is_usage_error(tmp_path: Path) -> None:
@@ -208,6 +238,72 @@ def test_job_steps(tmp_path: Path) -> None:
     assert test["meta"]["runtime"] == "CODESYS Control Win V3 (пользовательский процесс)"
     exp = cli.export_step(s, project, tmp_path / "out", True)
     assert exp["out_root"] == str(tmp_path / "out") and exp["with_tests"] is True
+
+
+def test_check_step(tmp_path: Path) -> None:
+    root = tmp_path / "pump-station"
+    s = settings_for(root)
+    step = cli.check_step(s, False)
+    assert step["action"] == "check" and step["mode"] == "normal" and step["with_tests"] is False
+    assert step["project"] == str(root / "build" / "codesys" / "pump-station-check.project")
+    assert [x["key"] for x in step["libraries"]] == ["standard"]
+    assert step["repository"] == "System" and step["tests_folder"] == "Tests"
+    # устройство — чтобы скопировать в пул проверки ссылки, которые оно добавляет приложению само
+    assert step["device"] == {"name": "Device", "type": 4096, "id": "0000 0001", "version": "3.5.17.30"}
+    assert step["log"] == str(root / "build" / "check.log") and step["report"] == str(root / "build" / "check.json")
+    tests = cli.check_step(s, True)
+    assert tests["mode"] == "test" and tests["with_tests"] is True
+    assert [x["key"] for x in tests["libraries"]] == ["counit", "standard"]
+
+
+def check_result(errors: int, messages: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    step: dict[str, Any] = {
+        "action": "check",
+        "ok": errors == 0,
+        "objects": 7,
+        "errors": errors,
+        "warnings": 0,
+        "messages": messages or [],
+        "duration_s": 1.0,
+    }
+    if errors:
+        step["error"] = f"проверка всех объектов: ошибок {errors}"
+    return {"ok": errors == 0, "exit_code": 1 if errors else 0, "steps": [step]}
+
+
+def test_cmd_check_reports_unreachable_errors_with_source(
+    make_tree: MakeTree, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = make_tree(LAYOUT)
+    s = settings_for(root, {"LOCALAPPDATA": str(root / "lad")})
+    (root / "build").mkdir()
+    (root / "build" / "check.json").write_text(json.dumps({"messages": []}), encoding="utf-8")
+    msg = {
+        "severity": "Error",
+        "code": "C0032",
+        "object": "FB_A.Run",
+        "text": "Невозможно конвертировать тип 'DINT' в тип 'INT'",
+        "position": "Строка 1, Столбец 1 (Реализ.)",
+    }
+    jobs: list[dict[str, Any]] = []
+
+    def fake_run(settings: cli.Settings, script: str, job: dict[str, Any], label: str, **kw: Any) -> dict[str, Any]:
+        jobs.append({"script": script, "job": job, "label": label})
+        return check_result(1, [msg])
+
+    monkeypatch.setattr(cli, "run_codesys", fake_run)
+    assert cli.cmd_check(s, cli.build_parser().parse_args(["check", "--tests"])) == cli.EXIT_FAILED
+    assert jobs[0]["script"] == "check_sources.py" and jobs[0]["label"] == "check"
+    step = jobs[0]["job"]["steps"][0]
+    assert step["action"] == "check" and step["with_tests"] is True
+    out = capsys.readouterr().out
+    assert "src/POUs/FB_A/Run.method.impl.st:1: Error C0032" in out
+    saved = json.loads((root / "build" / "check.json").read_text(encoding="utf-8"))
+    assert saved["messages"][0]["source"] == "src/POUs/FB_A/Run.method.impl.st:1"
+    assert not (root / "build" / "codesys" / "cds.lock.owner").exists()  # блокировка снята
+    monkeypatch.setattr(cli, "run_codesys", lambda *a, **k: check_result(0))
+    assert cli.cmd_check(s, cli.build_parser().parse_args(["check"])) == cli.EXIT_OK
+    assert "все объекты src/ скомпилированы без ошибок (7 объектов)" in capsys.readouterr().out
 
 
 # ---------------------------------------------------------------------------
@@ -699,6 +795,143 @@ def test_print_steps_without_test_totals(capsys: pytest.CaptureFixture[str]) -> 
     assert "тесты не выполнялись" in out and "None" not in out
 
 
+@pytest.mark.parametrize(
+    ("decl", "expected"),
+    [
+        (
+            "VAR_GLOBAL PERSISTENT RETAIN\n    x : INT;\nEND_VAR\n",
+            "VAR_GLOBAL            RETAIN\n    x : INT;\nEND_VAR\n",
+        ),
+        ("// шапка\nvar_global retain persistent\nEND_VAR\n", "// шапка\nvar_global retain           \nEND_VAR\n"),
+        (  # комментарий и имя переменной со словом PERSISTENT не трогаются
+            "VAR_GLOBAL (* PERSISTENT *) PERSISTENT\n    PERSISTENT_x : INT; // PERSISTENT\nEND_VAR\n",
+            "VAR_GLOBAL (* PERSISTENT *)           \n    PERSISTENT_x : INT; // PERSISTENT\nEND_VAR\n",
+        ),
+        ("VAR_GLOBAL\n    x : INT;\nEND_VAR\n", "VAR_GLOBAL\n    x : INT;\nEND_VAR\n"),
+    ],
+)
+def test_pvl_as_gvl_keeps_positions(decl: str, expected: str) -> None:
+    """Заменитель Persistent Variables в cds.py check: без PERSISTENT, строки и столбцы — как в файле."""
+    steps: Any = importlib.import_module("check_sources")  # скрипт CODESYS, без CODESYS импортируется
+    assert steps.pvl_as_gvl(decl) == expected
+
+
+def test_check_option_files(tmp_path: Path) -> None:
+    """Файлы настроек пользователя проекта проверки (<имя>-*.opt) — и только они."""
+    steps: Any = importlib.import_module("check_sources")
+    names = ["tpl-check-AllUsers.opt", "TPL-CHECK-user-host.opt", "tpl-library-AllUsers.opt", "tpl-check.json", "x.opt"]
+    for name in names:
+        (tmp_path / name).write_text("", encoding="utf-8")
+    found = [Path(p).name for p in steps.option_files(str(tmp_path / "tpl-check.project"))]
+    assert sorted(found) == ["TPL-CHECK-user-host.opt", "tpl-check-AllUsers.opt"]
+    assert steps.option_files(str(tmp_path / "missing" / "a.project")) == []
+
+
+class FakeRef:
+    """Ссылка Library Manager: плейсхолдер или обычная (только свойства, которые читает ref_record)."""
+
+    def __init__(self, name: str, placeholder: str | None = None, target: str = "", namespace: str = "") -> None:
+        self.name = name
+        self.is_placeholder = placeholder is not None
+        self.placeholder_name = placeholder
+        self.effective_resolution = target or None
+        self.default_resolution = target or None
+        self.namespace = namespace
+        self.qualified_only = False
+        self.is_managed = placeholder is None
+        self.managed_library = None
+
+    def get_redirection(self) -> None:
+        return None
+
+
+class FakeLibman:
+    is_libman = True
+
+    def __init__(self, refs: list[FakeRef] | None = None) -> None:
+        self.references = list(refs or [])
+
+    def add_placeholder(self, name: str, target: str) -> None:
+        self.references.append(FakeRef("#" + name, name, target, namespace=name))
+
+    def add_library(self, lib: Any) -> None:
+        self.references.append(FakeRef(str(lib), namespace="lib"))
+
+
+class FakeObj:
+    def __init__(self, children: list[Any]) -> None:
+        self.children = children
+
+    def get_children(self, recursive: bool) -> list[Any]:
+        return list(self.children)
+
+
+class FakeDevice(FakeObj):
+    is_device = True
+
+    def __init__(self, proj: FakeProject, app: FakeObj) -> None:
+        super().__init__([app])
+        self.proj = proj
+
+    def remove(self) -> None:
+        self.proj.children.remove(self)
+
+
+class FakeProject(FakeObj):
+    def __init__(self, device_refs: list[FakeRef]) -> None:
+        super().__init__([])
+        self.device_refs = device_refs
+        self.pool = FakeLibman()
+        self.added: list[tuple[str, Any]] = []
+        self.app: FakeObj | None = None
+
+    def add(self, name: str, device_id: Any) -> None:
+        self.added.append((name, device_id))
+        self.app = FakeObj([FakeLibman(self.device_refs)])
+        self.children.append(FakeDevice(self, self.app))
+
+    @property
+    def active_application(self) -> FakeObj | None:
+        return self.app if self.children else None
+
+    def get_library_manager(self) -> FakeLibman:
+        return self.pool
+
+
+def test_check_mirrors_device_libraries(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Ссылки, которые добавляет устройство, копируются в пул проверки, устройство удаляется."""
+    steps: Any = importlib.import_module("check_sources")
+    monkeypatch.setattr(C, "api", lambda: SimpleNamespace(DeviceID=lambda t, i, v: (t, i, v)))
+    device_refs = [
+        FakeRef("#IoStandard", "IoStandard", "IoStandard, 3.5.17.0 (System)", namespace="IoStandard"),
+        FakeRef("#BreakpointLogging", "BreakpointLogging", "Breakpoint Logging Functions, 3.5.17.0 (3S)", "BPLog"),
+        FakeRef("#Broken", "Broken", ""),  # ни во что не разрешается — предупреждение, остальные копируются
+        FakeRef("Util, 3.5.17.0 (System)", namespace="Util"),
+    ]
+    proj = FakeProject(device_refs)
+    proj.pool.references.append(FakeRef("#IoStandard", "IoStandard", "IoStandard, 3.5.17.0 (System)", "IoStandard"))
+    log = C.Log(None)
+    device = {"name": "Device", "type": 4096, "id": "0000 0001", "version": "3.5.17.30"}
+    copied = steps.mirror_device_libraries(proj, device, log)
+    assert proj.added == [("Device", (4096, "0000 0001", "3.5.17.30"))]
+    assert copied == ["#BreakpointLogging -> Breakpoint Logging Functions, 3.5.17.0 (3S)", "Util, 3.5.17.0 (System)"]
+    by_name = {r.name: r for r in proj.pool.references}
+    assert by_name["#BreakpointLogging"].namespace == "BPLog"  # пространство имён — как у устройства
+    assert by_name["Util, 3.5.17.0 (System)"].namespace == "Util"
+    assert len([r for r in proj.pool.references if r.name == "#IoStandard"]) == 1  # уже был — не дублируется
+    assert proj.children == []  # устройство удалено
+    assert len(log.warnings) == 1 and "#Broken" in log.warnings[0]
+    # без устройства в задании — ничего; устройство не добавляется — предупреждение и пустой список
+    assert steps.mirror_device_libraries(FakeProject(device_refs), None, log) == []
+
+    def no_device(t: int, i: str, v: str) -> None:
+        raise RuntimeError("Устройство не найдено")
+
+    monkeypatch.setattr(C, "api", lambda: SimpleNamespace(DeviceID=no_device))
+    assert steps.mirror_device_libraries(FakeProject(device_refs), device, log) == []
+    assert "не добавлено (Устройство не найдено)" in log.warnings[-1]
+
+
 # ---------------------------------------------------------------------------
 # Запускатель
 # ---------------------------------------------------------------------------
@@ -713,5 +946,6 @@ def test_launcher_help_runs() -> None:
         check=False,
     )
     assert proc.returncode == 0
-    for command in ("import", "export", "build", "test", "roundtrip", "library", "deps", "runtime", "junit", "report"):
+    commands = ("import", "export", "build", "check", "test", "roundtrip", "library", "deps", "runtime", "junit")
+    for command in (*commands, "report"):
         assert command in proc.stdout

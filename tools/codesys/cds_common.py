@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """Общая часть скриптов CODESYS Scripting (IronPython 2.7): задание, журнал, результат, дерево объектов.
 
-Модуль импортируют import_sources.py, export_sources.py, build.py и run_tests.py. Он написан на
-общем подмножестве Python 2.7 и 3.x (как stlayout.py): чистые функции (разбор значений ПЛК,
+Модуль импортируют все скрипты шагов (import_sources.py, export_sources.py, build.py, run_tests.py,
+make_library.py, check_sources.py, library_repo.py). Он написан на общем подмножестве Python 2.7
+и 3.x (как stlayout.py): чистые функции (разбор значений ПЛК,
 определение вида объекта по GUID, пути) проверяются pytest без CODESYS, а функции, которым нужен
 CODESYS, обращаются к модулю scriptengine (в среде CODESYS он импортируется явно — проверено на
 3.5.17.30: в импортируемых модулях доступны projects, system, online, librarymanager, PouType,
@@ -10,8 +11,8 @@ DutType, DeviceID, OnlineChangeOption, Severity).
 
 Параметры передаются не аргументами командной строки, а файлом задания (JSON): путь к нему — в
 переменной окружения CDS_JOB. Его пишет tools/codesys/cds.py. Задание — список шагов
-(import, export, build, test), шаги выполняются по порядку в одном процессе CODESYS; итог
-записывается в файл результата (job["result"]) и возвращается кодом выхода процесса
+(import, export, build, test, library, check, ...), шаги выполняются по порядку в одном процессе
+CODESYS; итог записывается в файл результата (job["result"]) и возвращается кодом выхода процесса
 (sys.exit(n) доходит до ОС — проверено на 3.5.17.30; необработанное исключение даёт код 1).
 """
 from __future__ import absolute_import, print_function, unicode_literals
@@ -531,6 +532,69 @@ def missing_dependencies(rec, records):
     return missing
 
 
+def describe_reference(spec, rec):
+    # type: (Dict[str, Any], Dict[str, Any]) -> str
+    """Ссылка, которую добавит импорт: '#Standard -> Standard, * (System)' или 'T, 1.0.0.0 (C)'."""
+    want = spec_reference(spec, rec)
+    if spec.get('placeholder'):
+        return '#%s -> %s' % (_text(spec['placeholder']), want)
+    return want
+
+
+def dedupe_libraries(resolved):
+    # type: (List[Tuple[Dict[str, Any], Dict[str, Any]]]) -> Tuple[List[Tuple[Dict[str, Any], Dict[str, Any]]], List[str]]
+    """Одна библиотека — одна ссылка: описания config.json, которые нашли одну и ту же библиотеку.
+
+    Повтор возникает, когда проект описал библиотеку под своим ключом, а шаблон — под своим
+    (Standard в modes.normal.libraries и в library.libraries). Импорт добавил бы ссылку по первому
+    описанию, а по второму заменял бы её при каждом запуске. Библиотеку определяет найденная запись
+    (название и компания, без учёта регистра), а не текст описания: title, title_contains и namespace
+    могут описывать одну библиотеку по-разному.
+
+    Описания с одинаковой ссылкой (вид — плейсхолдер или обычная, имя плейсхолдера, версия)
+    сливаются: остаётся первое (порядок — modes.<режим>.libraries, затем library.libraries), явные
+    namespace и qualified_only второго дополняют его. Разные ссылки на одну библиотеку или разные
+    явные namespace/qualified_only — StepError. Возвращает (пары без повторов, заметки о слитых описаниях).
+    """
+    kept = []  # type: List[Tuple[Dict[str, Any], Dict[str, Any]]]
+    notes = []  # type: List[str]
+    for spec, rec in resolved:
+        ident = (_low(rec.get('title')), _low(rec.get('company')))
+        index = None
+        for i, (_, krec) in enumerate(kept):
+            if (_low(krec.get('title')), _low(krec.get('company'))) == ident:
+                index = i
+                break
+        if index is None:
+            kept.append((spec, rec))
+            continue
+        kspec, krec = kept[index]
+        first = describe_reference(kspec, krec)
+        second = describe_reference(spec, rec)
+        problems = []  # type: List[str]
+        if (_low(kspec.get('placeholder')), _low(spec_reference(kspec, krec))) != (
+                _low(spec.get('placeholder')), _low(spec_reference(spec, rec))):
+            problems.append('ссылки %s и %s' % (first, second))
+        merged = dict(kspec)
+        for key in ('namespace', 'qualified_only'):
+            mine, other = kspec.get(key), spec.get(key)
+            if mine is not None and other is not None and mine != other:
+                problems.append('%s: %s и %s' % (key, _text(mine), _text(other)))
+            elif mine is None and other is not None:
+                merged[key] = other
+        names = ('libraries.%s' % _text(kspec.get('key') or kspec.get('label') or '?'),
+                 'libraries.%s' % _text(spec.get('key') or spec.get('label') or '?'))
+        if problems:
+            raise StepError(
+                '%s и %s описывают одну библиотеку %s (%s), но по-разному: %s — оставьте одно описание '
+                '(config.json: libraries, modes.*.libraries, library.libraries)'
+                % (names[0], names[1], _text(rec.get('title')), _text(rec.get('company')), '; '.join(problems)))
+        kept[index] = (merged, krec)
+        notes.append('%s и %s описывают одну библиотеку %s (%s): ссылка одна — %s; лишнее описание можно удалить'
+                     % (names[0], names[1], _text(rec.get('title')), _text(rec.get('company')), first))
+    return kept, notes
+
+
 def library_problems(info):
     # type: (Dict[str, Any]) -> List[str]
     """Проверка Project Information библиотеки (config.json: library) — список замечаний."""
@@ -757,6 +821,7 @@ ACTION_MODULES = {
     'build': 'build',
     'test': 'run_tests',
     'library': 'make_library',
+    'check': 'check_sources',
     'deps': 'library_repo',
     'uninstall': 'library_repo',
 }

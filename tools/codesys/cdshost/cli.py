@@ -12,6 +12,7 @@ build.py, run_tests.py — IronPython 2.7) запускаются как
     import [--tests] [--clean] [--force]   исходники -> проект (build/<имя>.project или <имя>-tests.project)
     export [--tests] [--to DIR]            проект -> раскладка src/ (и tests/)
     build [--tests] [--no-import]          импорт и полная сборка, сообщения -> build/build.log, build.json
+    check [--tests]                        компиляция всех объектов src/ (и tests/), даже недостижимых из задач
     test [--restart-runtime]               импорт с тестами, сборка, прогон coUnit в рантайме -> build/test-results.json
     roundtrip                              импорт в чистый проект -> экспорт во временный каталог -> сравнение
     library [--install] [--compiled]       src/ -> библиотека build/<имя>.library (+ .compiled-library), установка
@@ -21,8 +22,8 @@ build.py, run_tests.py — IronPython 2.7) запускаются как
     junit [--results F] [--out F]          build/test-results.json -> build/junit.xml
     report [--results F] [--doc F]         раздел последнего прогона в docs/TEST_REPORT.md
 
-Коды выхода: 0 — успех; 1 — проверка не прошла (ошибки раскладки или сборки, упавшие тесты, дифф
-roundtrip); 2 — неверные аргументы или config.json; 3 — окружение (нет CODESYS, рантайма, файла);
+Коды выхода: 0 — успех; 1 — проверка не прошла (ошибки раскладки, сборки или проверки всех объектов,
+упавшие тесты, дифф roundtrip); 2 — неверные аргументы или config.json; 3 — окружение (нет CODESYS, рантайма, файла);
 4 — таймаут; 5 — не удалось взять блокировку.
 
 Настройки — tools/codesys/config.json (между репозиториями отличается только он), переменные
@@ -842,6 +843,31 @@ def library_step(
     }
 
 
+def check_step(settings: Settings, tests: bool) -> dict[str, Any]:
+    """Шаг check: все объекты src/ (с tests — и tests/) в пуле проекта без устройства, «Проверить все объекты пула».
+
+    Библиотеки — те же, что у проекта режима: modes.<режим>.libraries и library.libraries, а также
+    ссылки, которые добавляет само устройство (device — check_sources.py копирует их в пул и удаляет
+    устройство). Проект проверки не сохраняется; в отличие от build, компилируются и объекты, которые
+    не достижимы из задач.
+    """
+    mode = "test" if tests else "normal"
+    build = settings.repo_root / "build"
+    return {
+        "action": "check",
+        "repo_root": str(settings.repo_root),
+        "with_tests": tests,
+        "tests_folder": settings.tests_folder,
+        "mode": mode,
+        "project": str(settings.repo_root / WORK_DIR / f"{settings.value('project.name')}-check.project"),
+        "device": settings.device(),
+        "libraries": settings.mode_config(mode)["libraries"],
+        "repository": settings.library_repository,
+        "log": str(build / "check.log"),
+        "report": str(build / "check.json"),
+    }
+
+
 def deps_step(
     settings: Settings, specs: Sequence[Mapping[str, Any]], install_missing: bool, reinstall: Sequence[str] = ()
 ) -> dict[str, Any]:
@@ -1003,8 +1029,8 @@ def source_location(obj_path: str | None, position: str | None, objects: Sequenc
 def annotate_build(settings: Settings, result: Mapping[str, Any], action: str = "build") -> None:
     """Добавляет к сообщениям компилятора поле source (файл:строка) и переписывает build/<action>.json.
 
-    action — шаг с сообщениями: build (сборка приложения) или library (проверка пула библиотеки:
-    пути объектов там от корня проекта — 'Motors.FB_X', их разбирает тот же source_location).
+    action — шаг с сообщениями: build (сборка приложения), library или check (проверка пула: пути
+    объектов там от корня проекта — 'Motors.FB_X', 'Tests.FB_X_Test', их разбирает тот же source_location).
     """
     step = next((s for s in result.get("steps", []) if s.get("action") == action), None)
     if not step or not step.get("messages"):
@@ -1058,9 +1084,10 @@ def _print_steps(result: Mapping[str, Any]) -> None:
         elif action == "build":
             detail = f"ошибок {step.get('errors')}, предупреждений {step.get('warnings')}"
             _print_messages(step)
-        elif action == "library":
+        elif action in ("library", "check"):
+            what = "ошибок проверки пула" if action == "library" else "ошибок"
             detail = (
-                f"объектов {step.get('objects', 0)}, ошибок проверки пула {step.get('errors', '-')}, "
+                f"объектов {step.get('objects', 0)}, {what} {step.get('errors', '-')}, "
                 f"предупреждений {step.get('warnings', '-')}"
             )
             _print_messages(step)
@@ -1422,6 +1449,29 @@ def cmd_build(settings: Settings, args: argparse.Namespace) -> int:
     result = run_with_deps(settings, run, not args.no_deps)
     annotate_build(settings, result)
     return _finish(result)
+
+
+def cmd_check(settings: Settings, args: argparse.Namespace) -> int:
+    """Компиляция всех объектов src/ (и tests/) — и тех, что не достижимы из задач.
+
+    build проверяет только то, что вызывают задачи: программа без задачи или ФБ без экземпляра с
+    ошибкой дают в build «0 ошибок». check создаёт объекты в пуле проекта без устройства и выполняет
+    «Проверить все объекты пула»; проект на диск не пишется, build/ и проекты import не меняются.
+    """
+    step = check_step(settings, args.tests)
+
+    def run() -> dict[str, Any]:
+        with repo_lock(settings, "check"):
+            return run_codesys(settings, "check_sources.py", {"steps": [step]}, "check")
+
+    result = run_with_deps(settings, run, not args.no_deps)
+    annotate_build(settings, result, "check")
+    code = _finish(result)
+    done = _step(result, "check")
+    if done.get("ok"):
+        what = "src/ и tests/" if args.tests else "src/"
+        print(f"[cds] check: все объекты {what} скомпилированы без ошибок ({done.get('objects', 0)} объектов)")
+    return code
 
 
 def _git_commit(repo_root: Path) -> str | None:
@@ -2212,6 +2262,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--force", action="store_true", help="импортировать, даже если проект сохранён в IDE")
     p.add_argument("--no-deps", action="store_true", help=no_deps_help)
     p.set_defaults(func=cmd_build)
+
+    p = sub.add_parser(
+        "check",
+        help="компиляция всех объектов src/ (и tests/), в том числе не достижимых из задач (build/check.log)",
+    )
+    p.add_argument("--tests", action="store_true", help="вместе с tests/ (библиотеки режима test)")
+    p.add_argument("--no-deps", action="store_true", help=no_deps_help)
+    p.set_defaults(func=cmd_check)
 
     p = sub.add_parser("test", help="импорт с тестами, сборка, прогон coUnit в рантайме")
     p.add_argument("--restart-runtime", action="store_true", help="перезапустить рантайм перед прогоном")

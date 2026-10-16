@@ -1,0 +1,148 @@
+{
+  "_doc": [
+    "Настройки tools/codesys/cds.py. Между репозиториями портфолио отличается только этот файл.",
+    "Значение {\"env\": ИМЯ, \"default\": ...}: переменная окружения ИМЯ (в том числе заданная через setx — читается и из HKCU\\Environment), иначе default; список в default — первый существующий путь.",
+    "Подстановки: ~ — домашний каталог, ${ИМЯ} — переменная окружения, {repo} — корень репозитория, {repo_name} — имя его каталога, {name} — имя проекта, {runtime_dir} — каталог рантайма.",
+    "Относительные пути — от корня репозитория. Абсолютных путей пользователя здесь нет. Полный список переменных — tools/README.md."
+  ],
+  "codesys": {
+    "exe": {
+      "env": "CODESYS_EXE",
+      "default": [
+        "${ProgramFiles(x86)}/CODESYS 3.5.17.30/CODESYS/Common/CODESYS.exe",
+        "${ProgramFiles}/CODESYS 3.5.17.30/CODESYS/Common/CODESYS.exe"
+      ]
+    },
+    "profile": {"env": "CODESYS_PROFILE", "default": "CODESYS V3.5 SP17 Patch 3"},
+    "version": "3.5.17.30",
+    "timeout_s": {"env": "CDS_TIMEOUT_S", "default": 900}
+  },
+  "project": {
+    "name": {"env": "CDS_PROJECT_NAME", "default": "{repo_name}"},
+    "path": {"env": "CDS_PROJECT", "default": "build/{name}.project"},
+    "test_path": {"env": "CDS_TEST_PROJECT", "default": "build/{name}-tests.project"},
+    "roundtrip_dir": "build/roundtrip",
+    "tests_folder": "Tests"
+  },
+  "device": {
+    "name": "Device",
+    "type": {"env": "CDS_DEVICE_TYPE", "default": 4096},
+    "id": {"env": "CDS_DEVICE_ID", "default": "0000 0001"},
+    "version": {"env": "CDS_DEVICE_VERSION", "default": "3.5.17.30"},
+    "title": "CODESYS Control Win V3",
+    "_alternatives": {
+      "CODESYS Control Win V3 (32 бит, по умолчанию — рантайм сборки ОВЕН 3.5.17.30)": "type 4096, id 0000 0001",
+      "CODESYS Control Win V3 x64": "type 4096, id 0000 0004",
+      "CODESYS Control RTE V3": "type 4096, id 0000 0002",
+      "CODESYS Control RTE V3 x64": "type 4096, id 0000 0022",
+      "ОВЕН ПЛК210": "type/id/version — из таргет-файла ОВЕН после установки пакета (docs/MANUAL_STEPS.md)"
+    }
+  },
+  "modes": {
+    "normal": {
+      "tasks": [{"name": "MainTask", "interval_ms": 20, "pous": ["PRG_Main"]}],
+      "libraries": []
+    },
+    "test": {
+      "tasks": [{"name": "TestTask", "interval_ms": 10, "pous": ["PRG_Tests"]}],
+      "libraries": ["counit"]
+    }
+  },
+  "libraries": {
+    "_doc": [
+      "Библиотеки-зависимости; режимы (modes.*.libraries) и library.libraries ссылаются на них по ключу.",
+      "Какая библиотека: title (точно), title_contains (подстрока), company (точно); без них — по namespace.",
+      "version: точная \"1.0.0.0\" (ссылка на эту версию) или \"*\" (новейшая установленная, ссылка 'Название, * (Компания)').",
+      "namespace — пространство имён ссылки в проекте (по умолчанию — из библиотеки); placeholder — ссылка-плейсхолдер #имя; qualified_only — true/false.",
+      "Если нужной версии нет: install_from — файл .library; build_from_repo — репозиторий, где cds.py соберёт её командой library --install.",
+      "standard — библиотека Standard (TON, R_TRIG, CTU, CONCAT...) через плейсхолдер #Standard, как в проектах IDE: версию выбирает профиль CODESYS, доступ с пространством имён и без (Standard.TON и TON). По умолчанию подключена через library.libraries, то есть ко всем режимам и к библиотеке репозитория.",
+      "Пример библиотеки портфолио: \"plc-process-lib\": {\"namespace\": \"PL\", \"title_contains\": \"plc-process-lib\", \"version\": \"1.0.0.0\", \"build_from_repo\": {\"env\": \"PL_REPO\", \"default\": \"../plc-process-lib\"}, \"install_from\": {\"env\": \"PL_LIBRARY\", \"default\": null}}"
+    ],
+    "counit": {
+      "label": "coUnit (CfUnit) 1.2.0.0",
+      "namespace": "coUnit",
+      "version": "1.2.0.0",
+      "title_contains": "unittest framework for CODESYS",
+      "install_from": {"env": "COUNIT_LIBRARY", "default": null}
+    },
+    "standard": {
+      "label": "Standard (плейсхолдер #Standard, версию задаёт профиль CODESYS)",
+      "title": "Standard",
+      "company": "System",
+      "version": "*",
+      "placeholder": "Standard",
+      "namespace": "Standard",
+      "qualified_only": false
+    }
+  },
+  "library": {
+    "_doc": [
+      "Библиотека, которую собирает cds.py library из src/ (без tests/): Project Information и файлы.",
+      "Библиотеку однозначно задают company, title и version: их не меняют от сборки к сборке; новая версия — новый version.",
+      "exclude — объекты src/, которые в библиотеку не входят (точка входа приложения); libraries — ключи libraries, на которые ссылается сама библиотека; они же подключаются к проектам всех режимов (normal, test) и к проверке cds.py check."
+    ],
+    "title": "plc-repo-template",
+    "company": "plc-portfolio",
+    "version": {"env": "CDS_LIBRARY_VERSION", "default": "0.1.0.0"},
+    "default_namespace": "TPL",
+    "placeholder": null,
+    "author": "<ИМЯ ФАМИЛИЯ>",
+    "description": "Шаблон ПЛК-репозитория портфолио: пример ФБ с режимами и диагностикой, функция F_Clamp",
+    "released": false,
+    "exclude": ["PRG_Main"],
+    "libraries": ["standard"],
+    "path": {"env": "CDS_LIBRARY", "default": "build/{name}.library"},
+    "compiled_path": {"env": "CDS_COMPILED_LIBRARY", "default": "build/{name}.compiled-library"}
+  },
+  "library_repository": {
+    "_doc": "Репозиторий библиотек CODESYS для установки (общий на машину): имя из списка репозиториев CODESYS, глобальная блокировка установки и учёт установок cds.py.",
+    "name": {"env": "CDS_LIBRARY_REPOSITORY", "default": "System"},
+    "lock": {"env": "CDS_LIBRARY_LOCK", "default": "${LOCALAPPDATA}/plc-tools/codesys-library-repo.lock"},
+    "registry": {"env": "CDS_LIBRARY_REGISTRY", "default": "${LOCALAPPDATA}/plc-tools/codesys-libraries.json"}
+  },
+  "runtime": {
+    "title": "CODESYS Control Win V3 (пользовательский процесс)",
+    "dir": {"env": "CODESYS_RUNTIME_DIR", "default": "~/.local/plc-tools/cds-runtime"},
+    "exe": {
+      "env": "CODESYS_RUNTIME_EXE",
+      "default": [
+        "${ProgramFiles(x86)}/CODESYS 3.5.17.30/GatewayPLC/CODESYSControlService.exe",
+        "${ProgramFiles}/CODESYS 3.5.17.30/GatewayPLC/CODESYSControlService.exe"
+      ]
+    },
+    "boot_cfg": {"env": "CODESYS_RUNTIME_BOOT_CFG", "default": "{runtime_dir}/boot.cfg"},
+    "work_dir": {"env": "CODESYS_RUNTIME_WORK_DIR", "default": "{runtime_dir}/work"},
+    "cfg_template": {
+      "env": "CODESYS_RUNTIME_CFG_TEMPLATE",
+      "default": "${ProgramData}/CODESYS/CODESYSControlWinV3/*/CODESYSControl.cfg"
+    },
+    "credentials": {"env": "CODESYS_RUNTIME_CREDENTIALS", "default": "{runtime_dir}/credentials.json"},
+    "pid_file": {"env": "CODESYS_RUNTIME_PID_FILE", "default": "{runtime_dir}/runtime.pid.json"},
+    "log_file": {"env": "CODESYS_RUNTIME_LOG", "default": "{runtime_dir}/runtime_console.log"},
+    "port": 11740,
+    "device_address": {"env": "CODESYS_DEVICE_ADDRESS", "default": "127.0.0.1"},
+    "gateway": {
+      "name": "Gateway-1",
+      "host": {"env": "CODESYS_GATEWAY_HOST", "default": "localhost"},
+      "port": {"env": "CODESYS_GATEWAY_PORT", "default": 1217}
+    },
+    "start_timeout_s": 60,
+    "demo_limit_min": 120,
+    "restart_after_min": {"env": "CODESYS_RUNTIME_MAX_AGE_MIN", "default": 100}
+  },
+  "tests": {
+    "runner": "coUnit.GVL_coUnit.coUnitRunner",
+    "framework": "coUnit (CfUnit) 1.2.0.0",
+    "timeout_s": {"env": "CDS_TEST_TIMEOUT_S", "default": 120},
+    "poll_ms": 500,
+    "max_suites": 1000,
+    "max_tests_per_suite": 100,
+    "results": "build/test-results.json",
+    "junit": "build/junit.xml",
+    "report_doc": "docs/TEST_REPORT.md"
+  },
+  "lock": {
+    "path": {"env": "CDS_RUNTIME_LOCK", "default": "${LOCALAPPDATA}/plc-tools/codesys-runtime.lock"},
+    "timeout_s": {"env": "CDS_LOCK_TIMEOUT_S", "default": 1800}
+  }
+}

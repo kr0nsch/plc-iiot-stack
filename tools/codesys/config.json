@@ -13,22 +13,46 @@
         "${ProgramFiles}/CODESYS 3.5.17.30/CODESYS/Common/CODESYS.exe"
       ]
     },
-    "profile": {"env": "CODESYS_PROFILE", "default": "CODESYS V3.5 SP17 Patch 3"},
+    "profile": {
+      "env": "CODESYS_PROFILE",
+      "default": "CODESYS V3.5 SP17 Patch 3"
+    },
     "version": "3.5.17.30",
-    "timeout_s": {"env": "CDS_TIMEOUT_S", "default": 900}
+    "timeout_s": {
+      "env": "CDS_TIMEOUT_S",
+      "default": 900
+    }
   },
   "project": {
-    "name": {"env": "CDS_PROJECT_NAME", "default": "{repo_name}"},
-    "path": {"env": "CDS_PROJECT", "default": "build/{name}.project"},
-    "test_path": {"env": "CDS_TEST_PROJECT", "default": "build/{name}-tests.project"},
+    "name": {
+      "env": "CDS_PROJECT_NAME",
+      "default": "{repo_name}"
+    },
+    "path": {
+      "env": "CDS_PROJECT",
+      "default": "build/{name}.project"
+    },
+    "test_path": {
+      "env": "CDS_TEST_PROJECT",
+      "default": "build/{name}-tests.project"
+    },
     "roundtrip_dir": "build/roundtrip",
     "tests_folder": "Tests"
   },
   "device": {
     "name": "Device",
-    "type": {"env": "CDS_DEVICE_TYPE", "default": 4096},
-    "id": {"env": "CDS_DEVICE_ID", "default": "0000 0001"},
-    "version": {"env": "CDS_DEVICE_VERSION", "default": "3.5.17.30"},
+    "type": {
+      "env": "CDS_DEVICE_TYPE",
+      "default": 4096
+    },
+    "id": {
+      "env": "CDS_DEVICE_ID",
+      "default": "0000 0001"
+    },
+    "version": {
+      "env": "CDS_DEVICE_VERSION",
+      "default": "3.5.17.30"
+    },
     "title": "CODESYS Control Win V3",
     "_alternatives": {
       "CODESYS Control Win V3 (32 бит, по умолчанию — рантайм сборки ОВЕН 3.5.17.30)": "type 4096, id 0000 0001",
@@ -40,12 +64,30 @@
   },
   "modes": {
     "normal": {
-      "tasks": [{"name": "MainTask", "interval_ms": 20, "pous": ["PRG_Main"]}],
+      "tasks": [
+        {
+          "name": "MainTask",
+          "interval_ms": 20,
+          "pous": [
+            "PRG_Main"
+          ]
+        }
+      ],
       "libraries": []
     },
     "test": {
-      "tasks": [{"name": "TestTask", "interval_ms": 10, "pous": ["PRG_Tests"]}],
-      "libraries": ["counit"]
+      "tasks": [
+        {
+          "name": "TestTask",
+          "interval_ms": 10,
+          "pous": [
+            "PRG_Tests"
+          ]
+        }
+      ],
+      "libraries": [
+        "counit"
+      ]
     }
   },
   "libraries": {
@@ -62,7 +104,26 @@
       "namespace": "coUnit",
       "version": "1.2.0.0",
       "title_contains": "unittest framework for CODESYS",
-      "install_from": {"env": "COUNIT_LIBRARY", "default": null}
+      "install_from": {
+        "env": "COUNIT_LIBRARY",
+        "default": null
+      }
+    },
+    "standard": {
+      "label": "Standard (плейсхолдер, разрешает профиль CODESYS)",
+      "title": "Standard",
+      "company": "System",
+      "version": "*",
+      "placeholder": "Standard",
+      "namespace": "Standard",
+      "qualified_only": false
+    },
+    "systimertc": {
+      "label": "SysTimeRtc (часы ПЛК для поля ts сообщений MQTT)",
+      "title": "SysTimeRtc",
+      "company": "System",
+      "version": "*",
+      "placeholder": "SysTimeRtc"
     }
   },
   "library": {
@@ -71,28 +132,55 @@
       "Библиотеку однозначно задают company, title и version: их не меняют от сборки к сборке; новая версия — новый version.",
       "exclude — объекты src/, которые в библиотеку не входят (точка входа приложения); libraries — ключи libraries, на которые ссылается сама библиотека."
     ],
-    "title": "plc-repo-template",
+    "title": "plc-iiot-stack",
     "company": "plc-portfolio",
-    "version": {"env": "CDS_LIBRARY_VERSION", "default": "0.1.0.0"},
+    "version": {
+      "env": "CDS_LIBRARY_VERSION",
+      "default": "0.1.0.0"
+    },
     "default_namespace": "TPL",
     "placeholder": null,
     "author": "<ИМЯ ФАМИЛИЯ>",
-    "description": "Шаблон ПЛК-репозитория портфолио: пример ФБ с режимами и диагностикой, функция F_Clamp",
+    "description": "plc-iiot-stack: ПЛК-часть IIoT-стека (MQTT: телеметрия, команды, диагностика связи)",
     "released": false,
-    "exclude": ["PRG_Main"],
-    "libraries": [],
-    "path": {"env": "CDS_LIBRARY", "default": "build/{name}.library"},
-    "compiled_path": {"env": "CDS_COMPILED_LIBRARY", "default": "build/{name}.compiled-library"}
+    "exclude": [
+      "PRG_Main",
+      "PRG_Iiot"
+    ],
+    "libraries": [
+      "standard",
+      "systimertc"
+    ],
+    "path": {
+      "env": "CDS_LIBRARY",
+      "default": "build/{name}.library"
+    },
+    "compiled_path": {
+      "env": "CDS_COMPILED_LIBRARY",
+      "default": "build/{name}.compiled-library"
+    }
   },
   "library_repository": {
     "_doc": "Репозиторий библиотек CODESYS для установки (общий на машину): имя из списка репозиториев CODESYS, глобальная блокировка установки и учёт установок cds.py.",
-    "name": {"env": "CDS_LIBRARY_REPOSITORY", "default": "System"},
-    "lock": {"env": "CDS_LIBRARY_LOCK", "default": "${LOCALAPPDATA}/plc-tools/codesys-library-repo.lock"},
-    "registry": {"env": "CDS_LIBRARY_REGISTRY", "default": "${LOCALAPPDATA}/plc-tools/codesys-libraries.json"}
+    "name": {
+      "env": "CDS_LIBRARY_REPOSITORY",
+      "default": "System"
+    },
+    "lock": {
+      "env": "CDS_LIBRARY_LOCK",
+      "default": "${LOCALAPPDATA}/plc-tools/codesys-library-repo.lock"
+    },
+    "registry": {
+      "env": "CDS_LIBRARY_REGISTRY",
+      "default": "${LOCALAPPDATA}/plc-tools/codesys-libraries.json"
+    }
   },
   "runtime": {
     "title": "CODESYS Control Win V3 (пользовательский процесс)",
-    "dir": {"env": "CODESYS_RUNTIME_DIR", "default": "~/.local/plc-tools/cds-runtime"},
+    "dir": {
+      "env": "CODESYS_RUNTIME_DIR",
+      "default": "~/.local/plc-tools/cds-runtime"
+    },
     "exe": {
       "env": "CODESYS_RUNTIME_EXE",
       "default": [
@@ -100,30 +188,60 @@
         "${ProgramFiles}/CODESYS 3.5.17.30/GatewayPLC/CODESYSControlService.exe"
       ]
     },
-    "boot_cfg": {"env": "CODESYS_RUNTIME_BOOT_CFG", "default": "{runtime_dir}/boot.cfg"},
-    "work_dir": {"env": "CODESYS_RUNTIME_WORK_DIR", "default": "{runtime_dir}/work"},
+    "boot_cfg": {
+      "env": "CODESYS_RUNTIME_BOOT_CFG",
+      "default": "{runtime_dir}/boot.cfg"
+    },
+    "work_dir": {
+      "env": "CODESYS_RUNTIME_WORK_DIR",
+      "default": "{runtime_dir}/work"
+    },
     "cfg_template": {
       "env": "CODESYS_RUNTIME_CFG_TEMPLATE",
       "default": "${ProgramData}/CODESYS/CODESYSControlWinV3/*/CODESYSControl.cfg"
     },
-    "credentials": {"env": "CODESYS_RUNTIME_CREDENTIALS", "default": "{runtime_dir}/credentials.json"},
-    "pid_file": {"env": "CODESYS_RUNTIME_PID_FILE", "default": "{runtime_dir}/runtime.pid.json"},
-    "log_file": {"env": "CODESYS_RUNTIME_LOG", "default": "{runtime_dir}/runtime_console.log"},
+    "credentials": {
+      "env": "CODESYS_RUNTIME_CREDENTIALS",
+      "default": "{runtime_dir}/credentials.json"
+    },
+    "pid_file": {
+      "env": "CODESYS_RUNTIME_PID_FILE",
+      "default": "{runtime_dir}/runtime.pid.json"
+    },
+    "log_file": {
+      "env": "CODESYS_RUNTIME_LOG",
+      "default": "{runtime_dir}/runtime_console.log"
+    },
     "port": 11740,
-    "device_address": {"env": "CODESYS_DEVICE_ADDRESS", "default": "127.0.0.1"},
+    "device_address": {
+      "env": "CODESYS_DEVICE_ADDRESS",
+      "default": "127.0.0.1"
+    },
     "gateway": {
       "name": "Gateway-1",
-      "host": {"env": "CODESYS_GATEWAY_HOST", "default": "localhost"},
-      "port": {"env": "CODESYS_GATEWAY_PORT", "default": 1217}
+      "host": {
+        "env": "CODESYS_GATEWAY_HOST",
+        "default": "localhost"
+      },
+      "port": {
+        "env": "CODESYS_GATEWAY_PORT",
+        "default": 1217
+      }
     },
     "start_timeout_s": 60,
     "demo_limit_min": 120,
-    "restart_after_min": {"env": "CODESYS_RUNTIME_MAX_AGE_MIN", "default": 100}
+    "restart_after_min": {
+      "env": "CODESYS_RUNTIME_MAX_AGE_MIN",
+      "default": 100
+    }
   },
   "tests": {
     "runner": "coUnit.GVL_coUnit.coUnitRunner",
     "framework": "coUnit (CfUnit) 1.2.0.0",
-    "timeout_s": {"env": "CDS_TEST_TIMEOUT_S", "default": 120},
+    "timeout_s": {
+      "env": "CDS_TEST_TIMEOUT_S",
+      "default": 120
+    },
     "poll_ms": 500,
     "max_suites": 1000,
     "max_tests_per_suite": 100,
@@ -132,7 +250,13 @@
     "report_doc": "docs/TEST_REPORT.md"
   },
   "lock": {
-    "path": {"env": "CDS_RUNTIME_LOCK", "default": "${LOCALAPPDATA}/plc-tools/codesys-runtime.lock"},
-    "timeout_s": {"env": "CDS_LOCK_TIMEOUT_S", "default": 1800}
+    "path": {
+      "env": "CDS_RUNTIME_LOCK",
+      "default": "${LOCALAPPDATA}/plc-tools/codesys-runtime.lock"
+    },
+    "timeout_s": {
+      "env": "CDS_LOCK_TIMEOUT_S",
+      "default": 1800
+    }
   }
 }

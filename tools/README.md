@@ -11,8 +11,8 @@
 | `check/st_lint.py` | линтер ST по правилам `CONTRIBUTING.md` | 3.11+ |
 | `check/run_iec_checker.py` | статанализ iec_checker с обоснованием находок | 3.11+ |
 | `check/run_rusty.py` | проверка компилятором RuSTy (`plc --check`) | 3.11+ |
-| `codesys/cds.py` | командная строка CODESYS: импорт, сборка, тесты coUnit в рантайме, экспорт, roundtrip, отчёт, библиотеки и зависимости ([ниже](#codesyscdspy--codesys-из-консоли)) | 3.11+ |
-| `codesys/import_sources.py`, `export_sources.py`, `build.py`, `run_tests.py`, `make_library.py`, `library_repo.py`, `cds_common.py` | шаги в CODESYS (CODESYS Scripting); запускаются только через `cds.py` | IronPython 2.7 |
+| `codesys/cds.py` | командная строка CODESYS: импорт, сборка, проверка всех объектов, тесты coUnit в рантайме, экспорт, roundtrip, отчёт, библиотеки и зависимости ([ниже](#codesyscdspy--codesys-из-консоли)) | 3.11+ |
+| `codesys/import_sources.py`, `export_sources.py`, `build.py`, `check_sources.py`, `run_tests.py`, `make_library.py`, `library_repo.py`, `cds_common.py` | шаги в CODESYS (CODESYS Scripting); запускаются только через `cds.py` | IronPython 2.7 |
 
 Зависимости для разработки: `python -m pip install -r requirements-dev.txt` (ruff, mypy, pytest, hypothesis).
 Настройки ruff, mypy и pytest — в `pyproject.toml`.
@@ -28,6 +28,15 @@ python tools/assemble.py
 python tools/check/st_lint.py
 python tools/check/run_iec_checker.py            # бинарник v0.4 (в CI — тоже); образ nightly: --docker IMAGE
 python tools/check/run_rusty.py --optional       # если RuSTy не установлен — пропуск
+```
+
+С CODESYS (Windows) — полная проверка компиляции и тесты ([ниже](#полная-проверка-компиляции-check)):
+
+```
+python tools/codesys/cds.py build                # приложение: объекты, достижимые из задач
+python tools/codesys/cds.py check --tests        # все объекты src/ и tests/, в том числе без вызовов
+python tools/codesys/cds.py test                 # тесты coUnit в CODESYS Control Win V3
+python tools/codesys/cds.py roundtrip            # импорт -> экспорт без диффа
 ```
 
 ## `codesys/stlayout.py` — контракт раскладки
@@ -303,7 +312,8 @@ Win V3 в пользовательском процессе и coUnit 1.2.0.0.
 | Команда (`python tools/codesys/cds.py ...`) | Что делает | Артефакты в `build/` |
 |---|---|---|
 | `import [--tests] [--clean] [--force]` | раскладка → проект. Режим normal: `src/` → `<имя>.project`, задача MainTask 20 мс → `PRG_Main`. С `--tests` режим test: `src/` и `tests/` (в папке `Tests`) → `<имя>-tests.project`, TestTask 10 мс → `PRG_Tests`, библиотека coUnit | `import.log`, `import.json` |
-| `build [--tests] [--no-import] [--force]` | импорт того же режима и полная сборка (`app.rebuild()`) | `build.log`, `build.json` |
+| `build [--tests] [--no-import] [--force]` | импорт того же режима и полная сборка (`app.rebuild()`); компилируются объекты, достижимые из задач | `build.log`, `build.json` |
+| `check [--tests]` | компиляция **всех** объектов `src/` (с `--tests` — и `tests/`), в том числе тех, что не вызывает ни одна задача ([ниже](#полная-проверка-компиляции-check)); проекты `import` не меняются | `check.log`, `check.json` |
 | `test [--restart-runtime] [--no-runtime-start] [--clean] [--force]` | `import --tests` → сборка → вход в рантайм, загрузка, старт, опрос coUnit, результаты, стоп, выход | `test.log`, `test-results.json`, `junit.xml` |
 | `export [--tests] [--to DIR] [--force]` | проект → раскладка `src/` (с `--tests` — тестовый проект и `tests/`) | `export.log`, `export.json` |
 | `roundtrip` | импорт в чистый проект `build/roundtrip/` → экспорт в `build/roundtrip/export/` → побайтное сравнение с `src/` и `tests/`; затем проект открывается с диска и импортируется повторно — изменений должно быть 0 | `roundtrip/*` |
@@ -314,11 +324,12 @@ Win V3 в пользовательском процессе и coUnit 1.2.0.0.
 | `junit [--results F] [--out F]` | `test-results.json` → JUnit XML | `junit.xml` |
 | `report [--results F] [--doc F]` | раздел «Последний прогон в CODESYS» в `docs/TEST_REPORT.md` (между маркерами `cds:test-report`) | — |
 
-`import`, `build`, `test`, `roundtrip` и `library` сами собирают недостающие библиотеки-зависимости
+`import`, `build`, `check`, `test`, `roundtrip` и `library` сами собирают недостающие библиотеки-зависимости
 ([ниже](#библиотеки-library-и-deps)); `--no-deps` это отключает.
 
-Коды выхода: 0 — успех; 1 — проверка не прошла (ошибки раскладки, сборки или проверки пула
-библиотеки, упавшие тесты, дифф roundtrip, защита от потери правок, `deps --check` нашёл не всё);
+Коды выхода: 0 — успех; 1 — проверка не прошла (ошибки раскладки, сборки, проверки всех объектов или
+проверки пула библиотеки, упавшие тесты, дифф roundtrip, защита от потери правок, `deps --check`
+нашёл не всё, два описания одной библиотеки с разными ссылками);
 2 — аргументы или `config.json`; 3 — окружение (нет CODESYS, рантайма, файла, библиотеки нужной
 версии, соседнего репозитория); 4 — таймаут; 5 — блокировка занята.
 
@@ -329,7 +340,7 @@ Win V3 в пользовательском процессе и coUnit 1.2.0.0.
   `subprocess` превращает это в `"--profile=..."`, и CODESYS не видит профиль).
 - Аргументы скриптам CODESYS не передаются: `cds.py` пишет файл задания
   `build/codesys/job-<команда>.json` и передаёт его путь в переменной `CDS_JOB`. Задание — список
-  шагов (`import`, `export`, `build`, `test`, `library`, `deps`, `uninstall`), они выполняются в одном
+  шагов (`import`, `export`, `build`, `check`, `test`, `library`, `deps`, `uninstall`), они выполняются в одном
   процессе CODESYS: `test` — это import + build + test за ~20 с, `library` — ~10 с.
 - Итог скрипт пишет в `build/codesys/result-<команда>.json` и возвращает кодом выхода процесса:
   `sys.exit(n)` и `system.exit(n)` доходят до ОС, необработанное исключение даёт 1 (проверено на
@@ -343,6 +354,7 @@ Win V3 в пользовательском процессе и coUnit 1.2.0.0.
 | `cdshost/cli.py` | Python 3.11+ | командная строка, `config.json`, задания, блокировки, рантайм, JUnit, отчёт |
 | `cds_common.py` | IronPython 2.7 и Python 3 | задание и диспетчер шагов, журнал, GUID типов объектов, разбор значений `read_value` |
 | `import_sources.py`, `export_sources.py`, `build.py`, `run_tests.py` | IronPython 2.7 (CODESYS) | шаги `import`, `export`, `build`, `test` |
+| `check_sources.py` | IronPython 2.7 (CODESYS) | шаг `check` (все объекты в пуле проекта без устройства, «Проверить все объекты пула») |
 | `make_library.py`, `library_repo.py` | IronPython 2.7 (CODESYS) | шаги `library` (сборка и установка библиотеки), `deps` и `uninstall` (репозиторий библиотек) |
 | `config.json` | — | проект, устройство, задачи и библиотеки по режимам, библиотека репозитория (`library`), репозиторий библиотек, рантайм, тесты, блокировка |
 
@@ -368,11 +380,20 @@ Win V3 в пользовательском процессе и coUnit 1.2.0.0.
 - Удаляются объекты управляемых видов (POU, DUT, GVL, интерфейсы, их методы и свойства), которых
   нет в исходниках, и опустевшие папки — каждый случай в отчёте. Действия (`ACTION`), визуализации и
   прочие объекты не трогаются, но `export` о них предупреждает.
-- Задачи — по `modes.<режим>.tasks` (лишние удаляются). Библиотеки — по `modes.<режим>.libraries`:
+- Задачи — по `modes.<режим>.tasks` (лишние удаляются). Библиотеки — по `modes.<режим>.libraries`
+  и `library.libraries` (по умолчанию там `standard`, [ниже](#standard-по-умолчанию)):
   ищутся в репозиториях CODESYS по названию (компании) и закреплённой версии, при отсутствии ставятся
   из `install_from` (`COUNIT_LIBRARY`) или собираются в соседнем репозитории (`build_from_repo`);
   ссылка другой версии заменяется, библиотеки других режимов удаляются из проекта
-  ([ниже](#библиотеки-library-и-deps)).
+  ([ниже](#библиотеки-library-и-deps)). Ссылки Library Manager после импорта — в поле `references`
+  `build/import.json` (и шага import в `build/codesys/result-<команда>.json`).
+- Одна библиотека — одна ссылка: если два ключа `libraries` (например, свой `std` проекта и `standard`
+  шаблона) нашли одну и ту же библиотеку (название и компания) и описывают одинаковую ссылку (вид —
+  плейсхолдер или обычная, имя плейсхолдера, версия), остаётся первое описание (сначала
+  `modes.<режим>.libraries`, затем `library.libraries`), явные `namespace` и `qualified_only` второго
+  его дополняют, а `cds.py` предупреждает «лишнее описание можно удалить». Разные ссылки на одну
+  библиотеку (плейсхолдер и обычная ссылка, разные версии, разные явные `namespace`/`qualified_only`) —
+  отказ до открытия проекта (код 1): иначе каждый импорт заменял бы одну ссылку другой (проверено).
 - Persistent Variables (`*.pvl.st`) в SP17 скриптом не создаются (`create_persistentvars` нет):
   предупреждение и ручной шаг; существующий объект импорт обновляет, экспорт выгружает.
 - Экспорт: DUT, GVL, PVL, интерфейсы и POU на ST приложения (не библиотеки, не дерево устройств и не
@@ -383,11 +404,97 @@ Win V3 в пользовательском процессе и coUnit 1.2.0.0.
   (`src/POUs/F_Clamp/F_Clamp.impl.st:16`): строки объявления и тела в CODESYS совпадают со строками
   файлов. Ошибка — важность Error/FatalError (сверяется со строкой итога «Компиляция завершена --
   N ошибок, M предупреждений»).
+- `check`: те же сообщения и поле `source`, что у `build`, но по всем объектам (ниже).
 - `test`: результаты coUnit читаются `read_value` из `coUnit.GVL_coUnit.coUnitRunner`: флаг
   `AllTestSuitesFinished`, итоги, затем наборы и тесты по индексам `[1..]`, пока имя не пустое
   (счётчики `NumberOfTests` наборов — поддиапазонного типа, `read_value` их не читает). Статус:
   `TestIsSkipped` → SKIP (тесты `DISABLED_...`), `TestIsFailed` → FAIL с `FailureMessage` и
   `FailureType`.
+
+### Полная проверка компиляции: `check`
+
+`cds.py build` компилирует приложение так же, как IDE: только объекты, достижимые из задач. Ошибка
+в программе без задачи, в ФБ без экземпляра и его методах, в функции без вызовов или в DUT, который
+никто не использует, в `build` не видна — «0 ошибок» (проверено на 3.5.17.30). `cds.py check`
+компилирует **все** объекты `src/` (с `--tests` — и `tests/`, в папке `Tests`) и возвращает код 1,
+если есть ошибки, с файлом и строкой раскладки:
+
+```
+[cds]   src/POUs/Orphans/PRG_Orphan/PRG_Orphan.impl.st:2: Error C0032 Невозможно конвертировать тип 'DINT' в тип 'INT' [Orphans.PRG_Orphan, Строка 2, Столбец 1 (Реализ.)]
+[cds]   src/POUs/Orphans/FB_Unused/Run.method.impl.st:2: Error C0046 Идентификатор 'xUndefined' не задан [Orphans.FB_Unused.Run, Строка 2, Столбец 1 (Реализ.)]
+[cds] check: ОШИБКА (объектов 11, ошибок 3, предупреждений 0, 4.0 с)
+```
+
+Как (`check_sources.py`, проверено зондами и прогонами на 3.5.17.30, docs/ASSUMPTIONS.md, D38):
+объекты раскладки создаются в пуле POU нового проекта без устройства тем же кодом, что у
+`cds.py library`, со ссылками на библиотеки режима (`modes.<режим>.libraries` и `library.libraries`;
+с `--tests` — режим `test`, с coUnit), затем «Проверить все объекты пула»
+(`proj.check_all_pool_objects()`). Проект проверки `build/codesys/<имя>-check.project` не
+сохраняется (`projects.create` файл не пишет, проверка пула работает и на несохранённом проекте;
+файлы настроек `<имя>-check-*.opt`, которые CODESYS пишет при закрытии, удаляются), проекты `import`
+и `library.exclude` не участвуют: проверяются все объекты, включая `PRG_Main`.
+
+Библиотеки проверки — те же, что у `build`: кроме ссылок из `config.json`, в пул копируются ссылки,
+которые устройство (`config.json: device`) добавляет приложению само — у Control Win V3 плейсхолдеры
+`#IoStandard`, `#3SLicense`, `#CAA Device Diagnosis`, `#BreakpointLogging`, у другого ПЛК свои.
+Устройство добавляется в проект проверки на время: ссылки его приложения копируются в пул с тем же
+разрешением, пространством имён и `qualified_only`, затем устройство удаляется (список — в
+`build/check.log` и поле `device_libraries` `build/check.json`). Без копий код с
+`IoStandard.IoConfigConnector` давал бы в `check` «Неизвестный тип», хотя `build` его собирает; с
+устройством в проекте проверка пула не находит и библиотеки самого пула (`TON` — «Неизвестный тип») —
+оба случая проверены зондом.
+
+- Прямые адреса (`AT %IX0.0`, `AT %QX0.0`, `AT %IW2`) в GVL и программах в пуле компилируются без
+  ошибок; TON, R_TRIG, CTU, CONCAT — через ту же ссылку `#Standard`, что у приложения.
+- Persistent Variables (`*.pvl.st`) скриптом в SP17 не создаются, поэтому в проверке объект
+  создаётся как GVL с тем же текстом без слова `PERSISTENT` (строки и столбцы не меняются):
+  обращения к ним проверяются, ошибки в самом файле привязываются к `*.pvl.st`. С `PERSISTENT` пул
+  выдал бы предупреждение C0244 «Приложение не содержит VAR_PERSISTENT-списка».
+- Ошибки синтаксиса (C0009, C0189) останавливают компиляцию до проверки типов: ошибки типов в других
+  объектах появятся после их исправления — повторите `check`.
+- `check` не заменяет `build`: в пуле нет задач, конфигурации ввода-вывода и параметров устройства
+  (от устройства берутся только его библиотеки). Полная проверка перед коммитом и релизом — `build`,
+  `check --tests`, `test`, `roundtrip`.
+
+### Standard по умолчанию
+
+В `config.json` шаблона библиотека Standard (TON, TOF, TP, R_TRIG, F_TRIG, CTU, CONCAT, LEN, ...)
+описана ключом `standard` и подключена через `library.libraries`, то есть ко всем режимам (проекты
+`build/<имя>.project`, `build/<имя>-tests.project`), к проверке `check` и к библиотеке репозитория:
+
+```json
+"standard": {
+  "label": "Standard (плейсхолдер #Standard, версию задаёт профиль CODESYS)",
+  "title": "Standard",
+  "company": "System",
+  "version": "*",
+  "placeholder": "Standard",
+  "namespace": "Standard",
+  "qualified_only": false
+}
+```
+
+Ссылка — плейсхолдер `#Standard`: версию выбирает профиль CODESYS (для 3.5.17.30 — Standard
+3.5.17.0), а не «новейшая установленная», поэтому сборка не меняется от установки чужих пакетов;
+так же на Standard ссылаются библиотеки, и потребитель библиотеки разрешает плейсхолдер своим
+профилем. Пространство имён — `Standard`, `qualified_only: false`: работают и `TON`, и
+`Standard.TON` — как в проекте IDE «Стандартный проект» (там ссылка `Standard, * (System)` с
+пространством имён `Standard` и `qualified_only = False`, проверено чтением шаблона
+`Templates/Standard.project`). Оба значения заданы явно: импорт возвращает их, если ссылку
+поменяли в IDE (или прошлым `config.json`), а свой ключ проекта на ту же библиотеку с другим
+`namespace` или `qualified_only` — отказ, а не тихая смена пространства имён, на которое опирается
+код `Standard.TON` (проверено). Устройство Control Win само добавляет плейсхолдеры `#IoStandard`,
+`#3SLicense`, `#CAA Device Diagnosis`, `#BreakpointLogging`; `#Standard` в их числе нет — без ссылки
+из `config.json` код с TON не собирается («Неизвестный тип: 'TON'», проверено).
+
+Проверено на 3.5.17.30 (копия шаблона с ФБ на TON, R_TRIG, CTU, CONCAT без пространства имён и с ним,
+вызов из `PRG_Main` и набор тестов coUnit): `build` и `build --tests` — 0 ошибок, `test` — 19 из 19,
+`check --tests` и `library` — 0 ошибок; повторный импорт — 0 изменений, `roundtrip` шаблона без диффа.
+
+Репозиторию без Standard достаточно убрать `standard` из `library.libraries` (и пересоздать проект:
+`cds.py import --clean` — ссылки, которых нет в `config.json`, импорт не удаляет). Репозиторий,
+который уже описал Standard сам (ключ `standard`, как в s7-to-codesys, или свой ключ с тем же
+плейсхолдером), ничего не меняет: ссылка остаётся одна ([выше](#импорт-и-экспорт-правила)).
 
 ### Библиотеки: `library` и `deps`
 
@@ -430,7 +537,7 @@ Win V3 в пользовательском процессе и coUnit 1.2.0.0.
 | `placeholder` | необязательно: свойство Placeholder (имя плейсхолдера, через который библиотеку предлагает подключать IDE) |
 | `author`, `description`, `released` | Project Information; `released` можно задать и флагом `library --released` |
 | `exclude` | объекты `src/`, которые в библиотеку не входят (точка входа `PRG_Main`); Persistent Variables не входят всегда |
-| `libraries` | ключи `libraries`, на которые ссылается сама библиотека (например, `Standard` через плейсхолдер); они же подключаются к проектам приложения и тестов этого репозитория (`build/<имя>.project`, `build/<имя>-tests.project`): там компилируются те же объекты `src/`, и без этих ссылок тесты библиотеки не соберутся («Неизвестный тип: 'TON'» — проверено) |
+| `libraries` | ключи `libraries`, на которые ссылается сама библиотека (по умолчанию `standard` — плейсхолдер `#Standard`, [выше](#standard-по-умолчанию)); они же подключаются к проектам приложения и тестов этого репозитория (`build/<имя>.project`, `build/<имя>-tests.project`) и к проверке `check`: там компилируются те же объекты `src/`, и без этих ссылок тесты библиотеки не соберутся («Неизвестный тип: 'TON'» — проверено) |
 | `path`, `compiled_path` | `build/{name}.library`, `build/{name}.compiled-library` (`CDS_LIBRARY`, `CDS_COMPILED_LIBRARY`) |
 
 Репозиторий установки — раздел `library_repository`: `name` — имя репозитория CODESYS
@@ -626,11 +733,22 @@ default library»), а потребителю эта настройка не п�
 |---|---|
 | `test_stlayout.py` | лексер без потерь (hypothesis), комментарии и прагмы, заголовки, секции VAR, DUT, метки CASE, `scan` и все коды LAY, цикл `scan → write` побайтно, запись поверх файлов с другим регистром имён |
 | `test_py27_compat.py` | `tools/codesys/*.py` без конструкций и модулей только Python 3 |
-| `test_cds_library.py` | библиотеки и зависимости без CODESYS: версии, закрепление `*`, идентичность и имена ссылок (`cds_common`), разделы `library`, `libraries`, `library_repository`, задания `library`/`deps`/`uninstall`, команда и окружение сборки в соседнем репозитории, проверка его версии, повтор задания после сборки зависимостей, учёт установок, переменные рабочей копии, блокировки рабочих копий |
-| `test_cds.py` | `cds.py` без CODESYS: строка запуска, `config.json` и переменные окружения, задания, JUnit, отчёт, блокировки, защита от потери правок, сравнение roundtrip, привязка сообщений компилятора к файлам, процессы рантайма, `runtime init`, удаление старых результатов `test`; чистые функции `cds_common.py` (значения `read_value`, интервалы задач, GUID, файл блокировки `.~u`, кэш предкомпиляции, коды выхода шагов) |
+| `test_cds_library.py` | библиотеки и зависимости без CODESYS: версии, закрепление `*`, идентичность и имена ссылок (`cds_common`), одна ссылка на библиотеку при двух описаниях, разделы `library`, `libraries`, `library_repository`, задания `library`/`deps`/`uninstall`, команда и окружение сборки в соседнем репозитории, проверка его версии, повтор задания после сборки зависимостей, учёт установок, переменные рабочей копии, блокировки рабочих копий |
+| `test_cds.py` | `cds.py` без CODESYS: строка запуска, `config.json` и переменные окружения, задания, команда `check` (заменитель Persistent Variables, копии ссылок устройства в пуле проверки, файлы `.opt`), JUnit, отчёт, блокировки, защита от потери правок, сравнение roundtrip, привязка сообщений компилятора к файлам, процессы рантайма, `runtime init`, удаление старых результатов `test`; чистые функции `cds_common.py` (значения `read_value`, интервалы задач, GUID, файл блокировки `.~u`, кэш предкомпиляции, коды выхода шагов) |
+| `test_cds_config.py` | `config.json` репозитория — только на уровне схемы: JSON без путей пользователя, те же разделы и ключи, что у эталона `fixtures/config_template.json`, полные описания режимов, задач и библиотек, всё разрешается |
 | `test_assemble.py` | эталоны всех вариантов (`tools/tests/golden/<вариант>/`), порядок `all.st`, карта строк, CLI, каждое правило замен rusty и понижения iec-checker |
 | `test_st_lint.py` | каждое правило — срабатывание и отсутствие, подавления, настройки, CLI |
 | `test_run_rusty.py`, `test_run_iec_checker.py` | поиск инструментов, команды, разбор вывода, обоснования, отчёты; интеграционные — с настоящими `plc` и iec_checker, в том числе `src/` и `tests/` шаблона: каждое обоснование `iec_checker_allow.toml` должно использоваться |
+
+**Настройки в тестах.** `test_cds.py` и `test_cds_library.py` берут настройки из эталона
+`tools/tests/fixtures/config_template.json` — копии `config.json` шаблона, — а не из `config.json`
+репозитория: у проекта свои библиотеки, задачи режимов и библиотека репозитория (`library`), и тесты
+шаблона от них не зависят, исключать их в `pyproject.toml` (`--deselect`) не нужно. `config.json`
+репозитория проверяет только `test_cds_config.py`: набор разделов и ключей настроек — как у
+эталона (кроме `modes` и `libraries`, которые проект наполняет сам), задачи и описания библиотек
+полные, ссылки на библиотеки разрешаются. Новый ключ в `config.json` шаблона добавляется и в
+эталон (иначе `test_cds_config.py` упадёт в шаблоне); проекту, обновившему `tools/`, тот же тест
+подскажет, какого ключа не хватает в его `config.json`.
 
 Интеграционные тесты помечены `@pytest.mark.integration` и пропускаются, если инструмента нет
 (`python -m pytest -m integration` — только они). Эталоны обновляются так:
