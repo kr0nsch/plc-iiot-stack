@@ -1,0 +1,16 @@
+fbClient.ForceConnected();
+aRuleTable[1].sDevice := 'P101';
+aRuleTable[1].eCommand := E_IiotCommand.Start;
+aRuleTable[1].diDev := 1;
+aRuleTable[2].sDevice := 'P101';
+aRuleTable[2].eCommand := E_IiotCommand.SpeedSp;
+aRuleTable[2].xRange := TRUE;
+aRuleTable[2].rMin := 0.0;
+aRuleTable[2].rMax := 100.0;
+aRuleTable[2].diDev := 1;
+aRuleTable[3].sDevice := 'P101';
+aRuleTable[3].eCommand := E_IiotCommand.Ack;
+aRuleTable[3].diDev := 1;
+aRuleTable[4].sDevice := 'LT101';
+aRuleTable[4].eCommand := E_IiotCommand.Ack;
+aRuleTable[4].diDev := 2;

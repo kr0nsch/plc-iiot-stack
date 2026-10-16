@@ -1,0 +1,1 @@
+IsConnected := xConnectRequested AND xLinkUp;

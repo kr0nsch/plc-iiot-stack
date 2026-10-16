@@ -1,0 +1,1 @@
+LastError := GVL_Const.MQTT_ERR_NO_TRANSPORT;

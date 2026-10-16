@@ -1,0 +1,29 @@
+IF sCommand = 'SetAuto' THEN
+    F_IiotCmdFromString := E_IiotCommand.SetAuto;
+ELSIF sCommand = 'SetManual' THEN
+    F_IiotCmdFromString := E_IiotCommand.SetManual;
+ELSIF sCommand = 'SetOos' THEN
+    F_IiotCmdFromString := E_IiotCommand.SetOos;
+ELSIF sCommand = 'Start' THEN
+    F_IiotCmdFromString := E_IiotCommand.Start;
+ELSIF sCommand = 'Stop' THEN
+    F_IiotCmdFromString := E_IiotCommand.Stop;
+ELSIF sCommand = 'SpeedSp' THEN
+    F_IiotCmdFromString := E_IiotCommand.SpeedSp;
+ELSIF sCommand = 'ResetMaint' THEN
+    F_IiotCmdFromString := E_IiotCommand.ResetMaint;
+ELSIF sCommand = 'SubstValue' THEN
+    F_IiotCmdFromString := E_IiotCommand.SubstValue;
+ELSIF sCommand = 'Ack' THEN
+    F_IiotCmdFromString := E_IiotCommand.Ack;
+ELSIF sCommand = 'Reset' THEN
+    F_IiotCmdFromString := E_IiotCommand.Reset;
+ELSIF sCommand = 'AckReq' THEN
+    F_IiotCmdFromString := E_IiotCommand.AckReq;
+ELSIF sCommand = 'ShelveReq' THEN
+    F_IiotCmdFromString := E_IiotCommand.ShelveReq;
+ELSIF sCommand = 'UnshelveReq' THEN
+    F_IiotCmdFromString := E_IiotCommand.UnshelveReq;
+ELSE
+    F_IiotCmdFromString := E_IiotCommand.None;
+END_IF

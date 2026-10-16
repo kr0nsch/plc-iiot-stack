@@ -1,8 +1,13 @@
-// Все зарегистрированные наборы выполняются параллельно; итоги — в журнал
-// устройства (логгер coUnit) и в XML-файл xUnit
+// Все зарегистрированные наборы выполняются параллельно; итоги — в журнал устройства и в XML xUnit
 coUnit.RUN();
 
-// AreAllTestsFinished() вызывается после RUN(): у метода есть побочный эффект
-// на первом цикле. Наборы объединяются через AND (не AND_THEN): метод вызывается
+// AreAllTestsFinished() — после RUN(); наборы объединяются через AND (не AND_THEN): метод вызывается
 // у каждого набора в каждом цикле.
-xAllFinished := fbF_ClampTest.AreAllTestsFinished() AND fbExampleTest.AreAllTestsFinished();
+xAllFinished := fbJsonBuilderTest.AreAllTestsFinished()
+    AND fbJsonFlatParserTest.AreAllTestsFinished()
+    AND fbIiotFunctionsTest.AreAllTestsFinished()
+    AND fbMqttTelemetryTest.AreAllTestsFinished()
+    AND fbMqttAlarmsTest.AreAllTestsFinished()
+    AND fbMqttCommandsTest.AreAllTestsFinished()
+    AND fbMqttDiagTest.AreAllTestsFinished()
+    AND fbKnsShimTest.AreAllTestsFinished();
