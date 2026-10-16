@@ -1,0 +1,9 @@
+#datatype,string,long,dateTime:RFC3339,string,string,string
+#group,false,false,false,false,true,true
+#default,_result,,,,,
+,result,table,_time,_value,device,suffix
+,,0,2026-10-15T11:42:10Z,Activated,LT101,H
+,,1,2026-10-15T11:55:50Z,Activated,LT101,HH
+,,2,2026-10-15T11:17:30Z,Activated,P102,FTS
+,,3,2026-10-15T07:05:00Z,Activated,ZS404,ALM
+

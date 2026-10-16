@@ -1,0 +1,87 @@
+# Настройки kns-report по умолчанию. Свой файл (--config my.toml) переопределяет только
+# заданные в нём ключи. Секретов здесь нет: токен InfluxDB и пароль OPC UA читаются из
+# переменных окружения (имена — token_env, password_env) или из .env (--env-file).
+
+[station]
+name = "КНС-1"
+# Сегменты топика MQTT site/area (schema/topics.json): vodokanal/kns1/station/<device>/<metric>;
+# area — код станции и префикс имён файлов отчёта
+site = "vodokanal"
+area = "kns1"
+# Местное время отчёта: смещение (+03:00) или имя IANA (Europe/Moscow; на Windows нужен tzdata)
+timezone = "+03:00"
+# Теги SCADA флагмана (data/scada_tags.csv)
+level_tag = "LT101.Value"
+flow_tag = "FT202.Value"
+pumps = ["P101", "P102", "P103"]
+# Устройства, тревоги которых считаются; пусто — все устройства из data/scada_alarms.csv
+alarm_devices = []
+# Сколько держится последнее значение, пока нет нового (дальше — «нет данных»):
+# аналоговые сигналы приходят периодически, дискретные и счётчики — по изменению и периодически
+analog_max_gap = "10m"
+discrete_max_gap = "2h"
+# Моточасы и пуски: counters — по счётчикам ПЛК (RunTime, Starts), state — по признаку Running,
+# auto — счётчики, если они есть в данных, иначе Running
+pump_method = "auto"
+
+# Значения стенда (.env.example): адрес — порт с docker-compose.dev.yml (make up DEV=1),
+# организация INFLUX_ORG, бакет сырых данных INFLUX_BUCKET. Из --env-file берутся INFLUX_URL
+# (или http://localhost:INFLUX_PORT), INFLUX_ORG, INFLUX_BUCKET.
+[influx]
+url = "http://localhost:8086"
+org = "vodokanal"
+bucket = "kns_raw"
+# Токен: переменная token_env; если её нет — INFLUX_ADMIN_TOKEN стенда (только для демонстрации:
+# в рабочей установке отчёту выдаётся токен с правом чтения одного бакета)
+token_env = "INFLUX_TOKEN"
+# Телеметрия (docs/data_schema.md, раздел 7): measurement, поле значения и теги точки
+measurement = "telemetry"
+field = "value"
+site_tag = "site"
+area_tag = "area"
+device_tag = "device"
+metric_tag = "metric"
+# Путь данных: mqtt — опубликовал ПЛК, opcua — прочитал Telegraf (одни и те же device/metric);
+# пусто — без фильтра (не рекомендуется: ряды двух путей смешаются)
+source_tag = "source"
+source = "mqtt"
+# Поле достоверности (только у source = mqtt): точки с этими значениями не берутся, час теряет
+# полноту данных. Пусто — без фильтра (для source = opcua поля quality нет)
+quality_field = "quality"
+exclude_quality = ["bad"]
+# Прореживание на стороне InfluxDB, например "10s" (aggregateWindow, fn: last); пусто — сырые точки
+downsample = ""
+timeout_s = 60
+# Тревоги: events — события из топиков .../alarm/<SUFFIX> (срабатывание — reason = Activated);
+# words — слова <DEV>.AlmActive в телеметрии (как при опросе OPC UA)
+alarms = "events"
+alarm_measurement = "alarm"
+alarm_field = "reason"
+alarm_value = "Activated"
+alarm_suffix_tag = "suffix"
+
+# Имя метрики в базе для тега SCADA: сначала ищется полный тег (LT101.Value), затем свойство
+# (Running). Без записи — свойство как есть. Источник — schema/telemetry_catalog.csv
+# (его можно подать целиком: --catalog schema/telemetry_catalog.csv)
+[influx.metrics]
+"LT101.Value" = "level"
+"FT202.Value" = "flow"
+Running = "running"
+Starts = "starts"
+RunTime = "run_hours"
+AlmActive = "alm_active"
+
+[opcua]
+endpoint = "opc.tcp://localhost:4840"
+# Узел строится как в scada_tags.csv: ns=4;s=|var|CODESYS Control Win V3.Application.GVL_...
+node_id_template = "ns={ns};s=|var|{device}.{path}"
+ns_index = 4
+# Если задан, номер пространства имён берётся с сервера по URI (перекрывает ns_index)
+namespace_uri = ""
+device_name = "CODESYS Control Win V3"
+interval_s = 1.0
+minutes = 10
+user = ""
+password_env = "OPCUA_PASSWORD"
+# Строка безопасности asyncua: "Basic256Sha256,SignAndEncrypt,<cert клиента>,<ключ клиента>[,<cert сервера>]"
+security = ""

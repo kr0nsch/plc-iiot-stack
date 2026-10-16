@@ -1,0 +1,56 @@
+# kns-report — суточный отчёт КНС-1: InfluxDB 2 (Flux) или OPC UA → CSV и XLSX.
+# Установка из корня репозитория: python -m pip install -e report
+# Тесты: python -m pytest report/tests (сеть не нужна: данные — из tests/fixtures)
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kns-report"
+version = "0.1.0"
+description = "Суточный отчёт КНС-1 по данным InfluxDB 2 или OPC UA: CSV и XLSX"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+    "openpyxl>=3.1",
+    "asyncua>=1.1",
+]
+
+[project.optional-dependencies]
+# IANA-зоны (--tz Europe/Moscow) на Windows: в Windows нет системной базы часовых поясов
+tz = ["tzdata"]
+dev = ["pytest>=8", "ruff", "mypy", "types-openpyxl"]
+
+[project.scripts]
+kns-report = "kns_report.cli:main"
+
+[tool.setuptools]
+packages = ["kns_report"]
+
+[tool.setuptools.package-data]
+kns_report = ["data/*.csv", "default_config.toml"]
+
+[tool.ruff]
+extend = "../pyproject.toml"
+src = ["."]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["kns_report", "tests"]
+strict = true
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+# Правила условного форматирования openpyxl (CellIsRule и др.) в заглушках не типизированы
+module = ["kns_report.xlsx_out"]
+disallow_untyped_calls = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra --strict-markers"
+markers = [
+    "integration: запросы к поднятому стенду (InfluxDB); без KNS_REPORT_INFLUX_URL пропускаются",
+]
