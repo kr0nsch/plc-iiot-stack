@@ -1,0 +1,183 @@
+{
+  "version": 1,
+  "flavor": "iec",
+  "files": {
+   "E_DeviceMode.st": [
+    [1, 11, "src/DUTs/E_DeviceMode.dut.st", 1]
+   ],
+   "E_NamurStatus.st": [
+    [1, 11, "src/DUTs/E_NamurStatus.dut.st", 1]
+   ],
+   "FB_DeviceBase.st": [
+    [1, 17, "src/POUs/Devices/FB_DeviceBase/FB_DeviceBase.decl.st", 1],
+    [18, 4, "src/POUs/Devices/FB_DeviceBase/Reset.method.decl.st", 1],
+    [22, 3, "src/POUs/Devices/FB_DeviceBase/Reset.method.impl.st", 1],
+    [25, 1, null, 1],
+    [26, 4, "src/POUs/Devices/FB_DeviceBase/Start.method.decl.st", 1],
+    [30, 1, null, 1],
+    [31, 1, "src/POUs/Devices/FB_DeviceBase/Mode.prop.decl.st", 1],
+    [32, 1, "src/POUs/Devices/FB_DeviceBase/Mode.get.impl.st", 1],
+    [33, 1, null, 1],
+    [34, 1, "src/POUs/Devices/FB_DeviceBase/Mode.prop.decl.st", 1],
+    [35, 1, "src/POUs/Devices/FB_DeviceBase/Mode.set.impl.st", 1],
+    [36, 1, null, 1],
+    [37, 1, "src/POUs/Devices/FB_DeviceBase/FB_DeviceBase.impl.st", 1],
+    [38, 1, null, 1]
+   ],
+   "FB_F_Clamp_Test.st": [
+    [1, 9, "tests/POUs/FB_F_Clamp_Test/FB_F_Clamp_Test.decl.st", 1],
+    [10, 4, "tests/POUs/FB_F_Clamp_Test/SwappedLimits.method.decl.st", 1],
+    [14, 4, "tests/POUs/FB_F_Clamp_Test/SwappedLimits.method.impl.st", 1],
+    [18, 1, null, 1],
+    [19, 4, "tests/POUs/FB_F_Clamp_Test/ValueBelowMin.method.decl.st", 1],
+    [23, 4, "tests/POUs/FB_F_Clamp_Test/ValueBelowMin.method.impl.st", 1],
+    [27, 1, null, 1],
+    [28, 4, "tests/POUs/FB_F_Clamp_Test/ValueInsideRange.method.decl.st", 1],
+    [32, 4, "tests/POUs/FB_F_Clamp_Test/ValueInsideRange.method.impl.st", 1],
+    [36, 1, null, 1],
+    [37, 3, "tests/POUs/FB_F_Clamp_Test/FB_F_Clamp_Test.impl.st", 1],
+    [40, 1, null, 1]
+   ],
+   "FB_Motor.st": [
+    [1, 25, "src/POUs/Devices/FB_Motor/FB_Motor.decl.st", 1],
+    [26, 4, "src/POUs/Devices/FB_Motor/Reset.method.decl.st", 1],
+    [30, 6, "src/POUs/Devices/FB_Motor/Reset.method.impl.st", 1],
+    [36, 1, null, 1],
+    [37, 4, "src/POUs/Devices/FB_Motor/Start.method.decl.st", 1],
+    [41, 5, "src/POUs/Devices/FB_Motor/Start.method.impl.st", 1],
+    [46, 1, null, 1],
+    [47, 2, "src/POUs/Devices/FB_Motor/Running.prop.decl.st", 1],
+    [49, 1, "src/POUs/Devices/FB_Motor/Running.get.impl.st", 1],
+    [50, 1, null, 1],
+    [51, 44, "src/POUs/Devices/FB_Motor/FB_Motor.impl.st", 1],
+    [95, 1, null, 1]
+   ],
+   "F_Clamp.st": [
+    [1, 12, "src/POUs/F_Clamp/F_Clamp.decl.st", 1],
+    [13, 6, "src/POUs/F_Clamp/F_Clamp.impl.st", 1],
+    [19, 1, null, 1]
+   ],
+   "GVL_Const.st": [
+    [1, 9, "src/GVLs/GVL_Const.gvl.st", 1]
+   ],
+   "GVL_Io.st": [
+    [1, 8, "src/GVLs/GVL_Io.gvl.st", 1]
+   ],
+   "I_Device.st": [
+    [1, 2, "src/Interfaces/I_Device/I_Device.itf.st", 1],
+    [3, 4, "src/Interfaces/I_Device/Start.method.decl.st", 1],
+    [7, 1, null, 1],
+    [8, 1, "src/Interfaces/I_Device/Mode.prop.decl.st", 1],
+    [9, 1, null, 1],
+    [10, 1, "src/Interfaces/I_Device/Mode.prop.decl.st", 1],
+    [11, 2, null, 1]
+   ],
+   "I_Resettable.st": [
+    [1, 2, "src/Interfaces/I_Resettable/I_Resettable.itf.st", 1],
+    [3, 5, "src/Interfaces/I_Resettable/Reset.method.decl.st", 1],
+    [8, 2, null, 1]
+   ],
+   "PRG_Main.st": [
+    [1, 13, "src/POUs/PRG_Main/PRG_Main.decl.st", 1],
+    [14, 20, "src/POUs/PRG_Main/PRG_Main.impl.st", 1],
+    [34, 1, null, 1]
+   ],
+   "PRG_Tests.st": [
+    [1, 10, "tests/POUs/PRG_Tests/PRG_Tests.decl.st", 1],
+    [11, 1, "tests/POUs/PRG_Tests/PRG_Tests.impl.st", 1],
+    [12, 1, null, 1]
+   ],
+   "PVL_Retain.st": [
+    [1, 3, "src/GVLs/PVL_Retain.pvl.st", 1]
+   ],
+   "ST_DeviceSts.st": [
+    [1, 8, "src/DUTs/Motor/ST_DeviceSts.dut.st", 1]
+   ],
+   "ST_MotorCmd.st": [
+    [1, 10, "src/DUTs/Motor/ST_MotorCmd.dut.st", 1]
+   ],
+   "ST_MotorSts.st": [
+    [1, 9, "src/DUTs/Motor/ST_MotorSts.dut.st", 1]
+   ],
+   "U_RawValue.st": [
+    [1, 7, "src/DUTs/U_RawValue.dut.st", 1]
+   ],
+   "all.st": [
+    [1, 11, "src/DUTs/E_DeviceMode.dut.st", 1],
+    [12, 1, null, 1],
+    [13, 11, "src/DUTs/E_NamurStatus.dut.st", 1],
+    [24, 1, null, 1],
+    [25, 8, "src/DUTs/Motor/ST_DeviceSts.dut.st", 1],
+    [33, 1, null, 1],
+    [34, 10, "src/DUTs/Motor/ST_MotorCmd.dut.st", 1],
+    [44, 1, null, 1],
+    [45, 9, "src/DUTs/Motor/ST_MotorSts.dut.st", 1],
+    [54, 1, null, 1],
+    [55, 7, "src/DUTs/U_RawValue.dut.st", 1],
+    [62, 1, null, 1],
+    [63, 9, "src/GVLs/GVL_Const.gvl.st", 1],
+    [72, 1, null, 1],
+    [73, 8, "src/GVLs/GVL_Io.gvl.st", 1],
+    [81, 1, null, 1],
+    [82, 3, "src/GVLs/PVL_Retain.pvl.st", 1],
+    [85, 1, null, 1],
+    [86, 2, "src/Interfaces/I_Resettable/I_Resettable.itf.st", 1],
+    [88, 5, "src/Interfaces/I_Resettable/Reset.method.decl.st", 1],
+    [93, 3, null, 1],
+    [96, 2, "src/Interfaces/I_Device/I_Device.itf.st", 1],
+    [98, 4, "src/Interfaces/I_Device/Start.method.decl.st", 1],
+    [102, 1, null, 1],
+    [103, 1, "src/Interfaces/I_Device/Mode.prop.decl.st", 1],
+    [104, 1, null, 1],
+    [105, 1, "src/Interfaces/I_Device/Mode.prop.decl.st", 1],
+    [106, 3, null, 1],
+    [109, 12, "src/POUs/F_Clamp/F_Clamp.decl.st", 1],
+    [121, 6, "src/POUs/F_Clamp/F_Clamp.impl.st", 1],
+    [127, 2, null, 1],
+    [129, 17, "src/POUs/Devices/FB_DeviceBase/FB_DeviceBase.decl.st", 1],
+    [146, 4, "src/POUs/Devices/FB_DeviceBase/Reset.method.decl.st", 1],
+    [150, 3, "src/POUs/Devices/FB_DeviceBase/Reset.method.impl.st", 1],
+    [153, 1, null, 1],
+    [154, 4, "src/POUs/Devices/FB_DeviceBase/Start.method.decl.st", 1],
+    [158, 1, null, 1],
+    [159, 1, "src/POUs/Devices/FB_DeviceBase/Mode.prop.decl.st", 1],
+    [160, 1, "src/POUs/Devices/FB_DeviceBase/Mode.get.impl.st", 1],
+    [161, 1, null, 1],
+    [162, 1, "src/POUs/Devices/FB_DeviceBase/Mode.prop.decl.st", 1],
+    [163, 1, "src/POUs/Devices/FB_DeviceBase/Mode.set.impl.st", 1],
+    [164, 1, null, 1],
+    [165, 1, "src/POUs/Devices/FB_DeviceBase/FB_DeviceBase.impl.st", 1],
+    [166, 2, null, 1],
+    [168, 9, "tests/POUs/FB_F_Clamp_Test/FB_F_Clamp_Test.decl.st", 1],
+    [177, 4, "tests/POUs/FB_F_Clamp_Test/SwappedLimits.method.decl.st", 1],
+    [181, 4, "tests/POUs/FB_F_Clamp_Test/SwappedLimits.method.impl.st", 1],
+    [185, 1, null, 1],
+    [186, 4, "tests/POUs/FB_F_Clamp_Test/ValueBelowMin.method.decl.st", 1],
+    [190, 4, "tests/POUs/FB_F_Clamp_Test/ValueBelowMin.method.impl.st", 1],
+    [194, 1, null, 1],
+    [195, 4, "tests/POUs/FB_F_Clamp_Test/ValueInsideRange.method.decl.st", 1],
+    [199, 4, "tests/POUs/FB_F_Clamp_Test/ValueInsideRange.method.impl.st", 1],
+    [203, 1, null, 1],
+    [204, 3, "tests/POUs/FB_F_Clamp_Test/FB_F_Clamp_Test.impl.st", 1],
+    [207, 2, null, 1],
+    [209, 25, "src/POUs/Devices/FB_Motor/FB_Motor.decl.st", 1],
+    [234, 4, "src/POUs/Devices/FB_Motor/Reset.method.decl.st", 1],
+    [238, 6, "src/POUs/Devices/FB_Motor/Reset.method.impl.st", 1],
+    [244, 1, null, 1],
+    [245, 4, "src/POUs/Devices/FB_Motor/Start.method.decl.st", 1],
+    [249, 5, "src/POUs/Devices/FB_Motor/Start.method.impl.st", 1],
+    [254, 1, null, 1],
+    [255, 2, "src/POUs/Devices/FB_Motor/Running.prop.decl.st", 1],
+    [257, 1, "src/POUs/Devices/FB_Motor/Running.get.impl.st", 1],
+    [258, 1, null, 1],
+    [259, 44, "src/POUs/Devices/FB_Motor/FB_Motor.impl.st", 1],
+    [303, 2, null, 1],
+    [305, 13, "src/POUs/PRG_Main/PRG_Main.decl.st", 1],
+    [318, 20, "src/POUs/PRG_Main/PRG_Main.impl.st", 1],
+    [338, 2, null, 1],
+    [340, 10, "tests/POUs/PRG_Tests/PRG_Tests.decl.st", 1],
+    [350, 1, "tests/POUs/PRG_Tests/PRG_Tests.impl.st", 1],
+    [351, 1, null, 1]
+   ]
+  }
+}

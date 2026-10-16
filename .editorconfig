@@ -1,0 +1,26 @@
+# Единые настройки редакторов: UTF-8 без BOM, LF, 4 пробела (см. CONTRIBUTING.md, docs/LAYOUT.md)
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.st]
+max_line_length = 120
+
+[*.py]
+max_line_length = 120
+
+[*.{yml,yaml,json,toml}]
+indent_size = 2
+
+[*.md]
+# два пробела в конце строки в Markdown — перенос строки, не трогаем
+trim_trailing_whitespace = false
+
+[*.{bat,cmd}]
+end_of_line = crlf

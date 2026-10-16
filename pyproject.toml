@@ -1,0 +1,55 @@
+# Настройки Python-инструментов шаблона (tools/): ruff, mypy, pytest.
+# tools/codesys/*.py выполняются и в IronPython 2.7 (CODESYS Scripting): для них отключены
+# правила, которые предлагают синтаксис Python 3 (pyupgrade и др.).
+
+[project]
+name = "plc-repo-template-tools"
+version = "0.1.0"
+description = "Инструменты шаблона ПЛК-репозитория: раскладка ST, сборка, линтер, проверки"
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["build"]
+# Каталоги модулей проекта (для сортировки импортов: first-party)
+src = ["tools", "tools/codesys", "tools/check", "tools/tests"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "C4", "RUF"]
+ignore = [
+    "RUF001", # кириллица в строках (сообщения по-русски) — не опечатка
+    "RUF002", # то же в docstring
+    "RUF003", # то же в комментариях
+]
+
+[tool.ruff.format]
+# Скрипты CODESYS форматируются вручную: форматтер ruff рассчитан на Python 3 и может
+# добавить запятую после *args/**kwargs, а это SyntaxError в IronPython 2.7.
+exclude = ["tools/codesys/*.py"]
+
+[tool.ruff.lint.per-file-ignores]
+# Общее подмножество Python 2.7 и 3.x: __future__, "%"-форматирование, class X(object),
+# без f-строк, распаковки [*a], raise ... from, contextlib.suppress
+"tools/codesys/*.py" = ["UP", "SIM", "C4", "B904", "RUF005", "RUF012"]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["tools"]
+mypy_path = ["tools", "tools/codesys", "tools/check"]
+strict = true
+warn_unreachable = true
+# Скрипты CODESYS (IronPython 2.7) используют глобальные объекты среды CODESYS (projects,
+# system, ...), mypy их не знает. stlayout.py проверяется: он типизирован комментариями.
+exclude = [
+    '^tools/codesys/(?!stlayout\.py$)[^/]*\.py$',
+    '^tools/tests/fixtures/',
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tools/tests"]
+pythonpath = ["tools", "tools/codesys", "tools/check"]
+addopts = "-ra --strict-markers"
+markers = [
+    "integration: проверки с настоящими plc (RuSTy) и iec_checker; пропускаются, если инструмента нет",
+]

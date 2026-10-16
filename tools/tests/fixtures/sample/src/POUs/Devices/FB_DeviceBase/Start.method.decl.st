@@ -1,0 +1,4 @@
+METHOD PUBLIC ABSTRACT Start
+VAR_INPUT
+    rSpeed_rpm : REAL;
+END_VAR

@@ -1,0 +1,4 @@
+METHOD PUBLIC Reset : BOOL
+VAR_INPUT
+    xForce : BOOL;
+END_VAR

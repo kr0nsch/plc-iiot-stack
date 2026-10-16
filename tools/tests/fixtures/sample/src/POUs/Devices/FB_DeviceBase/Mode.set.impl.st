@@ -1,0 +1,1 @@
+eModeInt := Mode;

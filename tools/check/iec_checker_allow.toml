@@ -1,0 +1,65 @@
+# Обоснованные находки iec_checker (tools/check/run_iec_checker.py).
+# Обоснованная находка попадает в отчёт со статусом allowed и не роняет проверку.
+# Подробный разбор каждой записи — docs/STATIC_ANALYSIS.md; при изменении кода держите их согласованными.
+#
+# Ключи записи [[allow]]:
+#   id     — идентификатор правила iec_checker (шаблон fnmatch), например "PLCOPEN-CP3";
+#   file   — шаблон fnmatch пути исходника (src/POUs/...) или имени собранного файла (FB_X.st);
+#            '*' захватывает и '/';
+#   match  — необязательно: регулярное выражение по тексту сообщения;
+#   reason — обязательно: почему находка допустима.
+# ParserError и LexingError обосновать нельзя: их исправляют в коде или в понижении iec-checker.
+
+[[allow]]
+id = "PLCOPEN-CP3"
+file = "src/*"
+reason = "Переменная без явного начального значения получает значение по умолчанию своего типа (МЭК 61131-3, как в CODESYS); вариант сборки iec-checker убирает неконстантные начальные значения"
+
+[[allow]]
+id = "PLCOPEN-CP3"
+file = "tests/*"
+reason = "Как для src/: значения по умолчанию типов; результаты тестов присваиваются до чтения"
+
+[[allow]]
+id = "PLCOPEN-CP9"
+file = "src/POUs/FB_Example/*"
+reason = "Сложность тела FB_Example по классической метрике — 8; iec_checker 0.4 считает её завышенно (docs/STATIC_ANALYSIS.md)"
+
+[[allow]]
+id = "PLCOPEN-CP9"
+file = "tests/*"
+reason = "Наборы тестов — последовательные вызовы без ветвлений (классическая сложность — 1); завышенный подсчёт iec_checker 0.4, метрика для тестов не показательна"
+
+[[allow]]
+id = "PLCOPEN-L17"
+file = "src/POUs/FB_Example/FB_Example.impl.st"
+reason = "Действия «иначе» нет: в зоне гистерезиса выход сохраняет состояние, без фронта счётчик не меняется"
+
+[[allow]]
+id = "PLCOPEN-L17"
+file = "src/POUs/PRG_Main/PRG_Main.impl.st"
+reason = "Однократная команда HMI не пришла — делать нечего; пустая ветка ELSE только добавит шум"
+
+[[allow]]
+id = "UnusedVariable"
+file = "src/POUs/PRG_Main/PRG_Main.decl.st"
+match = "STCMD|STSTS"
+reason = "Ложное срабатывание iec_checker 0.4: обращения к полям структуры (stCmd.xAck, stSts.xOut) он не считает использованием"
+
+[[allow]]
+id = "UnusedVariable"
+file = "tests/POUs/*_Test/*_Test.decl.st"
+match = "variable: [A-Z][A-Z0-9]*(_[A-Z0-9]+)+$"
+reason = "Артефакт понижения: константы набора (VAR CONSTANT, UPPER_SNAKE_CASE) используются в методах-тестах, которые сборка выносит в отдельные функции"
+
+[[allow]]
+id = "UnusedVariable"
+file = "tests/POUs/FB_Example_Test/*.method.decl.st"
+match = "FBDUT"
+reason = "Ложное срабатывание iec_checker 0.4: экземпляр ФБ используется вызовом fbDut(...), чтением выходов и вызовом методов — это он не считает использованием (как stCmd/stSts в PRG_Main)"
+
+[[allow]]
+id = "UnusedVariable"
+file = "tests/POUs/PRG_Tests/PRG_Tests.decl.st"
+match = "FBF_CLAMPTEST|FBEXAMPLETEST"
+reason = "Экземпляры наборов регистрируются в coUnit самим объявлением и используются вызовом AreAllTestsFinished()"

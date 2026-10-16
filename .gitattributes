@@ -1,0 +1,32 @@
+# Переводы строк нормализуются в LF (CONTRIBUTING.md); исключение — пакетные файлы Windows
+* text=auto eol=lf
+
+*.st    text eol=lf
+*.py    text eol=lf
+*.md    text eol=lf
+*.json  text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.toml  text eol=lf
+*.txt   text eol=lf
+*.sh    text eol=lf
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+
+# Двоичные файлы: без нормализации и текстового диффа.
+# Проекты и библиотеки CODESYS в git не хранятся (.gitignore), правила — на случай вложений к релизам.
+*.project         binary
+*.projectarchive  binary
+*.library         binary
+*.compiled-library binary
+*.package         binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.zip   binary
+*.gz    binary
+*.exe   binary
+*.dll   binary

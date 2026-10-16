@@ -1,0 +1,268 @@
+# CI шаблона ПЛК-репозитория: проверки, которым не нужен CODESYS.
+# Сборка и тесты в CODESYS выполняются на Windows вручную (docs/MANUAL_STEPS.md).
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  # Обязательный статанализ — тем же iec_checker v0.4, что и локально (docs/STATIC_ANALYSIS.md):
+  # обоснования в tools/check/iec_checker_allow.toml подобраны под находки этой версии.
+  IEC_CHECKER_VERSION: v0.4
+  # Файл iec_checker_Linux_x86_64 релиза v0.4: размер — из API GitHub Releases (поле size).
+  # Контрольной суммы у релиза 2022 года нет: SHA-256 вычислен по скачанному файлу 2026-10-16
+  # (доверие при первом использовании). Пустое значение — шаг загрузки только предупреждает.
+  IEC_CHECKER_SIZE: "10816408"
+  IEC_CHECKER_SHA256: e7bea2a594ad47d089650944c9095251a7db5b44c953f726390ca0023675fa40
+  # Необязательная сверка с новой версией разборщика: образ nightly, закреплённый по дайджесту
+  # (Docker Hub, тег nightly от 2026-07-13). Обновлять дайджест — осознанно, вместе с обоснованиями.
+  IEC_CHECKER_IMAGE: jubnzv1/iec-checker:nightly@sha256:fb1b148d4b6c5899f04924e87f78c6b5a3fc54ced31496b9ad50d0c8fbbdbe3d
+  RUSTY_VERSION: v1.0.6
+  # SHA-256 файлов релиза RuSTy v1.0.6 (из API GitHub Releases, поле digest)
+  RUSTY_PLC_SHA256: cee05d9871b7a4dea66ad0e1a3a94cce858d28967c0bdecd16a821e3c621a6bf
+  RUSTY_STDLIB_SHA256: 17086c67d46cdba0a6acf8c3c8e3b594804053df3913dab2756ef555cb826129
+
+jobs:
+  checks:
+    name: Python, сборка ST, линтер, iec_checker
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Зависимости
+        run: python -m pip install -r requirements-dev.txt
+
+      # До pytest: с переменной IEC_CHECKER интеграционные тесты идут с настоящим разборщиком,
+      # в том числе проверка, что tools/check/iec_checker_allow.toml соответствует src/ и tests/.
+      - name: Загрузка iec_checker ${{ env.IEC_CHECKER_VERSION }}
+        run: |
+          dir="$RUNNER_TEMP/iec-checker"
+          url="https://github.com/iec-checker/iec-checker/releases/download/$IEC_CHECKER_VERSION/iec_checker_Linux_x86_64"
+          mkdir -p "$dir"
+          curl -fsSL --retry 3 -o "$dir/iec_checker" "$url"
+          size=$(stat -c %s "$dir/iec_checker")
+          if [ "$size" != "$IEC_CHECKER_SIZE" ]; then
+            echo "::error::iec_checker: размер файла $size, ожидался $IEC_CHECKER_SIZE"
+            exit 1
+          fi
+          sum=$(sha256sum "$dir/iec_checker" | cut -d ' ' -f 1)
+          if [ -n "$IEC_CHECKER_SHA256" ]; then
+            echo "$IEC_CHECKER_SHA256  $dir/iec_checker" | sha256sum -c -
+          else
+            echo "::warning::SHA-256 iec_checker $IEC_CHECKER_VERSION не закреплён: $sum — впишите его в IEC_CHECKER_SHA256 (ci.yml)"
+          fi
+          chmod +x "$dir/iec_checker"
+          echo "IEC_CHECKER=$dir/iec_checker" >> "$GITHUB_ENV"
+
+      # Проверки ниже запускаются все, даже если одна упала: сводка показывает полную картину,
+      # а задание всё равно завершается ошибкой.
+      - name: ruff check
+        id: ruff
+        if: ${{ !cancelled() }}
+        run: python -m ruff check .
+
+      - name: ruff format --check
+        id: ruff_format
+        if: ${{ !cancelled() }}
+        run: python -m ruff format --check .
+
+      - name: mypy
+        id: mypy
+        if: ${{ !cancelled() }}
+        run: python -m mypy
+
+      - name: pytest
+        id: pytest
+        if: ${{ !cancelled() }}
+        run: python -m pytest
+
+      - name: Сборка ST (assemble)
+        id: assemble
+        if: ${{ !cancelled() }}
+        run: python tools/assemble.py --tests
+
+      - name: Линтер ST (st_lint)
+        id: st_lint
+        if: ${{ !cancelled() }}
+        run: python tools/check/st_lint.py --strict
+
+      # run_iec_checker.py сам собирает вариант iec-checker в build/assembled/iec-checker/ и берёт
+      # бинарник из переменной IEC_CHECKER; обоснованные находки — tools/check/iec_checker_allow.toml
+      # и docs/STATIC_ANALYSIS.md
+      - name: Статанализ (iec_checker)
+        id: iec_checker
+        if: ${{ !cancelled() }}
+        run: python tools/check/run_iec_checker.py --tests
+
+      - name: Сводка
+        if: ${{ !cancelled() }}
+        env:
+          R_RUFF: ${{ steps.ruff.outcome }}
+          R_RUFF_FORMAT: ${{ steps.ruff_format.outcome }}
+          R_MYPY: ${{ steps.mypy.outcome }}
+          R_PYTEST: ${{ steps.pytest.outcome }}
+          R_ASSEMBLE: ${{ steps.assemble.outcome }}
+          R_ST_LINT: ${{ steps.st_lint.outcome }}
+          R_IEC_CHECKER: ${{ steps.iec_checker.outcome }}
+        run: |
+          status() {
+            case "$1" in
+              success) echo "пройдено" ;;
+              failure) echo "**ошибка**" ;;
+              skipped) echo "пропущено" ;;
+              *) echo "${1:-нет данных}" ;;
+            esac
+          }
+          {
+            echo "## Проверки без CODESYS"
+            echo ""
+            echo "| Проверка | Итог |"
+            echo "|---|---|"
+            echo "| ruff check | $(status "$R_RUFF") |"
+            echo "| ruff format --check | $(status "$R_RUFF_FORMAT") |"
+            echo "| mypy | $(status "$R_MYPY") |"
+            echo "| pytest | $(status "$R_PYTEST") |"
+            echo "| assemble | $(status "$R_ASSEMBLE") |"
+            echo "| st_lint --strict | $(status "$R_ST_LINT") |"
+            echo "| iec_checker $IEC_CHECKER_VERSION | $(status "$R_IEC_CHECKER") |"
+            echo ""
+            echo "Отчёты — в артефакте \`build-reports\`. Находки iec_checker разбираются в \`docs/STATIC_ANALYSIS.md\`."
+            if [ -f build/iec_checker.md ]; then
+              echo ""
+              cat build/iec_checker.md
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Артефакты (build/)
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-reports
+          path: build/
+          if-no-files-found: warn
+          retention-days: 14
+
+  iec_checker_nightly:
+    # Необязательная сверка: новая версия разборщика может найти больше или иначе. Расхождения
+    # с v0.4 переносятся в docs/STATIC_ANALYSIS.md (столбец «решение»), падение не блокирует слияние.
+    name: iec_checker nightly, Docker (необязательно)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Загрузка образа
+        run: docker pull "$IEC_CHECKER_IMAGE"
+
+      - name: Статанализ (iec_checker nightly)
+        id: nightly
+        run: python tools/check/run_iec_checker.py --docker "$IEC_CHECKER_IMAGE" --tests
+
+      - name: Сводка
+        if: ${{ !cancelled() }}
+        env:
+          R_NIGHTLY: ${{ steps.nightly.outcome }}
+        run: |
+          {
+            echo "## iec_checker nightly (необязательная проверка)"
+            echo ""
+            echo "Образ: \`$IEC_CHECKER_IMAGE\`. Итог: ${R_NIGHTLY:-нет данных}."
+            echo ""
+            if [ -f build/iec_checker.md ]; then
+              cat build/iec_checker.md
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Артефакты (build/)
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: iec-checker-nightly-reports
+          path: build/
+          if-no-files-found: warn
+          retention-days: 14
+
+  rusty:
+    # Необязательная проверка: RuSTy понимает не все расширения CODESYS,
+    # несовместимые файлы перечислены в tools/check/rusty_exclude.txt.
+    name: RuSTy plc --check (необязательно)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Загрузка RuSTy ${{ env.RUSTY_VERSION }}
+        run: |
+          dir="$RUNNER_TEMP/rusty"
+          base="https://github.com/PLC-lang/rusty/releases/download/$RUSTY_VERSION"
+          mkdir -p "$dir"
+          curl -fsSL --retry 3 -o "$dir/plc" "$base/plc-linux-x86_64"
+          curl -fsSL --retry 3 -o "$dir/stdlib.tar.gz" "$base/stdlib-${RUSTY_VERSION#v}.tar.gz"
+          echo "$RUSTY_PLC_SHA256  $dir/plc" | sha256sum -c -
+          echo "$RUSTY_STDLIB_SHA256  $dir/stdlib.tar.gz" | sha256sum -c -
+          chmod +x "$dir/plc"
+          tar -xzf "$dir/stdlib.tar.gz" -C "$dir"
+          "$dir/plc" --version
+          echo "RUSTY_PLC=$dir/plc" >> "$GITHUB_ENV"
+          echo "RUSTY_STDLIB_INCLUDE=$dir/stdlib/include" >> "$GITHUB_ENV"
+
+      # run_rusty.py сам собирает вариант rusty (src/ и tests/ с прокладками tools/check/rusty_shims/);
+      # компилятор и stdlib — из переменных RUSTY_PLC и RUSTY_STDLIB_INCLUDE
+      - name: RuSTy plc --check
+        id: rusty
+        run: python tools/check/run_rusty.py
+
+      - name: Сводка
+        if: ${{ !cancelled() }}
+        env:
+          R_RUSTY: ${{ steps.rusty.outcome }}
+        run: |
+          {
+            echo "## RuSTy $RUSTY_VERSION (необязательная проверка)"
+            echo ""
+            echo "Итог \`plc --check\`: ${R_RUSTY:-нет данных}"
+            echo ""
+            if [ -f build/rusty.log ]; then
+              echo '```text'
+              tail -n 50 build/rusty.log
+              echo '```'
+            fi
+            echo ""
+            echo "Падение этого задания не блокирует слияние. Исключения — в \`tools/check/rusty_exclude.txt\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Артефакты (build/)
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: rusty-reports
+          path: build/
+          if-no-files-found: warn
+          retention-days: 14
