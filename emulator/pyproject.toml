@@ -1,0 +1,55 @@
+# kns-emulator — эмулятор ПЛК КНС-1: OPC UA-сервер с тегами флагмана, модель объекта, MQTT.
+# Установка из корня репозитория: python -m pip install -e emulator
+# Тесты: python -m pytest emulator/tests (брокер и Docker не нужны: брокер в тестах — свой, на Python)
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kns-emulator"
+version = "0.1.0"
+description = "Эмулятор ПЛК КНС-1 для IIoT-стека: OPC UA (asyncua), MQTT (paho-mqtt), модель объекта"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+    "asyncua>=1.1",
+    "paho-mqtt>=2.0,<3",
+    "cryptography>=42",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "jsonschema>=4.18", "ruff", "mypy"]
+
+[project.scripts]
+kns-emulator = "iiot_emulator.cli:main"
+
+[tool.setuptools]
+packages = ["iiot_emulator"]
+
+[tool.setuptools.package-data]
+iiot_emulator = ["data/*.csv", "data/*.json"]
+
+[tool.ruff]
+extend = "../pyproject.toml"
+src = ["."]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["iiot_emulator", "tests"]
+strict = true
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+# asyncua и paho-mqtt без полных аннотаций для strict
+module = ["asyncua.*", "paho.*", "jsonschema.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra --strict-markers"
+markers = [
+    "network: тест поднимает локальные сокеты (OPC UA-сервер, брокер MQTT на 127.0.0.1)",
+]
