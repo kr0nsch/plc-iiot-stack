@@ -40,7 +40,7 @@ tests/                               тесты CfUnit в той же раскл
 ## Именование ST
 - POU: `PRG_`, `FB_`, `F_`. Типы: `ST_` — структура, `E_` — перечисление, `U_` — объединение. Интерфейсы — `I_`. Списки глобальных переменных — `GVL_`.
 - Методы и свойства — PascalCase без префиксов: `Reset()`, `Value`.
-- Переменные — с префиксом типа: x BOOL, b BYTE, w WORD, dw DWORD, i INT, di DINT, ui UINT, udi UDINT, r REAL, lr LREAL, s STRING, ws WSTRING, t TIME, e перечисление, st структура, a массив, fb экземпляр ФБ, p указатель, ref ссылка, itf интерфейс.
+- Переменные — с префиксом типа: x BOOL, b BYTE, w WORD, dw DWORD, i INT, di DINT, ui UINT, udi UDINT, r REAL, lr LREAL, s STRING, ws WSTRING, t TIME, e перечисление, st структура, a массив (можно с префиксом типа элемента: `astAlarm` — массив структур, `afbAlarm` — экземпляров ФБ, `axFlag` — BOOL), fb экземпляр ФБ, p указатель, ref ссылка, itf интерфейс.
 - Физические величины — с единицами в имени: `rLevel_m`, `rPressure_bar`, `rFlow_m3h`.
 - Константы — `VAR_GLOBAL CONSTANT` в `GVL_Const`, UPPER_SNAKE_CASE. «Магических чисел» в логике нет.
 - В начале каждого POU — комментарий: назначение, автор, версия, ссылка на документ в `docs/`.

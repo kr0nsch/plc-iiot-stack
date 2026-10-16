@@ -52,6 +52,25 @@ RuSTy, `cds.py` для CODESYS 3.5.17.30) — из шаблона, пример 
   RuSTy), `packages` — mypy и pytest эмулятора и отчёта, `stack` — `make demo DEV=1` с нуля на Linux,
   `make test-stack` и отчёт по данным стенда (заменяет отдельный `stack.yml`).
 
+### Changed
+
+- Статанализ ST — `tools/check/run_iec_checker.py --tests` шаблона (локально, обязательное задание CI и
+  необязательное `nightly`): после обновления `tools/` из plc-repo-template понижение варианта сборки
+  `iec-checker` разбирает все конструкции проекта — ошибок разбора 0 (прямой запуск раньше давал 41).
+  Обёртка `tools_project/iec_checker_gate.py`, её список пробелов разборщика
+  `tools_project/iec_checker_parser_gaps.toml` и тест `tests_stack/test_iec_checker_gate.py` удалены,
+  исключение шаблонного `test_integration_repository_sources` из `pyproject.toml` убрано.
+- `tools/check/iec_checker_allow.toml`: ложные UnusedVariable (обращения из методов, через вызов, метод
+  или поле, в границе `FOR`) — записи по объектам с перечнем имён; что к каждому имени есть обращение,
+  проверяет `tests_stack/test_iec_checker_allow.py`. Обоснование OutOfBounds для `FB_IiotKnsMap` удалено:
+  понижение шаблона `a[i].x` таких находок больше не даёт ([docs/STATIC_ANALYSIS.md](docs/STATIC_ANALYSIS.md)).
+- Тест coUnit `IntExtremes`: границы LINT записаны шестнадцатеричными литералами — набор
+  `FB_JsonBuilder_Test` теперь проходит статанализ (десятичный литерал больше 2^62 - 1 iec_checker 0.4
+  не читает).
+- RuSTy (`run_rusty.py`, необязательно): 314 ошибок вместо 414 — `VAR_IN_OUT CONSTANT` (100 ошибок E034
+  и E036) теперь заменяет вариант сборки `rusty` шаблона; оставшиеся — расширения CODESYS, которых нет в
+  RuSTy и в прокладках шаблона.
+
 ### Fixed
 
 - Эмулятор: зона нечувствительности — строгое «больше», как в контракте и `F_IiotDeadbandExceeded`

@@ -1,7 +1,6 @@
-# Обоснованные находки iec_checker (tools/check/run_iec_checker.py и обёртка проекта
-# tools_project/iec_checker_gate.py). Обоснованная находка попадает в отчёт со статусом allowed и не
-# роняет проверку. Подробный разбор каждой записи — docs/STATIC_ANALYSIS.md; при изменении кода держите
-# их согласованными.
+# Обоснованные находки iec_checker (tools/check/run_iec_checker.py).
+# Обоснованная находка попадает в отчёт со статусом allowed и не роняет проверку.
+# Подробный разбор каждой записи — docs/STATIC_ANALYSIS.md; при изменении кода держите их согласованными.
 #
 # Ключи записи [[allow]]:
 #   id     — идентификатор правила iec_checker (шаблон fnmatch), например "PLCOPEN-CP3";
@@ -9,10 +8,14 @@
 #            '*' захватывает и '/';
 #   match  — необязательно: регулярное выражение по тексту сообщения;
 #   reason — обязательно: почему находка допустима.
-# ParserError и LexingError здесь обосновать нельзя: их исправляют в коде, а то, что исправить нельзя,
-# описано в tools_project/iec_checker_parser_gaps.toml (принимает только обёртка проекта).
-# UnusedVariable, у которой в коде POU есть обращение к переменной, обёртка отмечает сама (с местом
-# обращения); здесь — только переменные, которые действительно не читаются, и почему так задумано.
+# ParserError и LexingError обосновать нельзя: их исправляют в коде или в понижении iec-checker.
+#
+# UnusedVariable. Ложные срабатывания iec_checker 0.4 (к переменной обращаются, но он этого не видит)
+# обоснованы записями по объектам с перечнем имён в match: ': (ИМЯ|ИМЯ)$' или многострочно
+# '(?x) :\s ( ИМЯ | ИМЯ )$'. Что каждое перечисленное имя объявлено в файлах записи и встречается в теле
+# своего POU, метода или свойства, проверяет tests_stack/test_iec_checker_allow.py: обоснование не
+# переживёт переменную, к которой перестали обращаться. Записи без перечня — переменные, которые
+# действительно не читаются, с причиной.
 
 [[allow]]
 id = "PLCOPEN-CP3"
@@ -74,11 +77,7 @@ id = "PLCOPEN-L10"
 file = "tests/POUs/F_TestContains/*"
 reason = "Помощник тестов: EXIT при первом совпадении подстроки"
 
-[[allow]]
-id = "OutOfBounds"
-file = "src/POUs/Generated/FB_IiotKnsMap/*"
-match = 'out of range \[0 \.\. 0\]'
-reason = "Артефакт понижения: параметр ARRAY[*] (массив переменной длины CODESYS) вариант сборки iec-checker заменяет на ARRAY[0..0]. Индексы — константы 1..POINT_COUNT и 1..ALARM_WORDS_COUNT из генератора; массив короче перечня методы не заполняют (проверка LOWER_BOUND/UPPER_BOUND, тест MapIgnoresTooSmallTable)"
+# --- UnusedVariable: переменные, которые действительно не читаются ---
 
 [[allow]]
 id = "UnusedVariable"
@@ -89,3 +88,139 @@ reason = "Клиент без транспорта (нулевой объект 
 id = "UnusedVariable"
 file = "src/POUs/KnsShim/*.decl.st"
 reason = "Заглушки ФБ флагмана без логики: входы с именами выходов настоящих ФБ пишут тесты, а читает PRG_Iiot снаружи (GVL_Devices.fb<TAG>.<имя>); внутри ФБ они не нужны"
+
+# --- UnusedVariable: ложные срабатывания iec_checker 0.4 (обращение есть) ---
+# iec_checker 0.4 не считает использованием: обращения из методов ФБ (сборка выносит методы в отдельные
+# функции, в теле ФБ обращения нет), вызов экземпляра ФБ и его методов (fbX(...), fbX.M()), обращения к
+# полям (stX.y, fbX.y, a[i].y) и переменные в границах FOR (FOR i := 1 TO MAX(uiN, 1)).
+
+[[allow]]
+id = "UnusedVariable"
+file = "src/POUs/Iiot/FB_MqttAlarms/*"
+match = '''(?x) :\s (
+    STOPICPREFIX | UIMAXPERCYCLE | UDIPUBLISHED | UDIFAILED | UDIDROPPED | UDIEVENTS | UIPENDING | FBJSON |
+    STOPIC | DICURSOR | STALARM | AALARMTABLE
+)$'''
+reason = "Ложное срабатывание iec_checker 0.4: переменные ФБ читают и пишут только методы (PublishDue, PublishAlarm, UpdateStates, ResetSent); параметры методов stAlarm и aAlarmTable — только поля (stAlarm.xSent, aAlarmTable[i].eState) и границы FOR"
+
+[[allow]]
+id = "UnusedVariable"
+file = "src/POUs/Iiot/FB_MqttCommands/*"
+match = '''(?x) :\s (
+    ULITS_MS | TMAXAGE | UIRATELIMIT | TRATEWINDOW | UIMAXPERCYCLE | STCMD | ELASTREASON | UDIACCEPTED |
+    UDIREJECTED | UDIDROPPED | UDIACKFAILED | FBPARSER | FBJSON | SACKTOPIC | STOPICDEVICE | STOPICCOMMAND |
+    SCMDID | AHISTORY | UIHISTORYNEXT | ARATETIMES | UIRATENEXT | UIRATECOUNT
+)$'''
+reason = "Ложное срабатывание iec_checker 0.4: переменные ФБ читают и пишут только методы шлюза (Check, Arm, Finish, HandleMessage, IsDuplicate, Remember, RateAllows); uiMaxPerCycle в теле — только в границе FOR"
+
+[[allow]]
+id = "UnusedVariable"
+file = "src/POUs/Iiot/FB_MqttDiag/*"
+match = '''(?x) :\s (
+    STOPICPREFIX | SNODE | SSWVERSION | TPERIOD | UIFAILTHRESHOLD | UDICONNECTFAILURES | LTSTATESINCE |
+    FBJSON | STOPIC
+)$'''
+reason = "Ложное срабатывание iec_checker 0.4: переменные ФБ читают и пишут только методы автомата связи (BuildStatus, PublishStatus, StatusTopic, EnterState, ConnectFailed, UpdateNe107)"
+
+[[allow]]
+id = "UnusedVariable"
+file = "src/POUs/Iiot/FB_MqttTelemetry/*"
+match = '''(?x) :\s (
+    STOPICPREFIX | TMININTERVAL | UIMAXPERCYCLE | UDIPUBLISHED | UDIFAILED | UDIDROPPED | UIPENDING | FBJSON |
+    STOPIC | DICURSOR | APOINTTABLE | STPOINT
+)$'''
+reason = "Ложное срабатывание iec_checker 0.4: переменные ФБ читают и пишут только методы (PublishDue, PointDue, PublishPoint); параметры методов stPoint и aPointTable — только поля (stPoint.xSent, aPointTable[i].xForce) и границы FOR"
+
+[[allow]]
+id = "UnusedVariable"
+file = "src/POUs/Iiot/F_IiotAlarmStateOf/*"
+match = ': (STWORDS)$'
+reason = "Ложное срабатывание iec_checker 0.4: к входу-структуре обращаются только через поля (stWords.wActive, stWords.xOutOfService)"
+
+[[allow]]
+id = "UnusedVariable"
+file = "src/POUs/Json/FB_JsonBuilder/*"
+match = ': (SJSON|UILEN|XOVERFLOW|XNEEDCOMMA)$'
+reason = "Ложное срабатывание iec_checker 0.4: буфер, длину и флаги ФБ читают и пишут только методы (AppendByte, AppendKey, Begin, Finish)"
+
+[[allow]]
+id = "UnusedVariable"
+file = "src/POUs/Json/FB_JsonFlatParser/*"
+match = '''(?x) :\s (
+    UICOUNT | EERROR | UIERRORPOS | AFIELDS | UIPOS | UILEN | STOK | LRTOK | XTOKINTEGER
+)$'''
+reason = "Ложное срабатывание iec_checker 0.4: состояние разборщика (позиция, текущая лексема, поля, ошибка) читают и пишут только методы (Parse, Fail, MatchLiteral, FieldIsInteger, ...)"
+
+[[allow]]
+id = "UnusedVariable"
+file = "src/POUs/PRG_Iiot/*"
+match = ': (FBMAP|FBDIAG|FBTELEMETRY|FBALARMS|FBCOMMANDS|NS_PER_S)$'
+reason = "Ложное срабатывание iec_checker 0.4: экземпляры ФБ вызываются (fbDiag(...)) и читаются через выходы и методы (fbMap.FillPoints(...), fbDiag.xReady); константу NS_PER_S читает только метод FillNodePoints"
+
+[[allow]]
+id = "UnusedVariable"
+file = "tests/POUs/FB_IiotFunctions_Test/*"
+match = ': (STWORDS)$'
+reason = "Ложное срабатывание iec_checker 0.4: тест заполняет структуру по полям (stWords.wActive := ...) и передаёт её в функцию"
+
+[[allow]]
+id = "UnusedVariable"
+file = "tests/POUs/FB_JsonBuilder_Test/*"
+match = ': (FBJSON)$'
+reason = "Ложное срабатывание iec_checker 0.4: проверяемый экземпляр в тестах — только вызовы методов и чтение выходов (fbJson.Begin(), fbJson.sJson)"
+
+[[allow]]
+id = "UnusedVariable"
+file = "tests/POUs/FB_JsonFlatParser_Test/*"
+match = ': (FBPARSER)$'
+reason = "Ложное срабатывание iec_checker 0.4: проверяемый экземпляр в тестах — только вызовы методов (fbParser.Parse(...), fbParser.GetString(...))"
+
+[[allow]]
+id = "UnusedVariable"
+file = "tests/POUs/FB_KnsShim_Test/*"
+match = ': (FBMAP)$'
+reason = "Ложное срабатывание iec_checker 0.4: проверяемый экземпляр в тестах — только вызовы методов (fbMap.FillPoints(...))"
+
+[[allow]]
+id = "UnusedVariable"
+file = "tests/POUs/FB_MqttAlarms_Test/*"
+match = ': (FBALM|FBCLIENT|AALARMTABLE)$'
+reason = "Ложное срабатывание iec_checker 0.4: проверяемый экземпляр и подменный клиент — вызовы экземпляра и методов (fbAlm(...), fbClient.ForceConnected()), таблица тревог заполняется по полям (aAlarmTable[1].stCfg.uiId := ...)"
+
+[[allow]]
+id = "UnusedVariable"
+file = "tests/POUs/FB_MqttClientFake/*"
+match = '''(?x) :\s (
+    XLINKUP | XCONNECTACCEPTS | XSUBSCRIBEACCEPTS | XPUBLISHACCEPTS | DIERROR | ACAPTURE | XCONNECTREQUESTED |
+    UICONNECTCALLS | UIDISCONNECTCALLS | UISERVICECALLS | UISUBSCRIBECALLS | STLASTCFG | SLASTFILTER |
+    ELASTFILTERQOS | UIPUBCOUNT | UIPUBTOTAL | UIPUBREJECTED | APUB | UIINCOUNT | AIN | PUB_MAX | IN_MAX |
+    CAPTURE_MAX
+)$'''
+reason = "Ложное срабатывание iec_checker 0.4: подменный клиент MQTT для тестов — тела нет, состояние (настройки отказов, счётчики вызовов, буферы публикаций и входящих) читают и пишут только методы I_MqttClient и помощники тестов"
+
+[[allow]]
+id = "UnusedVariable"
+file = "tests/POUs/FB_MqttCommands_Test/*"
+match = ': (FBCMD|FBCOMMANDS|FBCLIENT|ARULETABLE)$'
+reason = "Ложное срабатывание iec_checker 0.4: проверяемый экземпляр и подменный клиент — вызовы экземпляра и методов (fbCmd(...), fbClient.ForceConnected()), таблица правил заполняется по полям (aRuleTable[1].sDevice := ...)"
+
+[[allow]]
+id = "UnusedVariable"
+file = "tests/POUs/FB_MqttDiag_Test/*"
+match = ': (FBDIAG)$'
+reason = "Ложное срабатывание iec_checker 0.4: проверяемый экземпляр в тестах — вызовы экземпляра и чтение выходов (fbDiag(...), fbDiag.eState)"
+
+[[allow]]
+id = "UnusedVariable"
+file = "tests/POUs/FB_MqttTelemetry_Test/*"
+match = ': (FBTEL|FBTELEMETRY|FBCLIENT|APOINTTABLE)$'
+reason = "Ложное срабатывание iec_checker 0.4: проверяемый экземпляр и подменный клиент — вызовы экземпляра и методов (fbTel(...), fbClient.ForceConnected()), таблица точек заполняется по полям (aPointTable[1].stCfg.sPath := ...)"
+
+[[allow]]
+id = "UnusedVariable"
+file = "tests/POUs/PRG_Tests/*"
+match = '''(?x) :\s (
+    FBJSONBUILDERTEST | FBJSONFLATPARSERTEST | FBIIOTFUNCTIONSTEST | FBMQTTTELEMETRYTEST | FBMQTTALARMSTEST |
+    FBMQTTCOMMANDSTEST | FBMQTTDIAGTEST | FBKNSSHIMTEST
+)$'''
+reason = "Ложное срабатывание iec_checker 0.4: экземпляры наборов тестов опрашиваются только методом (fbX.AreAllTestsFinished()), выполняет наборы coUnit.RUN()"

@@ -266,7 +266,7 @@ VAR
     rSpeedSp_rpm : REAL;            // принятая уставка
     pSts : REF_TO ST_MotorSts;
     refCmd : REF_TO ST_MotorCmd;
-    iStep : INT;
+    iStep : INT := 0;
     wsState : WSTRING[80] := "$041E$0441$0442$0430$043D$043E$0432$043B$0435$043D";
 END_VAR
 refCmd := ADR(stCmd);
@@ -322,7 +322,7 @@ END_VAR
 VAR (* копии переменных FB_Motor — приближение для статанализа *)
     itfInterlock : I_Resettable;
     fbStartTimer : TON;
-    iStep : INT;
+    iStep : INT := 0;
     Reset : BOOL;
 END_VAR
 Reset := FB_DeviceBase__Reset(xForce := xForce);

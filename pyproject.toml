@@ -50,11 +50,7 @@ exclude = [
 [tool.pytest.ini_options]
 testpaths = ["tools/tests", "tests_stack"]
 pythonpath = ["tools", "tools/codesys", "tools/check", "tools_project", "tests_stack"]
-# Вместо test_integration_repository_sources шаблона (прямой запуск run_iec_checker.py) src/ и tests/
-# проверяются через обёртку tools_project/iec_checker_gate.py — tests_stack/test_iec_checker_gate.py;
-# разбор находок — docs/STATIC_ANALYSIS.md.
-addopts = """-ra --strict-markers
-    --deselect=tools/tests/test_run_iec_checker.py::test_integration_repository_sources"""
+addopts = "-ra --strict-markers"
 markers = [
     "integration: проверки с настоящими plc (RuSTy) и iec_checker; пропускаются, если инструмента нет",
     "stack: интеграционные тесты на поднятом стенде docker compose (make test-stack, IIOT_STACK=1)",

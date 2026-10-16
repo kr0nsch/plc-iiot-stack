@@ -138,7 +138,7 @@ CODESYS-MQTT и настройка Symbol Configuration для OPC UA-серве
 | эмулятор и отчёт: mypy, pytest (модель, шлюз команд, OPC UA и MQTT на 127.0.0.1, сообщения по схеме; агрегаты отчёта) | CI (`packages`), локально | зелёные локально |
 | `make demo` с нуля на Linux, интеграционные тесты, панели дашбордов, отчёт по данным стенда | CI (`stack`, docker compose) | проверяется в CI |
 | тот же путь «эмулятор → брокер → Telegraf → InfluxDB → Grafana» без Docker | локально, `local_stack.ps1` | 12 интеграционных тестов зелёные; данные есть у всех 42 панелей (списки отклонений пусты, пока всё в норме) |
-| `st_lint --strict`, iec_checker v0.4 (через обёртку), RuSTy (необязательно) | CI, локально | без замечаний; разбор — [docs/STATIC_ANALYSIS.md](docs/STATIC_ANALYSIS.md) |
+| `st_lint --strict`, iec_checker v0.4 (`run_iec_checker.py --tests`), RuSTy (необязательно) | CI, локально | st_lint и iec_checker без необоснованных замечаний и ошибок разбора; RuSTy — расширения CODESYS, которых в нём нет; разбор — [docs/STATIC_ANALYSIS.md](docs/STATIC_ANALYSIS.md) |
 | сборка и 87 тестов coUnit в CODESYS 3.5.17.30 / Control Win V3 | Windows, `cds.py build`, `cds.py test` | ошибок 0, предупреждений 0; [docs/TEST_REPORT.md](docs/TEST_REPORT.md) |
 
 Интеграционные тесты (`tests_stack/test_stack_integration.py`, маркеры `integration` и `stack`)

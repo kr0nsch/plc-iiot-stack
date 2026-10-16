@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "flavor": "iec-checker",
+  "files": {
+   "FB_Alarm.st": [
+    [1, 15, "src/POUs/FB_Alarm/FB_Alarm.decl.st", 1],
+    [16, 12, "src/POUs/FB_Alarm/FB_Alarm.impl.st", 1],
+    [28, 7, null, 1],
+    [35, 1, "src/POUs/FB_Alarm/Priority.get.impl.st", 1],
+    [36, 2, null, 1]
+   ],
+   "FB_Slots.st": [
+    [1, 22, "src/POUs/FB_Slots/FB_Slots.decl.st", 1],
+    [23, 19, "src/POUs/FB_Slots/FB_Slots.impl.st", 1],
+    [42, 2, null, 1],
+    [44, 7, "src/POUs/FB_Slots/Check.method.decl.st", 1],
+    [51, 3, null, 1],
+    [54, 4, "src/POUs/FB_Slots/Check.method.impl.st", 1],
+    [58, 2, null, 1]
+   ],
+   "F_Noop.st": [
+    [1, 8, "src/POUs/F_Noop/F_Noop.decl.st", 1],
+    [9, 1, "src/POUs/F_Noop/F_Noop.impl.st", 1],
+    [10, 2, null, 1]
+   ],
+   "GVL_Const.st": [
+    [1, 1, null, 1],
+    [2, 6, "src/GVLs/GVL_Const.gvl.st", 1],
+    [8, 1, null, 1]
+   ],
+   "I_Alarm.st": [
+    [1, 2, "src/Interfaces/I_Alarm/I_Alarm.itf.st", 1],
+    [3, 3, null, 1]
+   ],
+   "PRG_Idle.st": [
+    [1, 8, "src/POUs/PRG_Idle/PRG_Idle.decl.st", 1],
+    [9, 1, "src/POUs/PRG_Idle/PRG_Idle.impl.st", 1],
+    [10, 2, null, 1]
+   ],
+   "ST_Cfg.st": [
+    [1, 6, "src/DUTs/ST_Cfg.dut.st", 1]
+   ],
+   "ST_Slot.st": [
+    [1, 9, "src/DUTs/ST_Slot.dut.st", 1]
+   ],
+   "all.st": [
+    [1, 6, "src/DUTs/ST_Cfg.dut.st", 1],
+    [7, 1, null, 1],
+    [8, 9, "src/DUTs/ST_Slot.dut.st", 1],
+    [17, 1, null, 1],
+    [18, 1, null, 1],
+    [19, 6, "src/GVLs/GVL_Const.gvl.st", 1],
+    [25, 2, null, 1],
+    [27, 2, "src/Interfaces/I_Alarm/I_Alarm.itf.st", 1],
+    [29, 4, null, 1],
+    [33, 8, "src/POUs/F_Noop/F_Noop.decl.st", 1],
+    [41, 1, "src/POUs/F_Noop/F_Noop.impl.st", 1],
+    [42, 3, null, 1],
+    [45, 15, "src/POUs/FB_Alarm/FB_Alarm.decl.st", 1],
+    [60, 12, "src/POUs/FB_Alarm/FB_Alarm.impl.st", 1],
+    [72, 7, null, 1],
+    [79, 1, "src/POUs/FB_Alarm/Priority.get.impl.st", 1],
+    [80, 3, null, 1],
+    [83, 22, "src/POUs/FB_Slots/FB_Slots.decl.st", 1],
+    [105, 19, "src/POUs/FB_Slots/FB_Slots.impl.st", 1],
+    [124, 2, null, 1],
+    [126, 7, "src/POUs/FB_Slots/Check.method.decl.st", 1],
+    [133, 3, null, 1],
+    [136, 4, "src/POUs/FB_Slots/Check.method.impl.st", 1],
+    [140, 3, null, 1],
+    [143, 8, "src/POUs/PRG_Idle/PRG_Idle.decl.st", 1],
+    [151, 1, "src/POUs/PRG_Idle/PRG_Idle.impl.st", 1],
+    [152, 2, null, 1]
+   ]
+  }
+}

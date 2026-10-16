@@ -240,6 +240,11 @@ class _Assembler:
         if self.flavor == FLAVOR_IEC_CHECKER:
             base = self._project_base(obj)
             self.tx = lambda text: F.iec_checker_text(text, self.ctx, base)
+            # константы VAR CONSTANT объекта видны в методах и аксессорах (границы массивов)
+            self.ctx.local_int_constants = {}
+            if obj.kind == L.KIND_POU:
+                tokens = L.tokenize(obj.decl)
+                self.ctx.local_int_constants = F.fragment_int_constants(obj.decl, tokens, self.ctx)
         if obj.kind in (L.KIND_DUT, L.KIND_GVL, L.KIND_PVL):
             self._flat(builder, obj)
         elif obj.kind == L.KIND_ITF:
@@ -325,8 +330,12 @@ class _Assembler:
             default_return_type="BOOL" if obj.pou_kind == L.POU_FUNCTION else None,
         )
         b.add(self.tx(header), obj.main_path())
-        if obj.impl is not None:
-            b.add(self.tx(obj.impl), _path(obj, obj.name, L.SUFFIX_IMPL))
+        body = self.tx(obj.impl) if obj.impl is not None else ""
+        if body:
+            b.add(body, _path(obj, obj.name, L.SUFFIX_IMPL))
+        if obj.pou_kind in (L.POU_PROGRAM, L.POU_FUNCTION) and not L.significant_indices(L.tokenize(body)):
+            # PROGRAM и FUNCTION без операторов iec_checker разбирает только с пустым телом {}
+            b.synthetic("{}\n")
         b.synthetic(_POU_END.get(obj.pou_kind or "", "END_FUNCTION_BLOCK") + "\n")
         own_vars = self._instance_vars(obj, set())
         for method in obj.methods:
@@ -346,7 +355,7 @@ class _Assembler:
             if method.impl is not None:
                 b.add(self.tx(method.impl), _path(obj, method.name, L.SUFFIX_METHOD_IMPL))
             tail = f"{fname} := {method.name};\n" if ret else f"{fname} := TRUE;\n"
-            b.synthetic(tail + "END_FUNCTION\n")
+            b.synthetic(self.tx(tail) + "END_FUNCTION\n")
         for prop in obj.properties:
             ptype = _prop_type(prop)
             if prop.has_get:
@@ -363,7 +372,7 @@ class _Assembler:
                 )
                 if prop.get_impl is not None:
                     b.add(self.tx(prop.get_impl), _path(obj, prop.name, L.SUFFIX_GET_IMPL))
-                b.synthetic(f"{fname} := {prop.name};\nEND_FUNCTION\n")
+                b.synthetic(self.tx(f"{fname} := {prop.name};\n") + "END_FUNCTION\n")
             if prop.has_set:
                 fname = f"{obj.name}__{prop.name}__set"
                 b.synthetic(self.tx(f"\nFUNCTION {fname} : BOOL\nVAR_INPUT\n    {prop.name} : {ptype};\nEND_VAR\n"))

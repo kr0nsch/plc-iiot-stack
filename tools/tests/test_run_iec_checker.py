@@ -12,7 +12,7 @@ import pytest
 
 import assemble
 import run_iec_checker as R
-from conftest import SAMPLE, MakeTree, requires_iec_checker
+from conftest import LOWERING, SAMPLE, SOURCEMAP, SOURCEMAP_CP8, MakeTree, requires_iec_checker, sourcemap_lines
 
 ALLOW_SAMPLE = """
 [[allow]]
@@ -239,11 +239,53 @@ def test_integration_sample_parses_without_errors(sample_copy: Path) -> None:
 
 @pytest.mark.integration
 @requires_iec_checker
+def test_integration_lowering_fixture_parses(tmp_path: Path) -> None:
+    """Конструкции CODESYS вне грамматики iec_checker v0.4 (TIME(), a[i].x, ARRAY[0..GVL.N - 1], T#1h500ms,
+    пустые операторы и тела, свойство Priority, ...) после понижения разбираются настоящим бинарником."""
+    root = tmp_path / "lowering"
+    shutil.copytree(LOWERING, root)
+    allow = root / "allow.toml"
+    allow.write_text(ALLOW_SAMPLE, encoding="utf-8")
+    code = R.main(["--root", str(root), "--allow", str(allow)])
+    report = json.loads((root / "build" / "iec_checker.json").read_text(encoding="utf-8"))
+    broken = [f for f in report["findings"] if f["id"] in (*R.PARSER_IDS, "ToolError")]
+    assert broken == []
+    assert len(report["files"]) == 8
+    # находки на строках исходников указывают на файлы раскладки
+    assert all(f["source"] for f in report["findings"] if f["status"] != "artifact")
+    assert code == 0, [f for f in report["findings"] if f["status"] == "error"]
+
+
+@pytest.mark.integration
+@requires_iec_checker
+def test_integration_findings_point_to_source_lines(tmp_path: Path) -> None:
+    """Находки настоящего iec_checker после понижения многострочных конструкций указывают на строки
+    исходников: каждая строка примера sourcemap с «= 1.5 THEN» (в любом регистре) даёт PLCOPEN-CP8 ровно на своей строке
+    (в теле ФБ, в методе и в аксессоре свойства, после a[i,\\n j], afb[i](...\\n), TIME(\\n), пустых
+    ветвей и т. п.), а OutOfBounds поддиапазона в псевдониме типа относится к его DUT."""
+    root = tmp_path / "sourcemap"
+    shutil.copytree(SOURCEMAP, root)
+    allow = root / "allow.toml"
+    allow.write_text(ALLOW_SAMPLE, encoding="utf-8")
+    R.main(["--root", str(root), "--allow", str(allow)])
+    report = json.loads((root / "build" / "iec_checker.json").read_text(encoding="utf-8"))
+    assert [f for f in report["findings"] if f["id"] in (*R.PARSER_IDS, "ToolError")] == []
+    cp8 = {(f["source"], f["source_line"]) for f in report["findings"] if f["id"] == "PLCOPEN-CP8"}
+    assert cp8 == sourcemap_lines(lambda line: SOURCEMAP_CP8 in line.upper())
+    bounds = [f for f in report["findings"] if f["id"] == "OutOfBounds"]
+    assert [(f["source"], "200" in f["msg"]) for f in bounds] == [("src/DUTs/T_Percent.dut.st", True)]
+    # TIME() понижается вызовом заглушки, а не литералом длительности: ни ZeroDivision, ни PLCOPEN-CP28
+    assert [f for f in report["findings"] if f["id"] in ("ZeroDivision", "PLCOPEN-CP28")] == []
+
+
+@pytest.mark.integration
+@requires_iec_checker
 def test_integration_parser_error_fails(make_tree: MakeTree) -> None:
     root = make_tree(
         {
             "src/POUs/F_X/F_X.decl.st": "FUNCTION F_X : INT\nVAR_INPUT\n    iA : INT := 0;\nEND_VAR\n",
-            "src/POUs/F_X/F_X.impl.st": "IF iA > 0 THEN\nEND_IF\nF_X := iA;\n",
+            # JMP и метки переходов понижение не обрабатывает
+            "src/POUs/F_X/F_X.impl.st": "JMP lEnd;\nlEnd: F_X := iA;\n",
         }
     )
     assert R.main(["--root", str(root), "--allow", str(root / "none.toml")]) == 1
@@ -256,7 +298,10 @@ def test_integration_parser_error_fails(make_tree: MakeTree) -> None:
 @requires_iec_checker
 @pytest.mark.parametrize("with_tests", [False, True], ids=["src", "src+tests"])
 def test_integration_repository_sources(tmp_path: Path, with_tests: bool) -> None:
-    """Исходники шаблона (src/, с флагом и tests/) проходят статанализ с файлом обоснований репозитория."""
+    """Исходники репозитория (src/, с флагом и tests/) проходят статанализ с его же файлом обоснований.
+
+    Файл обоснований — tools/check/iec_checker_allow.toml репозитория (у проекта свой список), поэтому тест
+    выполняется и в проектах: он проверяет их исходники их обоснованиями, а не исходники шаблона."""
     from conftest import REPO_ROOT
 
     if not (REPO_ROOT / "src" / "POUs").is_dir():

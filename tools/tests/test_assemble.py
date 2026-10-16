@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 
 import pytest
@@ -11,7 +12,7 @@ import pytest
 import assemble
 import st_flavors as F
 import stlayout as L
-from conftest import GOLDEN, SAMPLE, MakeTree, update_golden
+from conftest import GOLDEN, LOWERING, SAMPLE, SOURCEMAP, SOURCEMAP_MARK, MakeTree, sourcemap_lines, update_golden
 
 GOLDEN_FLAVORS = {
     assemble.FLAVOR_IEC: [],
@@ -35,12 +36,8 @@ def read_dir(path: Path) -> dict[str, str]:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("flavor", list(GOLDEN_FLAVORS))
-def test_golden(tmp_path: Path, flavor: str) -> None:
-    result = assemble_sample(flavor, GOLDEN_FLAVORS[flavor])
-    out = tmp_path / flavor
+def check_golden(result: assemble.AssembleResult, out: Path, golden: Path) -> None:
     assemble.write_result(result, str(out))
-    golden = GOLDEN / flavor
     if update_golden():
         golden.mkdir(parents=True, exist_ok=True)
         for old in golden.iterdir():
@@ -48,6 +45,23 @@ def test_golden(tmp_path: Path, flavor: str) -> None:
         for name, text in read_dir(out).items():
             (golden / name).write_bytes(text.encode("utf-8"))
     assert read_dir(out) == read_dir(golden)
+
+
+@pytest.mark.parametrize("flavor", list(GOLDEN_FLAVORS))
+def test_golden(tmp_path: Path, flavor: str) -> None:
+    result = assemble_sample(flavor, GOLDEN_FLAVORS[flavor])
+    check_golden(result, tmp_path / flavor, GOLDEN / flavor)
+
+
+def assemble_lowering(flavor: str = assemble.FLAVOR_IEC_CHECKER) -> assemble.AssembleResult:
+    objects, issues = assemble.load_objects(str(LOWERING), ["src"])
+    assert issues == []
+    return assemble.assemble_objects(objects, flavor)
+
+
+def test_golden_lowering(tmp_path: Path) -> None:
+    """Эталон понижения iec-checker для примера с конструкциями вне грамматики iec_checker v0.4."""
+    check_golden(assemble_lowering(), tmp_path / "lowering", GOLDEN / "iec-checker-lowering")
 
 
 def test_all_st_order() -> None:
@@ -402,11 +416,11 @@ def test_iec_checker_case_labels() -> None:
     ctx = F.Context(enum_values={"e_mode": {"auto": 0, "manual": 1}}, gvl_int_constants={"gvl_c": {"step": 10}})
     source = (
         "CASE e OF\n    E_Mode.Auto, E_Mode.Manual:\n        x := E_Mode.Auto;\n"
-        "    GVL_C.STEP:\n        ;\n    Lib.E_Y.Z:\n        y := 1;\nEND_CASE\n"
+        "    GVL_C.STEP:\n        z := 2;\n    Lib.E_Y.Z:\n        y := 1;\nEND_CASE\n"
     )
     assert lower(source, ctx) == (
         "CASE e OF\n    0, 1:\n        x := E_Mode.Auto;\n    10:\n"
-        "        ;\n    Lib.E_Y.Z:\n        y := 1;\nEND_CASE\n"
+        "        z := 2;\n    Lib.E_Y.Z:\n        y := 1;\nEND_CASE\n"
     )
 
 
@@ -502,3 +516,260 @@ def test_written_files_are_utf8_lf(tmp_path: Path) -> None:
     for name in os.listdir(tmp_path):
         data = (tmp_path / name).read_bytes()
         assert b"\r" not in data and not data.startswith(b"\xef\xbb\xbf")
+
+
+# ---------------------------------------------------------------------------
+# Понижение iec-checker: конструкции вне грамматики iec_checker v0.4
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        # TIME() и LTIME() — вызов функции-заглушки (литерал длительности дал бы ZeroDivision и PLCOPEN-CP28)
+        ("t := TIME();", "t := CDS__TIME();"),
+        ("lt := LTIME() - ltMark;", "lt := CDS__LTIME() - ltMark;"),
+        ("x := ltime ( ) > lt;", "x := CDS__LTIME() > lt;"),
+        ("t := TIME(x);", "t := TIME(x);"),
+        ("t := fb.TIME();", "t := fb.TIME();"),
+        # длительности: единицы подряд, верхний регистр, без '_'
+        ("t := T#1h500ms;", "t := T#1H0M0S500MS;"),
+        ("lt := LTIME#1H500MS;", "lt := LTIME#1H0M0S500MS;"),
+        ("t := t#5s;", "t := T#5S;"),
+        ("t := T#1h_30m;", "t := T#1H30M;"),
+        ("t := T#-1.5s;", "t := T#-1.5S;"),
+        ("t := time#2d3m;", "t := TIME#2D0H3M;"),
+        ("lt := lt#1ms500us;", "lt := LT#1MS500US;"),
+        ("t := T#5s1m;", "t := T#5s1m;"),
+        # даты и время суток — префикс в верхнем регистре
+        ("d := d#2020-01-01; td := tod#12:00:00;", "d := D#2020-01-01; td := TOD#12:00:00;"),
+        # типизированные литералы и вещественные числа
+        ("w := WORD#16#FF; b := byte#1;", "w := 16#FF; b := 1;"),
+        ("x := BOOL#1; y := bool#false;", "x := TRUE; y := FALSE;"),
+        ("r := REAL#2; lr := LREAL#-1e3;", "r := REAL#2.0; lr := LREAL#-1.0E3;"),
+        ("r := 1E3 + 1.5e-3; w := 16#1E3; i := INT#5;", "r := 1.0E3 + 1.5E-3; w := 16#1E3; i := INT#5;"),
+        ("e := E_Mode#Auto;", "e := E_Mode#Auto;"),
+        # AND_THEN, OR_ELSE
+        ("x := a AND_THEN b OR_ELSE c;", "x := a AND b OR c;"),
+        # обращения к элементам массивов
+        ("buffer[i].code := 0;", "buffer.code[i] := 0;"),
+        ("x := DB_Hmi.pump[1].startReq;", "x := DB_Hmi.pump.startReq[1];"),
+        ("x := stCfg.astSlot[i].stLim.rHigh;", "x := stCfg.astSlot.stLim.rHigh[i];"),
+        ("x := a[i].b[j].c;", "x := a.b.c[CDS__IDX(i, j)];"),
+        ("x := a[i, j] + a[i][j];", "x := a[CDS__IDX(i, j)] + a[CDS__IDX(i, j)];"),
+        ("x := aw[i].3;", "x := aw.3[i];"),
+        ("afb[i](IN := x, PT := T#1S);", "afb(IN := x, PT := T#1S, i);"),
+        ("afb[i]();", "afb(i);"),
+        ("x := stCfg.afb[i].Check(1);", "x := stCfg.afb.Check(1, i);"),
+        ("x := b[a[i].x].y;", "x := b.y[a.x[i]];"),
+        ("x := a[i] + st.a[i + 1];", "x := a[i] + st.a[i + 1];"),
+        ("x := a[F(i, j)];", "x := a[F(i, j)];"),
+        # имена — ключевые слова iec_checker
+        ("Priority := iPrio; x := itf.Priority + On;", "Priority_ := iPrio; x := itf.Priority_ + On_;"),
+        (
+            "VAR\n    Interval : TIME;\n    Single : BOOL;\nEND_VAR\n",
+            "VAR\n    Interval_ : TIME;\n    Single_ : BOOL;\nEND_VAR\n",
+        ),
+        # управляющие слова в нижнем регистре
+        ("if x then y := true; end_if", "IF x THEN y := TRUE; END_IF"),
+        # пустые операторы и пустые ветви
+        ("x := 1;;\ny := 2;", "x := 1;\ny := 2;"),
+        ("IF a THEN\n    ;\nEND_IF;", "IF a THEN CDS__NOP();\n    \nEND_IF;"),
+        ("IF a THEN x := 1; ELSE // ничего\nEND_IF", "IF a THEN x := 1; ELSE CDS__NOP(); // ничего\nEND_IF"),
+        ("IF a THEN ELSIF b THEN x := 1; END_IF", "IF a THEN CDS__NOP(); ELSIF b THEN x := 1; END_IF"),
+        (
+            "FOR i := 0 TO 3 DO END_FOR; WHILE a DO ; END_WHILE",
+            "FOR i := 0 TO 3 DO CDS__NOP(); END_FOR; WHILE a DO CDS__NOP();  END_WHILE",
+        ),
+        ("REPEAT UNTIL a END_REPEAT", "REPEAT CDS__NOP(); UNTIL a END_REPEAT"),
+        (
+            "CASE e OF\n    1:\n    2, 3:\n        ;  // ждать\n    4: x := 1;\nELSE\nEND_CASE",
+            "CASE e OF\n    1: CDS__NOP();\n    2, 3: CDS__NOP();\n          // ждать\n    4: x := 1;\n"
+            "ELSE CDS__NOP();\nEND_CASE",
+        ),
+        (";\n", "\n"),
+    ],
+)
+def test_iec_checker_grammar_gaps(source: str, expected: str) -> None:
+    assert lower(source) == expected
+
+
+def test_iec_checker_constant_sizes() -> None:
+    ctx = F.Context(gvl_int_constants={"gvl_const": {"n": 8, "len": 32}}, enum_values={"e_x": {"last": 5}})
+    ctx.local_int_constants = {"pou_n": 3}
+    source = (
+        "VAR\n    a : ARRAY[0..GVL_Const.N - 1] OF INT;\n    b : ARRAY[1..N, 0..POU_N * 2] OF BOOL;\n"
+        "    c : ARRAY[0..E_X.LAST] OF REAL;\n    d : ARRAY[0..Lib.UNKNOWN] OF INT;\n    e : ARRAY[*] OF INT;\n"
+        "    f : ARRAY[0..LOCAL_MAX MOD 4] OF INT;\n    s : STRING(GVL_Const.LEN);\n    w : WSTRING[Lib.LEN];\n"
+        "    g : ARRAY[0..1] OF ARRAY[0..GVL_Const.N] OF INT;\nEND_VAR\n"
+        "VAR CONSTANT\n    LOCAL_MAX : INT := (GVL_Const.N + 2) / 2;\nEND_VAR\n"
+    )
+    assert lower(source, ctx) == (
+        "VAR\n    a : ARRAY[0..7] OF INT;\n    b : ARRAY[1..8, 0..6] OF BOOL;\n"
+        "    c : ARRAY[0..5] OF REAL;\n    d : ARRAY[0..32767] OF INT;\n    e : ARRAY[0..0] OF INT;\n"
+        "    f : ARRAY[0..1] OF INT;\n    s : STRING[32];\n    w : WSTRING;\n"
+        "    g : ARRAY[0..1, 0..8] OF INT;\nEND_VAR\n"
+        "VAR CONSTANT\n    LOCAL_MAX : INT := 5;\nEND_VAR\n"
+    )
+
+
+def test_iec_checker_struct_array_initializer_dropped() -> None:
+    source = (
+        "TYPE ST_R :\nSTRUCT\n    arDose : ARRAY[1..4] OF REAL := [0.5, 1.0,\n        1.5, 2.0];  // доза\n"
+        "    aaiX : ARRAY[0..1] OF ARRAY[0..1] OF INT;\n    sName : STRING(20) := 'DEFAULT';\nEND_STRUCT\nEND_TYPE\n"
+    )
+    assert lower(source) == (
+        "TYPE ST_R :\nSTRUCT\n    arDose : REAL\n;  // доза\n"
+        "    aaiX : INT;\n    sName : STRING[20] := 'DEFAULT';\nEND_STRUCT\nEND_TYPE\n"
+    )
+
+
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        # псевдоним с десятичными границами: iec_checker разбирает и проверяет начальное значение (OutOfBounds)
+        ("TYPE T_Pct : INT(0..100) := 200;\nEND_TYPE\n", "TYPE T_Pct : INT(0..100) := 200;\nEND_TYPE\n"),
+        ("TYPE T_D : DINT (-10..+10);\nEND_TYPE\n", "TYPE T_D : DINT (-10..+10);\nEND_TYPE\n"),
+        # границы не десятичные, поле структуры — поддиапазон убирается (иначе ParserError)
+        ("TYPE T_H : DINT(0..16#FF);\nEND_TYPE\n", "TYPE T_H : DINT;\nEND_TYPE\n"),
+        ("TYPE T_C : INT(0..GVL_C.MAX);\nEND_TYPE\n", "TYPE T_C : INT;\nEND_TYPE\n"),
+        (
+            "TYPE ST_S :\nSTRUCT\n    iP : INT(0..100) := 5;\nEND_STRUCT\nEND_TYPE\n",
+            "TYPE ST_S :\nSTRUCT\n    iP : INT := 5;\nEND_STRUCT\nEND_TYPE\n",
+        ),
+    ],
+)
+def test_iec_checker_subrange_alias(source: str, expected: str) -> None:
+    assert lower(source) == expected
+
+
+@pytest.mark.parametrize(
+    ("prefix", "value", "expected"),
+    [
+        ("T", "1h500ms", "T#1H0M0S500MS"),
+        ("LTIME", "+2D_1S", "LTIME#+2D0H0M1S"),
+        ("T", "0.5s", "T#0.5S"),
+        ("T", "5s1m", None),
+        ("T", "5x", None),
+        ("T", "", None),
+    ],
+)
+def test_normalize_duration(prefix: str, value: str, expected: str | None) -> None:
+    assert F.normalize_duration(prefix, value) == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "value"),
+    [
+        ("GVL_C.N - 1", 7),
+        ("(N + 2) * 3", 30),
+        ("-N / 3", -2),
+        ("-7 MOD 3", -1),
+        ("16#10 + INT#2", 18),
+        ("N / 0", None),
+        ("UNKNOWN + 1", None),
+        ("1.5", None),
+        ("T#5S", None),
+        ("N +", None),
+        ("", None),
+    ],
+)
+def test_eval_int_text(text: str, value: int | None) -> None:
+    ctx = F.Context(gvl_int_constants={"gvl_c": {"n": 8}})
+    assert F.eval_int_text(text, ctx) == value
+
+
+def test_context_constant_expressions(make_tree: MakeTree) -> None:
+    root = make_tree(
+        {
+            "src/GVLs/GVL_A.gvl.st": "VAR_GLOBAL CONSTANT\n    TOTAL : INT := GVL_B.BASE * 2 + LOCAL;\n"
+            "    LOCAL : INT := 1;\n    NAME : STRING := 'x';\nEND_VAR\n",
+            "src/GVLs/GVL_B.gvl.st": "VAR_GLOBAL CONSTANT\n    BASE : INT := 16#10;\n    LOCAL : INT := 5;\nEND_VAR\n",
+        }
+    )
+    ctx = F.Context.from_objects(L.scan(str(root), "src").objects)
+    assert ctx.gvl_int_constants == {"gvl_a": {"local": 1, "total": 33}, "gvl_b": {"base": 16, "local": 5}}
+    assert ctx.int_constant(["BASE"]) == 16
+    assert ctx.int_constant(["LOCAL"]) is None  # есть в двух GVL — неоднозначно
+    assert ctx.int_constant(["LOCAL"], {"local": 3}) == 3
+    assert ctx.int_constant(["Lib", "GVL_B", "BASE"]) == 16
+
+
+def test_iec_checker_empty_program_and_function_bodies(make_tree: MakeTree) -> None:
+    root = make_tree(
+        {
+            "src/POUs/PRG_A/PRG_A.decl.st": "PROGRAM PRG_A\nVAR\n    x : BOOL;\nEND_VAR\n",
+            "src/POUs/PRG_A/PRG_A.impl.st": "// пусто\n",
+            "src/POUs/F_A/F_A.decl.st": "FUNCTION F_A : BOOL\n",
+            "src/POUs/F_A/F_A.impl.st": ";\n",
+            "src/POUs/FB_A/FB_A.decl.st": "FUNCTION_BLOCK FB_A\n",
+            "src/POUs/FB_A/FB_A.impl.st": "",
+        }
+    )
+    code, result = assemble.run(str(root), flavor=assemble.FLAVOR_IEC_CHECKER, check_only=True)
+    assert code == 0
+    texts = {u.name: u.text for u in result.units}
+    assert texts["PRG_A"].endswith("// пусто\n{}\nEND_PROGRAM\n")
+    assert texts["F_A"].endswith("\n{}\nEND_FUNCTION\n")
+    assert texts["FB_A"] == "FUNCTION_BLOCK FB_A\nEND_FUNCTION_BLOCK\n"
+    smap = assemble.SourceMap.from_result(result)
+    brace = texts["PRG_A"].split("\n").index("{}") + 1
+    assert smap.is_synthetic("PRG_A.st", brace)
+
+
+def test_iec_checker_keyword_property_renamed_consistently() -> None:
+    text = next(u.text for u in assemble_lowering().units if u.name == "FB_Alarm")
+    getter = text[text.index("FUNCTION FB_Alarm__Priority__get : INT") :]
+    assert "    Priority_ : INT;" in getter
+    assert "Priority_ := iPriority;" in getter
+    assert "FB_Alarm__Priority__get := Priority_;\nEND_FUNCTION" in getter
+    itf = next(u.text for u in assemble_lowering().units if u.name == "I_Alarm")
+    assert "METHOD Priority__get : INT" in itf
+
+
+@pytest.mark.parametrize("flavor", list(GOLDEN_FLAVORS))
+def test_lowering_fixture_keeps_line_structure(flavor: str) -> None:
+    result = assemble_lowering(flavor)
+    for unit in result.units:
+        assert sum(seg.count for seg in unit.segments) == unit.text.count("\n")
+    smap = assemble.SourceMap.from_result(result)
+    unit = next(u for u in result.units if u.name == "FB_Slots")
+    lines = unit.text.split("\n")
+    number = next(i for i, line in enumerate(lines, 1) if "rSum := rSum +" in line)
+    assert smap.lookup("FB_Slots.st", number) == ("src/POUs/FB_Slots/FB_Slots.impl.st", 5)
+
+
+@pytest.mark.parametrize("flavor", list(GOLDEN_FLAVORS))
+def test_source_map_multiline_constructs(flavor: str) -> None:
+    """Карта строк после понижения: многострочные конструкции (индексы, вызов элемента, начальное значение
+    массива в STRUCT, вложенный массив, TIME(), пустые ветви, граница массива в параметре метода) занимают
+    столько же строк, а каждая строка с меткой «// @N» собранного текста указывает на строку N своего
+    исходника. Метки сгенерированных строк (копии переменных ФБ в функциях-методах) — синтетические."""
+    marks = sourcemap_lines(lambda line: SOURCEMAP_MARK in line)
+    for rel, number in marks:  # пример согласован: метка — номер своей строки
+        line = (SOURCEMAP / rel).read_text(encoding="utf-8").split("\n")[number - 1]
+        assert f"{SOURCEMAP_MARK}{number}" in line, (rel, number)
+    objects, issues = assemble.load_objects(str(SOURCEMAP), ["src"])
+    assert issues == []
+    result = assemble.assemble_objects(objects, flavor)
+    smap = assemble.SourceMap.from_result(result)
+    seen: set[tuple[str, int]] = set()
+    for unit in result.units:
+        assert sum(seg.count for seg in unit.segments) == unit.text.count("\n"), unit.name
+        for number, line in enumerate(unit.text.split("\n"), 1):
+            match = re.search(re.escape(SOURCEMAP_MARK) + r"(\d+)", line)
+            if match is None or smap.is_synthetic(unit.file_name, number):
+                continue
+            target = smap.lookup(unit.file_name, number)
+            assert target is not None and target[1] == int(match.group(1)), (unit.name, number, line, target)
+            seen.add(target)
+    assert seen == marks
+
+
+def test_rusty_var_in_out_constant() -> None:
+    source = (
+        "METHOD M\nVAR_IN_OUT CONSTANT\n    stCfg : ST_Cfg;\nEND_VAR\n"
+        "VAR_IN_OUT (* c\n*) CONSTANT\n    x : INT;\nEND_VAR\n"
+    )
+    assert rusty(source) == "METHOD M\nVAR_IN_OUT\n    stCfg : ST_Cfg;\nEND_VAR\nVAR_IN_OUT\n\n    x : INT;\nEND_VAR\n"
+    assert rusty("VAR CONSTANT\n    N : INT := 1;\nEND_VAR\n") == "VAR CONSTANT\n    N : INT := 1;\nEND_VAR\n"

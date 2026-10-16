@@ -21,6 +21,27 @@ REPO_ROOT = TESTS_DIR.parent.parent
 # проверяет только test_cds_config.py — на уровне схемы (те же разделы и ключи, что у эталона).
 CONFIG_TEMPLATE = FIXTURES / "config_template.json"
 LIVE_CONFIG = REPO_ROOT / "tools" / "codesys" / "config.json"
+# Эталон настроек st_lint (копия tools/check/st_lint.toml шаблона): tools/check/st_lint.toml принадлежит проекту,
+# тесты линтера от него не зависят; живой файл проверяется только на разбор и известные ключи.
+ST_LINT_TEMPLATE = FIXTURES / "st_lint_template.toml"
+# Пример для понижения iec-checker: конструкции CODESYS, которых нет в грамматике iec_checker v0.4
+LOWERING = FIXTURES / "lowering"
+# Пример для карты строк после понижения: многострочные конструкции, метка «// @N» — номер строки в своём
+# файле, строки с «= 1.5 THEN» (в любом регистре) дают PLCOPEN-CP8 (по ним интеграционный тест сверяет строки находок)
+SOURCEMAP = FIXTURES / "sourcemap"
+SOURCEMAP_MARK = "// @"
+SOURCEMAP_CP8 = "= 1.5 THEN"
+
+
+def sourcemap_lines(predicate: Callable[[str], bool]) -> set[tuple[str, int]]:
+    """(путь от корня примера, номер строки) для строк примера sourcemap, где predicate(строка) истинно."""
+    found: set[tuple[str, int]] = set()
+    for path in sorted(SOURCEMAP.rglob("*.st")):
+        rel = path.relative_to(SOURCEMAP).as_posix()
+        for number, line in enumerate(path.read_text(encoding="utf-8").split("\n"), 1):
+            if predicate(line):
+                found.add((rel, number))
+    return found
 
 
 def template_config() -> dict[str, Any]:

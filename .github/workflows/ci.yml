@@ -110,15 +110,13 @@ jobs:
         if: ${{ !cancelled() }}
         run: python tools/check/st_lint.py --strict
 
-      # Обёртка проекта над tools/check/run_iec_checker.py: тот же вариант сборки iec-checker и файл
-      # обоснований tools/check/iec_checker_allow.toml, плюс понижение конструкций CODESYS, которые
-      # iec_checker 0.4 не разбирает (длины строк из констант, a[i].b, AND_THEN); ParserError допускается
-      # только в местах из tools_project/iec_checker_parser_gaps.toml. Бинарник — из переменной
-      # IEC_CHECKER; разбор находок — docs/STATIC_ANALYSIS.md
+      # run_iec_checker.py сам собирает вариант iec-checker в build/assembled/iec-checker/ и берёт
+      # бинарник из переменной IEC_CHECKER; обоснованные находки — tools/check/iec_checker_allow.toml
+      # и docs/STATIC_ANALYSIS.md
       - name: Статанализ (iec_checker)
         id: iec_checker
         if: ${{ !cancelled() }}
-        run: python tools_project/iec_checker_gate.py
+        run: python tools/check/run_iec_checker.py --tests
 
       - name: Сводка
         if: ${{ !cancelled() }}
@@ -333,7 +331,7 @@ jobs:
 
       - name: Статанализ (iec_checker nightly)
         id: nightly
-        run: python tools_project/iec_checker_gate.py --docker "$IEC_CHECKER_IMAGE"
+        run: python tools/check/run_iec_checker.py --docker "$IEC_CHECKER_IMAGE" --tests
 
       - name: Сводка
         if: ${{ !cancelled() }}

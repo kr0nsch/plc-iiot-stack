@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import json
+import os
+import tomllib
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 import st_lint
-from conftest import SAMPLE, MakeTree
+from conftest import LOWERING, SAMPLE, ST_LINT_TEMPLATE, MakeTree
 
 BOM = chr(0xFEFF)
 HEADER = (
@@ -36,8 +38,12 @@ def pou(
     return {f"{base}.decl.st": decl, f"{base}.impl.st": impl}
 
 
+TEMPLATE_CONFIG = ["--config", str(ST_LINT_TEMPLATE)]
+
+
 def config(**overrides: Any) -> dict[str, Any]:
-    cfg = st_lint.load_config(st_lint.DEFAULT_CONFIG_PATH)
+    """Настройки шаблона (эталон), а не tools/check/st_lint.toml репозитория — он принадлежит проекту."""
+    cfg = st_lint.load_config(str(ST_LINT_TEMPLATE))
     return st_lint._merge(cfg, overrides)
 
 
@@ -56,9 +62,64 @@ def test_sample_is_clean() -> None:
     assert files == 46
 
 
-def test_toml_matches_defaults() -> None:
-    """tools/check/st_lint.toml повторяет значения по умолчанию из st_lint.py."""
-    assert st_lint.load_config(st_lint.DEFAULT_CONFIG_PATH) == st_lint.DEFAULT_CONFIG
+def test_lowering_fixture_is_clean() -> None:
+    """Пример понижения iec-checker — код по правилам шаблона (составные префиксы массивов, VAR_IN_OUT CONSTANT)."""
+    findings, files = st_lint.lint(str(LOWERING), config(), ["src"])
+    assert findings == []
+    assert files == 18
+
+
+def test_template_toml_matches_defaults() -> None:
+    """Эталон настроек шаблона повторяет значения по умолчанию из st_lint.py — ключ в ключ."""
+    with open(ST_LINT_TEMPLATE, "rb") as fh:
+        data = tomllib.load(fh)
+    assert data == st_lint.DEFAULT_CONFIG
+    assert st_lint.load_config(str(ST_LINT_TEMPLATE)) == st_lint.DEFAULT_CONFIG
+
+
+def test_repository_toml_is_valid() -> None:
+    """tools/check/st_lint.toml репозитория (его меняет проект) разбирается, каждый ключ известен."""
+    if not os.path.isfile(st_lint.DEFAULT_CONFIG_PATH):
+        pytest.skip("в репозитории нет tools/check/st_lint.toml — действуют умолчания")
+    cfg = st_lint.load_config(st_lint.DEFAULT_CONFIG_PATH)
+    assert set(cfg) == set(st_lint.DEFAULT_CONFIG)
+    assert set(cfg["severity"]) == set(st_lint.RULES)
+
+
+@pytest.mark.parametrize(
+    ("text", "fragment"),
+    [
+        ("[lint]\nmax_line = 100\n", "неизвестный ключ настроек: lint.max_line"),
+        ("[rules.STL007]\nallow_name = []\n", "rules.STL007.allow_name"),
+        ("[rules.STL002]\nexclude = []\nlimit = 1\n", "rules.STL002.limit"),
+        ("[extra]\nx = 1\n", "неизвестный ключ настроек: extra"),
+        ('[lint]\nmax_line_length = "120"\n', "lint.max_line_length: нужно int"),
+        ("[rules.STL001]\nrequire_docs_link = 1\n", "нужно true или false"),
+        ("[rules.STL007.type_prefixes]\nBOOL = 1\n", "нужна строка"),
+        ('[rules.STL007]\narray_element_prefixes = "some"\n', "array_element_prefixes"),
+    ],
+)
+def test_unknown_or_mistyped_keys_rejected(tmp_path: Path, text: str, fragment: str) -> None:
+    path = tmp_path / "st_lint.toml"
+    path.write_text(text, encoding="utf-8")
+    with pytest.raises(st_lint.ConfigError, match=fragment):
+        st_lint.load_config(str(path))
+
+
+def test_project_customization_is_valid(tmp_path: Path) -> None:
+    """Проект может менять настройки: свои исключения, уровни, префиксы, имена-исключения."""
+    path = tmp_path / "st_lint.toml"
+    path.write_text(
+        '[lint]\nexclude = ["src/Generated/*"]\n[severity]\nSTL008 = "warning"\n'
+        '[rules.STL004]\nexclude = ["src/*/Converted/*"]\n'
+        '[rules.STL007]\nallow_names = ["IN", "PT"]\narray_element_prefixes = "off"\n'
+        '[rules.STL007.type_name_prefixes]\n"T_" = "t"\n',
+        encoding="utf-8",
+    )
+    cfg = st_lint.load_config(str(path))
+    assert cfg["severity"]["STL008"] == "warning"
+    assert cfg["rules"]["STL007"]["type_name_prefixes"]["T_"] == "t"
+    assert cfg["rules"]["STL007"]["type_name_prefixes"]["ST_"] == "st"
 
 
 def test_clean_pou_has_no_findings(make_tree: MakeTree) -> None:
@@ -231,6 +292,71 @@ def test_stl007_allow_names(make_tree: MakeTree) -> None:
     assert stl007_names(root, config(rules={"STL007": {"allow_names": ["i"]}})) == []
 
 
+ARRAY_VARS = (
+    "    astAlarm : ARRAY[0..GVL_Const.N - 1] OF ST_AlarmCfg;\n"
+    "    afbAlarm : ARRAY[0..7] OF FB_Alarm;\n"
+    "    aitfDev : ARRAY[1..2] OF I_Device;\n"
+    "    altStart : ARRAY[0..29] OF LTIME;\n"
+    "    atDelay : ARRAY[0..1] OF TIME;\n"
+    "    axFlag, arValue : ARRAY[0..1] OF BOOL;\n"
+    "    audiReserve : ARRAY[0..3] OF UDINT;\n"
+    "    afbTon : ARRAY[0..1] OF TON;\n"
+    "    aaiGrid : ARRAY[0..1] OF ARRAY[0..2] OF INT;\n"
+    "    aValues : ARRAY[0..1] OF REAL;\n"
+    "    aiCustom : ARRAY[0..1] OF T_Custom;\n"
+    "    aqCustom : ARRAY[0..1] OF T_Custom;\n"
+    "    astWrong : ARRAY[0..1] OF INT;\n"
+    "    arr : ARRAY[0..1] OF INT;\n"
+)
+
+
+def test_stl007_array_compound_prefixes(make_tree: MakeTree) -> None:
+    """'a' + префикс типа элемента (astAlarm, afbAlarm, aitfDev, altStart...) — по умолчанию допустим."""
+    root = make_tree(pou("FB_A", ARRAY_VARS))
+    assert stl007_names(root) == ["arValue", "aqCustom", "astWrong", "arr"]
+    finding = next(f for f in run(root) if f.rule == "STL007" and "astWrong" in f.message)
+    assert "ожидается префикс 'a' или 'ai'" in finding.message
+
+
+def test_stl007_array_prefix_modes(make_tree: MakeTree) -> None:
+    root = make_tree(pou("FB_A", ARRAY_VARS))
+    any_mode = config(rules={"STL007": {"array_element_prefixes": "any"}})
+    assert stl007_names(root, any_mode) == ["aqCustom", "arr"]
+    off_mode = config(rules={"STL007": {"array_element_prefixes": "off"}})
+    assert stl007_names(root, off_mode) == [
+        "astAlarm",
+        "afbAlarm",
+        "aitfDev",
+        "altStart",
+        "atDelay",
+        "arValue",
+        "axFlag",
+        "audiReserve",
+        "afbTon",
+        "aaiGrid",
+        "aiCustom",
+        "aqCustom",
+        "astWrong",
+        "arr",
+    ]
+
+
+def test_stl007_var_in_out_constant_is_not_constant_section(make_tree: MakeTree) -> None:
+    """VAR_IN_OUT CONSTANT — параметр только для чтения: префикс по типу, а не UPPER_SNAKE_CASE."""
+    files = pou("FB_A", impl=";\n")
+    files["src/POUs/FB_A/FB_A.decl.st"] += (
+        "VAR_IN_OUT CONSTANT\n    stCfg : ST_Cfg;\n    astSlot : ARRAY[0..1] OF ST_Slot;\n    cfg : ST_Cfg;\nEND_VAR\n"
+        "VAR CONSTANT\n    MAX_N : INT := 3;\n    maxN : INT := 3;\nEND_VAR\n"
+    )
+    files["src/POUs/FB_A/Run.method.decl.st"] = "METHOD Run\nVAR_IN_OUT CONSTANT\n    stEvent : ST_Event;\nEND_VAR\n"
+    files["src/POUs/FB_A/Run.method.impl.st"] = ";\n"
+    findings = [f.message for f in run(make_tree(files)) if f.rule == "STL007"]
+    assert findings == [
+        "переменная cfg : ST_Cfg — ожидается префикс 'st'",
+        "константа maxN — нужен UPPER_SNAKE_CASE",
+    ]
+
+
 # --- STL008 -----------------------------------------------------------------------
 
 
@@ -382,18 +508,18 @@ def test_missing_config_file(tmp_path: Path) -> None:
 
 
 def test_cli_text_and_exit_codes(make_tree: MakeTree, capsys: pytest.CaptureFixture[str]) -> None:
-    assert st_lint.main(["--root", str(SAMPLE)]) == 0
+    assert st_lint.main(["--root", str(SAMPLE), *TEMPLATE_CONFIG]) == 0
     assert "ошибок 0" in capsys.readouterr().out
     root = make_tree(pou("FB_A", impl="iX := 7;\n"))
-    assert st_lint.main(["--root", str(root)]) == 1
+    assert st_lint.main(["--root", str(root), *TEMPLATE_CONFIG]) == 1
     out = capsys.readouterr().out
     assert "src/POUs/FB_A/FB_A.impl.st:1:7: STL008 [ошибка]" in out
 
 
 def test_cli_strict_and_warnings(make_tree: MakeTree, capsys: pytest.CaptureFixture[str]) -> None:
     root = make_tree(pou("FB_A", "    iCycleCount : INT;\n", impl="iCycleCount := iCycleCount + 1;\n"))
-    assert st_lint.main(["--root", str(root)]) == 0
-    assert st_lint.main(["--root", str(root), "--strict"]) == 1
+    assert st_lint.main(["--root", str(root), *TEMPLATE_CONFIG]) == 0
+    assert st_lint.main(["--root", str(root), "--strict", *TEMPLATE_CONFIG]) == 1
     capsys.readouterr()
 
 
@@ -414,7 +540,7 @@ def test_cli_list_rules(capsys: pytest.CaptureFixture[str]) -> None:
 def test_cli_explicit_paths(make_tree: MakeTree) -> None:
     files = pou("FB_A", impl="iX := 7;\n", subdir="tests")
     root = make_tree(files)
-    assert st_lint.main(["--root", str(root), "src"]) == 0
+    assert st_lint.main(["--root", str(root), "src", *TEMPLATE_CONFIG]) == 0
 
 
 @pytest.mark.parametrize(
@@ -433,3 +559,28 @@ def test_cli_explicit_paths(make_tree: MakeTree) -> None:
 )
 def test_prefix_for_type(type_text: str, prefix: str | None) -> None:
     assert st_lint.prefix_for_type(type_text, st_lint.DEFAULT_CONFIG["rules"]["STL007"]) == prefix
+
+
+@pytest.mark.parametrize(
+    ("type_text", "element"),
+    [
+        ("ARRAY[0..GVL_Const.N - 1] OF ST_X", "ST_X"),
+        ("array [1..2, 0..3] of INT", "INT"),
+        ("ARRAY[0..1] OF ARRAY[0..2] OF REAL", "ARRAY[0..2] OF REAL"),
+        ("ARRAY[*] OF BOOL", "BOOL"),
+        ("ARRAY[0..1]", None),
+        ("INT", None),
+    ],
+)
+def test_array_element_type(type_text: str, element: str | None) -> None:
+    assert st_lint.array_element_type(type_text) == element
+
+
+def test_expected_prefixes() -> None:
+    cfg = st_lint.DEFAULT_CONFIG["rules"]["STL007"]
+    assert st_lint.expected_prefixes("ARRAY[0..1] OF ST_X", cfg) == ["a", "ast"]
+    assert st_lint.expected_prefixes("ARRAY[0..1] OF ARRAY[0..2] OF BOOL", cfg) == ["a", "aa", "aax"]
+    unknown = st_lint.expected_prefixes("ARRAY[0..1] OF T_Custom", cfg)
+    assert unknown is not None and unknown[0] == "a" and {"ast", "afb", "aitf", "audi", "alt"} <= set(unknown)
+    assert st_lint.expected_prefixes("UDINT", cfg) == ["udi"]
+    assert st_lint.expected_prefixes("T_Custom", cfg) is None

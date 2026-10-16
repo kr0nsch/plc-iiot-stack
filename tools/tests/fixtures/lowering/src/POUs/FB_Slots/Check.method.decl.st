@@ -1,0 +1,7 @@
+METHOD Check : BOOL
+VAR_IN_OUT CONSTANT
+    astCfg : ARRAY[0..GVL_Const.SLOTS_MAX - 1] OF ST_Slot;
+END_VAR
+VAR
+    iIdx : INT;
+END_VAR

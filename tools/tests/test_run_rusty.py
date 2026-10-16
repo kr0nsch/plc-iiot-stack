@@ -150,7 +150,10 @@ def test_main_with_fake_compiler(sample_copy: Path, monkeypatch: pytest.MonkeyPa
 @pytest.mark.integration
 @requires_rusty
 def test_integration_sample_passes(sample_copy: Path) -> None:
-    assert run_rusty.main(["--root", str(sample_copy)]) == 0
+    # свой пустой файл исключений: tools/check/rusty_exclude.txt принадлежит проекту и к фикстуре не относится
+    exclude = sample_copy / "exclude.txt"
+    exclude.write_text("", encoding="utf-8")
+    assert run_rusty.main(["--root", str(sample_copy), "--exclude-file", str(exclude)]) == 0
     report = json.loads((sample_copy / "build" / "rusty.json").read_text(encoding="utf-8"))
     assert report["errors"] == 0 and report["returncode"] == 0
 
@@ -180,3 +183,29 @@ def test_integration_codesys_counter_shim(make_tree: MakeTree) -> None:
         }
     )
     assert run_rusty.main(["--root", str(root), "--no-tests"]) == 0
+
+
+@pytest.mark.integration
+@requires_rusty
+def test_integration_var_in_out_constant_and_time_conversions(make_tree: MakeTree) -> None:
+    """VAR_IN_OUT CONSTANT (понижается до VAR_IN_OUT) и TIME_TO_UDINT/DINT_TO_TIME (прокладки) проходят RuSTy."""
+    root = make_tree(
+        {
+            "src/DUTs/ST_Cfg.dut.st": "TYPE ST_Cfg :\nSTRUCT\n    tDelay : TIME;\nEND_STRUCT\nEND_TYPE\n",
+            "src/POUs/FB_C/FB_C.decl.st": "FUNCTION_BLOCK FB_C\nVAR_IN_OUT CONSTANT\n    stCfg : ST_Cfg;\nEND_VAR\n"
+            "VAR\n    udiMs : UDINT;\n    tBack : TIME;\n    diMs : DINT;\nEND_VAR\n",
+            "src/POUs/FB_C/FB_C.impl.st": "udiMs := TIME_TO_UDINT(stCfg.tDelay);\ndiMs := TIME_TO_DINT(stCfg.tDelay);\n"
+            "tBack := UDINT_TO_TIME(udiMs) + DINT_TO_TIME(diMs);\nCheck(stArg := stCfg);\n",
+            "src/POUs/FB_C/Check.method.decl.st": (
+                "METHOD Check : BOOL\nVAR_IN_OUT CONSTANT\n    stArg : ST_Cfg;\nEND_VAR\n"
+            ),
+            "src/POUs/FB_C/Check.method.impl.st": "Check := TIME_TO_REAL(stArg.tDelay) > 0.0;\n",
+            "src/POUs/PRG_Main/PRG_Main.decl.st": (
+                "PROGRAM PRG_Main\nVAR\n    fbC : FB_C;\n    stCfg : ST_Cfg;\nEND_VAR\n"
+            ),
+            "src/POUs/PRG_Main/PRG_Main.impl.st": "fbC(stCfg := stCfg);\n",
+        }
+    )
+    assert run_rusty.main(["--root", str(root), "--no-tests"]) == 0
+    report = json.loads((root / "build" / "rusty.json").read_text(encoding="utf-8"))
+    assert report["errors"] == 0

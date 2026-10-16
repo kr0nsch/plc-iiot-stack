@@ -50,6 +50,10 @@ RULES: dict[str, str] = {
 }
 
 SEVERITIES = ("error", "warning", "off")
+# Префиксы массивов (STL007): match — 'a' или 'a' + префикс типа элемента (astCfg — массив ST_*,
+# axFlag — массив BOOL; если тип элемента правилу неизвестен — 'a' + любой известный префикс);
+# any — 'a' или 'a' + любой известный префикс; off — только 'a' и заглавная буква (aValues)
+ARRAY_PREFIX_MODES = ("match", "any", "off")
 
 DEFAULT_CONFIG: dict[str, Any] = {
     "lint": {"paths": ["src", "tests"], "exclude": [], "max_line_length": 120},
@@ -78,6 +82,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "STL007": {
             "allow_names": [],
             "constant_pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$",
+            "array_element_prefixes": "match",
             "type_prefixes": {
                 "BOOL": "x",
                 "BYTE": "b",
@@ -167,6 +172,7 @@ def load_config(path: str | None) -> dict[str, Any]:
             data = tomllib.load(fh)
     except tomllib.TOMLDecodeError as exc:
         raise ConfigError(f"{path}: {exc}") from exc
+    _check_keys(data, DEFAULT_CONFIG, path, "")
     config = _merge(config, data)
     for rule, severity in config["severity"].items():
         if rule not in RULES:
@@ -176,7 +182,44 @@ def load_config(path: str | None) -> dict[str, Any]:
     for rule in config["rules"]:
         if rule not in RULES:
             raise ConfigError(f"{path}: неизвестное правило в [rules]: {rule}")
+    mode = config["rules"]["STL007"].get("array_element_prefixes")
+    if mode not in ARRAY_PREFIX_MODES:
+        raise ConfigError(f"{path}: rules.STL007.array_element_prefixes: одно из {ARRAY_PREFIX_MODES}")
     return config
+
+
+# Таблицы, ключи которых задаёт проект (имена правил и типов), а не набор настроек
+_FREE_TABLES = ("severity", "type_prefixes", "type_name_prefixes")
+
+
+def _check_keys(data: dict[str, Any], defaults: dict[str, Any], path: str, where: str) -> None:
+    """Каждый ключ файла настроек известен, значение — того же вида, что значение по умолчанию."""
+    table = where.rsplit(".", 1)[-1]
+    for key, value in data.items():
+        name = f"{where}.{key}" if where else key
+        if where == "rules":
+            if key not in RULES:
+                raise ConfigError(f"{path}: неизвестное правило в [rules]: {key}")
+            if not isinstance(value, dict):
+                raise ConfigError(f"{path}: [{name}] должна быть таблицей")
+            _check_keys(value, defaults.get(key, {"exclude": []}), path, name)
+            continue
+        if table in _FREE_TABLES:
+            if not isinstance(value, str):
+                raise ConfigError(f"{path}: {name}: нужна строка")
+            continue
+        if key not in defaults:
+            raise ConfigError(f"{path}: неизвестный ключ настроек: {name}")
+        default = defaults[key]
+        if isinstance(default, dict):
+            if not isinstance(value, dict):
+                raise ConfigError(f"{path}: [{name}] должна быть таблицей")
+            _check_keys(value, default, path, name)
+        elif isinstance(default, bool) or isinstance(value, bool):
+            if not (isinstance(default, bool) and isinstance(value, bool)):
+                raise ConfigError(f"{path}: {name}: нужно true или false")
+        elif not isinstance(value, type(default)):
+            raise ConfigError(f"{path}: {name}: нужно {type(default).__name__}, задано {type(value).__name__}")
 
 
 def _matches(path: str, patterns: Sequence[str]) -> bool:
@@ -190,7 +233,9 @@ def _matches(path: str, patterns: Sequence[str]) -> bool:
 _SUPPRESS_RE = re.compile(r"lint:allow\b(?P<body>[^\n]*)")
 _SUPPRESS_BODY_RE = re.compile(r"\s*(?P<rules>[A-Z]+\d{3}(?:\s*,\s*[A-Z]+\d{3})*)\s*(?P<reason>.*)$")
 _TODO_RE = re.compile(r"\b(TODO|FIXME)\b(?!\(#\d+\))")
-_CONSTANT_SECTIONS = ("CONSTANT",)
+# Секции констант (STL007, UPPER_SNAKE_CASE): VAR, VAR_GLOBAL (и VAR_STAT, VAR_EXTERNAL) с CONSTANT.
+# VAR_IN_OUT CONSTANT и VAR_INPUT CONSTANT — параметры только для чтения: для них префиксы по типу
+_CONSTANT_BLOCKS = ("VAR", "VAR_GLOBAL", "VAR_STAT", "VAR_EXTERNAL")
 _COMPARISON_OPS = ("<", ">", "<=", ">=", "=", "<>")
 
 
@@ -417,8 +462,8 @@ class Linter:
                 if tdecl is not None:
                     decls.extend(tdecl.members)
             for decl in decls:
-                constant = any(m in _CONSTANT_SECTIONS for m in decl.modifiers)
-                prefix = prefix_for_type(decl.type_text, cfg)
+                constant = "CONSTANT" in decl.modifiers and decl.section in _CONSTANT_BLOCKS
+                prefixes = expected_prefixes(decl.type_text, cfg)
                 for name, _ in decl.names:
                     if name in allow:
                         continue
@@ -426,17 +471,15 @@ class Linter:
                         if not constant_re.match(name):
                             self.report("STL007", rel, decl.line, 1, f"константа {name} — нужен UPPER_SNAKE_CASE")
                         continue
-                    if prefix is None:
+                    if prefixes is None or any(_has_prefix(name, p) for p in prefixes):
                         continue
-                    rest = name[len(prefix) :]
-                    if not name.startswith(prefix) or not rest or not (rest[0].isupper() or rest[0].isdigit()):
-                        self.report(
-                            "STL007",
-                            rel,
-                            decl.line,
-                            1,
-                            f"переменная {name} : {decl.type_text} — ожидается префикс '{prefix}'",
-                        )
+                    self.report(
+                        "STL007",
+                        rel,
+                        decl.line,
+                        1,
+                        f"переменная {name} : {decl.type_text} — ожидается префикс {_describe_prefixes(prefixes)}",
+                    )
 
     def _check_magic_numbers(self, obj: L.StObject, impls: list[tuple[str, str]]) -> None:
         cfg = self.rule_cfg("STL008")
@@ -544,6 +587,68 @@ def prefix_for_type(type_text: str, cfg: dict[str, Any]) -> str | None:
     if last.upper() in {t.upper() for t in cfg.get("fb_types", [])}:
         return "fb"
     return None
+
+
+def _has_prefix(name: str, prefix: str) -> bool:
+    """Имя начинается с префикса, за ним — заглавная буква или цифра (xReady, ai3Phase)."""
+    rest = name[len(prefix) :]
+    return name.startswith(prefix) and bool(rest) and (rest[0].isupper() or rest[0].isdigit())
+
+
+def _describe_prefixes(prefixes: Sequence[str]) -> str:
+    if len(prefixes) > 3:
+        return "'a' или 'a' + префикс типа элемента"
+    return " или ".join(f"'{p}'" for p in prefixes)
+
+
+_ARRAY_OF_RE = re.compile(r"\s*OF\s+(.+)$", re.IGNORECASE | re.DOTALL)
+
+
+def array_element_type(type_text: str) -> str | None:
+    """Тип элемента массива: 'ARRAY[0..N - 1] OF ST_X' -> 'ST_X'; None — не массив или не разобран."""
+    text = type_text.strip()
+    if not text.upper().startswith("ARRAY"):
+        return None
+    pos = len("ARRAY")
+    while pos < len(text) and text[pos].isspace():
+        pos += 1
+    if pos >= len(text) or text[pos] != "[":
+        return None
+    depth = 0
+    for i in range(pos, len(text)):
+        if text[i] == "[":
+            depth += 1
+        elif text[i] == "]":
+            depth -= 1
+            if depth == 0:
+                match = _ARRAY_OF_RE.match(text, i + 1)
+                return match.group(1).strip() if match else None
+    return None
+
+
+def known_prefixes(cfg: dict[str, Any]) -> list[str]:
+    """Все префиксы переменных из настроек правила (для составных префиксов массивов)."""
+    found = {*cfg.get("type_prefixes", {}).values(), *cfg.get("type_name_prefixes", {}).values()}
+    found |= {"fb", "p", "ref", "a"}
+    return sorted(found, key=lambda p: (-len(p), p))
+
+
+def expected_prefixes(type_text: str, cfg: dict[str, Any]) -> list[str] | None:
+    """Допустимые префиксы переменной по типу; None — тип правилу не известен.
+
+    Массив: 'a' и, по настройке array_element_prefixes, составной префикс 'a' + префикс элемента:
+    astAlarm — ARRAY OF ST_*, afbAlarm — ARRAY OF FB_*, aitfDev — ARRAY OF I_*, altStart — ARRAY OF LTIME.
+    """
+    element = array_element_type(type_text)
+    if element is None:
+        prefix = prefix_for_type(type_text, cfg)
+        return None if prefix is None else [prefix]
+    mode = cfg.get("array_element_prefixes", "match")
+    if mode == "off":
+        return ["a"]
+    nested = array_element_type(element) is not None
+    inner = expected_prefixes(element, cfg) if mode == "match" or nested else None
+    return ["a", *("a" + p for p in (inner or known_prefixes(cfg)))]
 
 
 def _designator_text(tokens: Sequence[L.Token], sig: Sequence[int], a: int, b: int) -> str:

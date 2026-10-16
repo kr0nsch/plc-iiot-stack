@@ -1,0 +1,101 @@
+# Эталон настроек st_lint шаблона — копия tools/check/st_lint.toml шаблона, равная умолчаниям
+# st_lint.py (это проверяет test_template_toml_matches_defaults). Тесты линтера берут настройки
+# отсюда, а не из tools/check/st_lint.toml репозитория: тот принадлежит проекту и может отличаться.
+# Новая настройка добавляется в st_lint.py, в tools/check/st_lint.toml шаблона и сюда.
+# Шаблоны путей (exclude) — fnmatch по пути от корня репозитория; '*' захватывает и '/'.
+
+[lint]
+paths = ["src", "tests"]        # каталоги раскладки (docs/LAYOUT.md)
+exclude = []                    # файлы, которые не проверяются вовсе
+max_line_length = 120           # STL003
+
+# Уровни: "error" — код выхода 1, "warning" — только сообщение, "off" — правило выключено.
+[severity]
+STL001 = "error"
+STL002 = "error"
+STL003 = "error"
+STL004 = "error"
+STL005 = "error"
+STL006 = "error"
+STL007 = "error"
+STL008 = "error"
+STL009 = "error"
+STL010 = "error"
+STL011 = "warning"              # эвристика
+STL012 = "error"
+
+[rules.STL001]
+# Слова, которые должен упоминать комментарий-заголовок POU (до первой секции VAR).
+keywords = ["назначение", "автор", "версия", "документ"]
+require_docs_link = true        # в заголовке есть путь вида docs/<файл>.md
+exclude = []
+
+[rules.STL006]
+# Допустимые префиксы имён объектов; пустой список — проверка выключена.
+program = ["PRG_"]
+function_block = ["FB_"]
+function = ["F_"]
+struct = ["ST_"]
+enum = ["E_"]
+union = ["U_"]
+alias = []                      # для псевдонимов типов в CONTRIBUTING.md правила нет
+interface = ["I_"]
+gvl = ["GVL_"]
+pvl = ["PVL_", "GVL_"]
+# Методы и свойства — PascalCase без префиксов.
+member_pattern = "^[A-Z][A-Za-z0-9]*$"
+member_exceptions = ["FB_init", "FB_exit", "FB_reinit"]
+exclude = []
+
+[rules.STL007]
+allow_names = []                # имена-исключения, например ["i", "j"]
+constant_pattern = "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"   # VAR CONSTANT / VAR_GLOBAL CONSTANT (не VAR_IN_OUT CONSTANT)
+# Массивы: "match" — 'a' или 'a' + префикс типа элемента (astAlarm — ARRAY OF ST_*, axFlag — ARRAY OF BOOL);
+# "any" — 'a' + любой префикс из таблиц ниже; "off" — только 'a' и заглавная буква (aValues)
+array_element_prefixes = "match"
+fb_types = ["TON", "TOF", "TP", "R_TRIG", "F_TRIG", "CTU", "CTD", "CTUD", "RS", "SR"]
+exclude = []
+
+[rules.STL007.type_prefixes]
+BOOL = "x"
+BYTE = "b"
+WORD = "w"
+DWORD = "dw"
+LWORD = "lw"
+SINT = "si"
+USINT = "usi"
+INT = "i"
+UINT = "ui"
+DINT = "di"
+UDINT = "udi"
+LINT = "li"
+ULINT = "uli"
+REAL = "r"
+LREAL = "lr"
+STRING = "s"
+WSTRING = "ws"
+TIME = "t"
+LTIME = "lt"
+DATE = "d"
+TOD = "tod"
+TIME_OF_DAY = "tod"
+DT = "dt"
+DATE_AND_TIME = "dt"
+
+[rules.STL007.type_name_prefixes]
+# Префикс имени типа -> префикс переменной (ARRAY -> a, POINTER TO -> p, REFERENCE TO -> ref — встроено).
+"E_" = "e"
+"ST_" = "st"
+"U_" = "u"
+"FB_" = "fb"
+"I_" = "itf"
+
+[rules.STL008]
+allowed_values = [0, 1, 2]      # сравниваются по значению: 0.0, 1.0, 2.0 тоже допустимы
+exempt_objects = ["GVL_Const"]
+exclude = ["tests/*"]           # в тестах ожидаемые значения — это данные, а не логика
+
+[rules.STL011]
+name_pattern = "(?i)(cycle|cyc|scan|tick)"                  # счётчик с таким именем
+time_name_pattern = "(?i)(time|delay|timeout|_ms$|_s$|sec)" # сравнение счётчика с «временем»
+exclude = []

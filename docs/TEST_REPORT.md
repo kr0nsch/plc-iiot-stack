@@ -234,13 +234,13 @@ _Нет._
 
 | Проверка | Итог | Примечание |
 |---|---|---|
-| `ruff check`, `ruff format --check`, `mypy --strict`, `pytest` (корень) | пройдено, 2026-10-16, локально | pytest: 675 пройдено при поднятом локальном стенде (из них 12 интеграционных), 10 отключено (тесты шаблона, `pyproject.toml`); без стенда интеграционные пропускаются; интеграционные с настоящим iec_checker выполнялись |
+| `ruff check`, `ruff format --check`, `mypy --strict`, `pytest` (корень) | пройдено, 2026-10-16, локально | pytest без поднятого стенда: 804 пройдено, 13 пропущено (12 интеграционных тестов стенда и 1 тест только для POSIX); отключённых тестов шаблона нет; интеграционные с настоящими iec_checker и RuSTy выполнялись, в том числе `test_integration_repository_sources` (исходники проекта с его обоснованиями) |
 | эмулятор `emulator/`: mypy, pytest | пройдено, 2026-10-16, локально | 93 теста |
 | отчёт `report/`: mypy, pytest | пройдено, 2026-10-16, локально | 89 пройдено, 1 пропущен без стенда (`test_live_influx.py`); на локальном стенде — 90 из 90 |
 | `tools_project/gen_plc_iiot.py --check`, `gen_config.py --check` | пройдено, 2026-10-16, локально | таблицы ПЛК, узлы OPC UA, тексты тревог, дашборды и таблицы `data_schema.md` совпадают со `schema/` |
 | `tools/check/st_lint.py --strict` | пройдено, 2026-10-16, локально | 506 файлов `src/` и `tests/`, 0 замечаний; адаптер `adapters/sd_mqtt_1_0` — 20 файлов, 0 замечаний |
-| iec_checker 0.4 через `tools_project/iec_checker_gate.py` | пройдено, 2026-10-16, локально | 94 объекта `src/` и `tests/`; необоснованных 0, известных пробелов разборщика 2, обоснованных 1732 — разбор в [STATIC_ANALYSIS.md](STATIC_ANALYSIS.md) |
-| RuSTy 1.0.6 (локально, `run_rusty.py`, необязательно) | 414 ошибок, 19 предупреждений | расширения CODESYS, которых нет в RuSTy (`VAR_IN_OUT CONSTANT`, `s[i]`, `ARRAY[*]`) и в прокладках шаблона — [STATIC_ANALYSIS.md](STATIC_ANALYSIS.md#rusty-plc---check) |
+| iec_checker 0.4, `tools/check/run_iec_checker.py --tests` | пройдено, 2026-10-16, локально | 94 объекта `src/` и `tests/`; необоснованных 0, ошибок разбора 0, неиспользованных обоснований 0, обоснованных 1418 — разбор в [STATIC_ANALYSIS.md](STATIC_ANALYSIS.md) |
+| RuSTy 1.0.6 (локально, `run_rusty.py`, необязательно) | 314 ошибок, 19 предупреждений | расширения CODESYS, которых нет в RuSTy (`s[i]`, `ARRAY[*]`, параметры метода-помощника `Run` наборов) и в прокладках шаблона — [STATIC_ANALYSIS.md](STATIC_ANALYSIS.md#rusty-plc---check) |
 
 ## Стенд: сквозной путь данных
 
