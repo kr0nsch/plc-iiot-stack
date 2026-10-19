@@ -302,7 +302,8 @@ def spec(name: str, env: Mapping[str, str], layout: Layout) -> dict[str, Any]:
         # Пути и адреса, которые в контейнере заданы по умолчанию в telegraf.conf
         compose["TELEGRAF_LOOKUP_DIR"] = posix(layout.map_path("telegraf", "/etc/telegraf/lookup"))
         compose["TELEGRAF_HEALTH_ADDRESS"] = f"http://127.0.0.1:{layout.telegraf_health_port}"
-        args = ["--config", str(layout.map_path("telegraf", "/etc/telegraf/telegraf.conf"))]
+        # Строгая подстановка окружения — как в entrypoint
+        args = ["--strict-env-handling", "--config", str(layout.map_path("telegraf", "/etc/telegraf/telegraf.conf"))]
         # То же решение, что в telegraf/docker-entrypoint.sh
         if compose.get("OPCUA_ENABLED", "true").lower() in ("true", "1", "yes"):
             args += ["--config-directory", str(layout.map_path("telegraf", "/etc/telegraf/telegraf.d"))]

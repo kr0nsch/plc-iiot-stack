@@ -224,6 +224,19 @@ def test_environment_variables_are_provided_by_compose() -> None:
     assert with_default == {"TELEGRAF_LOOKUP_DIR", "TELEGRAF_HEALTH_ADDRESS"}
 
 
+def test_strict_env_handling() -> None:
+    """Подстановка окружения строгая и задана явно (entrypoint, локальный стенд): в этом режиме Telegraf
+    подставляет ${VAR} только в строках, поэтому каждое ${...} конфигурации — внутри строки TOML."""
+    entry = (TELEGRAF / "docker-entrypoint.sh").read_text(encoding="utf-8")
+    assert "set -- telegraf --strict-env-handling --config /etc/telegraf/telegraf.conf" in entry
+    assert "--non-strict-env-handling" not in entry
+    in_string = re.compile(r"\s*[\w.]+\s*=\s*\[?\s*[\"'].*\$\{.*")
+    for name in ("telegraf.conf", "telegraf.d/opcua.conf"):
+        for line in (TELEGRAF / name).read_text(encoding="utf-8").splitlines():
+            if "${" in line and not line.lstrip().startswith("#"):
+                assert in_string.fullmatch(line), f"{name}: ${{...}} вне строки: {line.strip()}"
+
+
 def test_lookup_path_is_mounted() -> None:
     compose = yaml.safe_load((sc.REPO / "docker-compose.yml").read_text(encoding="utf-8"))
     mounts = compose["services"]["telegraf"]["volumes"]

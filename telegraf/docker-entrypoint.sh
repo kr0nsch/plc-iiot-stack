@@ -20,7 +20,10 @@ fi
 INFLUX_TOKEN="$(cat "$token_file")"
 export INFLUX_TOKEN
 
-set -- telegraf --config /etc/telegraf/telegraf.conf
+# Подстановка ${...} из окружения — строгая (умолчание Telegraf с 1.38, задано явно — без
+# предупреждения при каждом запуске): только внутри строк конфигурации, все ${...} в telegraf.conf
+# и telegraf.d — строки (tests_stack/test_telegraf.py)
+set -- telegraf --strict-env-handling --config /etc/telegraf/telegraf.conf
 case "${OPCUA_ENABLED:-true}" in
     true | 1 | yes)
         set -- "$@" --config-directory /etc/telegraf/telegraf.d

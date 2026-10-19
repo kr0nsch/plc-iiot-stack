@@ -51,6 +51,13 @@ pytestmark = [pytest.mark.integration, pytest.mark.stack]
 PROBE = "TEST1"
 FILES = [f for f in os.environ.get("IIOT_COMPOSE_FILES", "docker-compose.yml").split(",") if f]
 REQUIRED = os.environ.get("IIOT_STACK") == "1"
+# Предел ожидания полного каталога по MQTT. При рождении узел публикует все метрики каталога сразу
+# (их больше 100), но Mosquitto держит у подписчика не больше max_inflight_messages = 100
+# неподтверждённых сообщений QoS 1 (mosquitto.conf), а Telegraf подтверждает сообщение только после
+# записи в InfluxDB (flush_interval 5 с и jitter до 1 с, telegraf.conf): каталог приходит за два сброса,
+# и сразу после make demo его хвоста в базе ещё нет. Предел — контрольный период узла (60 с, повтор всех
+# метрик) и два сброса Telegraf.
+CATALOG_TIMEOUT_S = 75.0
 
 
 def unavailable(reason: str) -> None:
@@ -252,16 +259,27 @@ def last_value(db: Db, device: str, metric: str) -> float | None:
 
 # --- эмулятор → брокер → InfluxDB ---------------------------------------------------------------------
 def test_all_catalog_metrics_reach_influxdb(db: Db, plc_online: str) -> None:
-    """Каждая метрика каталога за последние 3 контрольных периода есть в базе (путь MQTT)."""
-    rows = db.rows(
-        f'from(bucket: "{db.bucket}") |> range(start: -3m)'
-        ' |> filter(fn: (r) => r._measurement == "telemetry" and r._field == "value" and r.source == "mqtt")'
-        ' |> filter(fn: (r) => r.site == "vodokanal" and r.area == "kns1" and r.unit == "station")'
-        ' |> last() |> group() |> keep(columns: ["device", "metric", "_value"])'
-    )
-    seen = {(r["device"], r["metric"]) for r in rows}
+    """Каждая метрика каталога за последние 3 контрольных периода есть в базе (путь MQTT).
+
+    Сразу после рождения узла каталог ещё доходит до базы частями — ожидание до CATALOG_TIMEOUT_S.
+    """
     expected = {(m.device, m.metric) for m in sc.load_catalog()}
-    assert expected <= seen, f"нет в InfluxDB: {sorted(expected - seen)}"
+
+    def latest() -> list[dict[str, str]]:
+        return db.rows(
+            f'from(bucket: "{db.bucket}") |> range(start: -3m)'
+            ' |> filter(fn: (r) => r._measurement == "telemetry" and r._field == "value" and r.source == "mqtt")'
+            ' |> filter(fn: (r) => r.site == "vodokanal" and r.area == "kns1" and r.unit == "station")'
+            ' |> last() |> group() |> keep(columns: ["device", "metric", "_value"])'
+        )
+
+    def seen() -> set[tuple[str, str]]:
+        return {(r["device"], r["metric"]) for r in latest()}
+
+    wait_until(lambda: expected <= seen(), timeout=CATALOG_TIMEOUT_S)
+    rows = latest()
+    missing = expected - {(r["device"], r["metric"]) for r in rows}
+    assert not missing, f"нет в InfluxDB: {sorted(missing)}"
     level = next(float(r["_value"]) for r in rows if (r["device"], r["metric"]) == ("LT101", "level"))
     assert 0.0 <= level <= 5.0
 
@@ -292,13 +310,19 @@ def test_opcua_path_covers_catalog_nodes(db: Db, plc_online: str) -> None:
     wait_until(lambda: expected <= seen(), timeout=40)
     missing = expected - seen()
     assert not missing, f"нет по OPC UA: {sorted(missing)}"
-    rows = db.rows(
-        f'from(bucket: "{db.bucket}") |> range(start: -2m)'
-        ' |> filter(fn: (r) => r._measurement == "telemetry" and r._field == "value")'
-        ' |> filter(fn: (r) => r.device == "K1" and r.metric == "general_alarm") |> last()'
-        ' |> group() |> keep(columns: ["source", "_value"])'
-    )
-    by_source = {r["source"]: float(r["_value"]) for r in rows}
+
+    def k1() -> dict[str, float]:
+        rows = db.rows(
+            f'from(bucket: "{db.bucket}") |> range(start: -2m)'
+            ' |> filter(fn: (r) => r._measurement == "telemetry" and r._field == "value")'
+            ' |> filter(fn: (r) => r.device == "K1" and r.metric == "general_alarm") |> last()'
+            ' |> group() |> keep(columns: ["source", "_value"])'
+        )
+        return {r["source"]: float(r["_value"]) for r in rows}
+
+    # K1 — в хвосте каталога: по MQTT после рождения узла приходит со вторым сбросом Telegraf
+    wait_until(lambda: set(k1()) == {"mqtt", "opcua"}, timeout=CATALOG_TIMEOUT_S)
+    by_source = k1()
     assert set(by_source) == {"mqtt", "opcua"} and by_source["mqtt"] == by_source["opcua"], by_source
 
 

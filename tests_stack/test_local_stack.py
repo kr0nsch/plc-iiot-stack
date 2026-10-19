@@ -151,7 +151,11 @@ def test_telegraf_spec(layout: ls.Layout) -> None:
     assert env["OPCUA_ID_PREFIX"] == "|var|CODESYS Control Win V3."
     assert env["MQTT_TELEGRAF_PASSWORD"] == "p2-secret"
     assert env["TELEGRAF_LOOKUP_DIR"].endswith("telegraf/lookup")
-    assert s["args"][:2] == ["--config", str((sc.REPO / "telegraf" / "telegraf.conf").resolve())]
+    assert s["args"][:3] == [
+        "--strict-env-handling",
+        "--config",
+        str((sc.REPO / "telegraf" / "telegraf.conf").resolve()),
+    ]
     assert "--config-directory" in s["args"]
 
 
