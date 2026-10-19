@@ -1,12 +1,9 @@
 """Модель тегов флагмана КНС-1: теги SCADA и тревоги из файлов генератора iolistgen.
 
-Файлы `data/scada_tags.csv` и `data/scada_alarms.csv` — копия вывода iolistgen по перечню
-сигналов КНС-1 (проект 07, `examples/kns/io_list.csv`), та же, что `schema/source/` репозитория
-(совпадение проверяет tests/test_tagmodel.py). Обновить:
-
-    python -m iolistgen generate examples/kns/io_list.csv --out <каталог>
-
-и скопировать `<каталог>/scada/*.csv` в `schema/source/` и `report/kns_report/data/`.
+Файлы `data/scada_tags.csv` и `data/scada_alarms.csv` — копия вывода iolistgen флагмана
+(kns-pump-station, `scada/*.csv`), та же, что `schema/source/` репозитория (совпадение проверяет
+tests/test_tagmodel.py). Обновить: `python tools_project/flagship_snapshot.py` в корне репозитория и
+скопировать `schema/source/scada_*.csv` в `report/kns_report/data/`.
 """
 
 from __future__ import annotations

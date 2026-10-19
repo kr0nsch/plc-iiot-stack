@@ -1,7 +1,7 @@
 """Генератор конфигурации стенда из контракта данных ``schema/``.
 
 Назначение: держать согласованными каталог телеметрии, Telegraf, Grafana и документацию.
-Автор: <ИМЯ ФАМИЛИЯ>. Версия: 1.0. Описание схемы данных — docs/data_schema.md.
+Автор: kr0nsch. Версия: 1.0. Описание схемы данных — docs/data_schema.md.
 
 Что генерируется (файлы с пометкой AUTO-GENERATED руками не правят):
 - ``telegraf/telegraf.d/opcua.conf`` — узлы OPC UA для всех метрик каталога с путём ПЛК;
@@ -132,15 +132,42 @@ def render_opcua_conf(root: Path) -> str:
         '    identifier_type = "s"',
         f'    default_tags = {{ site = "{st["site"]}", area = "{st["area"]}", unit = "{st["unit"]}" }}',
     ]
+    inverted: list[tuple[str, str]] = []
     for m in sc.load_catalog(root):
         if not m.plc_path:
             continue
+        if m.invert:
+            inverted.append((m.device, m.metric))
         lines += [
             "",
             "    [[inputs.opcua.group.nodes]]",
             '      name = "value"',
             f'      identifier = "${{OPCUA_ID_PREFIX}}{m.plc_path}"',
             f'      default_tags = {{ device = "{m.device}", metric = "{m.metric}" }}',
+        ]
+    if inverted:
+        pairs = ", ".join(f'("{d}", "{n}")' for d, n in inverted)
+        lines += [
+            "",
+            "# Метрики с обратной логикой сигнала (каталог, колонка invert): OPC UA читает переменную ПЛК как есть,",
+            "# а значение метрики — её отрицание (реле K1 «Общая авария» в норме под напряжением: xK1 = TRUE —",
+            "# general_alarm = 0). Путь MQTT публикует метрику уже в смысле каталога. После converter (order 1).",
+            "[[processors.starlark]]",
+            "  order = 4",
+            '  namepass = ["telemetry"]',
+            "  source = '''",
+            f"INVERT = [{pairs}]",
+            "",
+            "def apply(metric):",
+            '    if metric.tags.get("source") != "opcua":',
+            "        return metric",
+            '    if (metric.tags.get("device"), metric.tags.get("metric")) not in INVERT:',
+            "        return metric",
+            '    value = metric.fields.get("value")',
+            "    if value != None:",
+            '        metric.fields["value"] = 1.0 - float(value)',
+            "    return metric",
+            "'''",
         ]
     return "\n".join(lines) + "\n"
 

@@ -23,7 +23,7 @@ Run(fbClient := fbFake, fbCommands := fbCmd, aRuleTable := aRules, xRetainedIn :
     ltAt := LTIME#1H, uliNow_ms := 1792137600250, uiSeq := 6, iResult := 1,
     sTopic := '',
     sPayload := '');
-AssertEquals_STRING(Expected := CONCAT('{"schema_version":"1.0","cmd_id":"c0000001","ts":1792137600250,',
+AssertEquals_STRING(Expected := CONCAT('{"schema_version":"1.1","cmd_id":"c0000001","ts":1792137600250,',
                                        '"command":"Start","result":"accepted","reason":"ok"}'),
                     Actual := fbFake.LastPayload(sTopic := 'vodokanal/kns1/station/P101/cmd_ack/Start'),
                         Message := 'ack JSON');

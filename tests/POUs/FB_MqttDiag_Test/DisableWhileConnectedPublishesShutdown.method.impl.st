@@ -8,7 +8,7 @@ fbDiag(xEnable := FALSE, itfClient := fbFake, ltNow := LTIME#1H + LTIME#1S, uliT
        stBroker := stCfg);
 
 AssertEquals_STRING(
-    Expected := '{"schema_version":"1.0","ts":1792137600250,"node":"PLC1","state":"offline","reason":"shutdown"}',
+    Expected := '{"schema_version":"1.1","ts":1792137600250,"node":"PLC1","state":"offline","reason":"shutdown"}',
     Actual := fbFake.LastPayload(sTopic := 'vodokanal/kns1/station/PLC1/status/connection'),
         Message := 'shutdown payload');
 AssertTrue(Condition := fbDiag.eState = E_MqttConnState.Closing, Message := 'closing');

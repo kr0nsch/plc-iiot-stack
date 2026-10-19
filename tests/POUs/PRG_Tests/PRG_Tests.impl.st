@@ -10,4 +10,4 @@ xAllFinished := fbJsonBuilderTest.AreAllTestsFinished()
     AND fbMqttAlarmsTest.AreAllTestsFinished()
     AND fbMqttCommandsTest.AreAllTestsFinished()
     AND fbMqttDiagTest.AreAllTestsFinished()
-    AND fbKnsShimTest.AreAllTestsFinished();
+    AND fbIiotMapTest.AreAllTestsFinished();

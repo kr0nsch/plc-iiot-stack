@@ -8,3 +8,5 @@ ReconnectRepeatsLastEventWithItsTs();
 ChangeWhileOfflineIsEventAfterReconnect();
 BudgetAndDisabledPriority();
 WordsOutOfTableMeanNormal();
+StationAlarmIdAndLongSuffix();
+SuppressedByDesignFromWords();

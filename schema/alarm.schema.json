@@ -17,15 +17,15 @@
       "maximum": 4102444800000
     },
     "id": {
-      "description": "Номер тревоги udiId = dev_no * 10 + слот",
+      "description": "Номер тревоги udiId: у устройств dev_no * 10 + слот, у станции 100000 + slot (перечень тревог флагмана)",
       "type": "integer",
       "minimum": 1,
-      "maximum": 99999
+      "maximum": 4294967295
     },
     "code": {
       "description": "Код <DEVICE>.<SUFFIX>, например LT101.HH; DEVICE и SUFFIX совпадают с уровнями топика",
       "type": "string",
-      "pattern": "^[A-Z][A-Z0-9_]{0,15}\\.[A-Z]{1,4}$"
+      "pattern": "^[A-Z][A-Z0-9_]{0,15}\\.[A-Z][A-Z0-9]{0,7}$"
     },
     "priority": {
       "description": "E_AlarmPriority без None",

@@ -16,6 +16,9 @@ AssertTrue(Condition := F_IiotAlarmStateOf(stWords := stWords, uiSlot := 3) = E_
 stWords.wShelved := 16#0008;
 AssertTrue(Condition := F_IiotAlarmStateOf(stWords := stWords, uiSlot := 3) = E_IiotAlarmState.Shelved,
            Message := 'shelved');
+stWords.wSuppressed := 16#0008;  // старшинство plc-process-lib: OutOfService > SuppressedByDesign > Shelved
+AssertTrue(Condition := F_IiotAlarmStateOf(stWords := stWords, uiSlot := 3) = E_IiotAlarmState.SuppressedByDesign,
+           Message := 'suppressed beats shelved');
 stWords.xOutOfService := TRUE;
 AssertTrue(Condition := F_IiotAlarmStateOf(stWords := stWords, uiSlot := 3) = E_IiotAlarmState.OutOfService,
            Message := 'out of service');

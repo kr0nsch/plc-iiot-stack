@@ -94,12 +94,12 @@ def test_codesys_config_of_this_project() -> None:
     assert cfg["library"]["libraries"] == ["standard", "systimertc"]
     assert cfg["libraries"]["systimertc"]["placeholder"] == "SysTimeRtc"
     assert cfg["library"]["title"] == "plc-iiot-stack"
-    assert set(cfg["library"]["exclude"]) == {"PRG_Main", "PRG_Iiot"}
+    assert set(cfg["library"]["exclude"]) == {"PRG_Main"}  # PRG_Iiot — во флагмане (flagship/)
     # библиотека CODESYS-MQTT в проект не подключается: её зависимости не собираются на 3.5.17.30
     assert "sd_mqtt" not in cfg["libraries"]
 
 
-# --- точные сообщения ST (проверены coUnit в CODESYS) против JSON Schema --------------------------------
+# --- точные сообщения ST (их сравнивают тесты coUnit) против JSON Schema -----------------------------------
 TESTS = REPO / "tests"
 EXPECTED_RE = re.compile(r"Expected\s*:=\s*(?P<expr>.*?),\s*Actual\s*:=\s*(?P<actual>[^;]*?)(?:,\s*Message|\);)", re.S)
 ST_STRING_RE = re.compile(r"'((?:\$.|[^'$])*)'")

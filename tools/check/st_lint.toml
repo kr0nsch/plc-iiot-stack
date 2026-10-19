@@ -4,7 +4,7 @@
 # Шаблоны путей (exclude) — fnmatch по пути от корня репозитория; '*' захватывает и '/'.
 
 [lint]
-paths = ["src", "tests"]        # каталоги раскладки (docs/LAYOUT.md)
+paths = ["src", "tests", "flagship/src", "adapters/sd_mqtt_1_0/src"]  # раскладка (docs/LAYOUT.md), привязка к флагману и адаптер
 exclude = []                    # файлы, которые не проверяются вовсе
 max_line_length = 120           # STL003
 

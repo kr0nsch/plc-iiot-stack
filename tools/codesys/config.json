@@ -140,13 +140,10 @@
     },
     "default_namespace": "TPL",
     "placeholder": null,
-    "author": "<ИМЯ ФАМИЛИЯ>",
+    "author": "kr0nsch",
     "description": "plc-iiot-stack: ПЛК-часть IIoT-стека (MQTT: телеметрия, команды, диагностика связи)",
     "released": false,
-    "exclude": [
-      "PRG_Main",
-      "PRG_Iiot"
-    ],
+    "exclude": ["PRG_Main"],
     "libraries": [
       "standard",
       "systimertc"

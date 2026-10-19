@@ -1,4 +1,5 @@
-// Назначение: команда (поле command и последний уровень топика): имя поля ST_<Dev>Cmd.
+// Назначение: команда (поле command и последний уровень топика): имя поля ST_<Dev>Cmd устройства или
+//             ST_StationCmd станции флагмана.
 // Документ:   docs/plc_mqtt.md
 {attribute 'qualified_only'}
 {attribute 'strict'}
@@ -17,6 +18,11 @@ TYPE E_IiotCommand :
     Reset := 10,   // stCommon.xReset
     AckReq := 11,   // stCommon.wAckReq: маска 0..65535
     ShelveReq := 12,   // stCommon.wShelveReq: маска
-    UnshelveReq := 13   // stCommon.wUnshelveReq: маска
+    UnshelveReq := 13,   // stCommon.wUnshelveReq: маска
+    SetStepped := 14,   // станция: xSetStepped
+    SetLevelPid := 15,   // станция: xSetLevelPid
+    AckAll := 16,   // станция: xAckAll
+    ResetAll := 17,   // станция: xResetAll
+    Silence := 18   // станция: xSilence
 ) INT;
 END_TYPE

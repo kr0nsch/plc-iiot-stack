@@ -20,7 +20,7 @@ fbAlm(xEnable := TRUE, xReady := TRUE, itfClient := fbFake, uliTs_ms := 17921376
     sTopicPrefix := 'vodokanal/kns1/station',
       aAlarms := aAlm, aWords := aWords);
 AssertEquals_UINT(Expected := 3, Actual := fbFake.uiPubCount, Message := 'all alarms after reconnect');
-AssertEquals_STRING(Expected := CONCAT('{"schema_version":"1.0","ts":1792137605000,"id":110,"code":"P101.FTS",',
+AssertEquals_STRING(Expected := CONCAT('{"schema_version":"1.1","ts":1792137605000,"id":110,"code":"P101.FTS",',
     '"priority":"Medium","state":"ActiveUnack","prev_state":"Normal","reason":"Activated"}'),
     Actual := fbFake.LastPayload(sTopic := 'vodokanal/kns1/station/P101/alarm/FTS'),
     Message := 'the Activated event repeated as is');

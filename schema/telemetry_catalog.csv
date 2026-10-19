@@ -1,124 +1,142 @@
 # Каталог телеметрии КНС-1: топик vodokanal/kns1/station/<device>/<metric>, measurement telemetry
-# Источник тегов — scada_tags.csv (iolistgen); имена метрик, вид и зона нечувствительности — решения схемы данных
-device;metric;scada_tag;kind;unit;deadband;eng_min;eng_max;plc_path;description
-P101;running;P101.Running;discrete;;;;;Application.GVL_Devices.fbP101.xRunning;Насос Н1: работает
-P101;state;P101.State;enum;;;;;Application.GVL_Devices.fbP101.stSts.eState;Насос Н1: состояние: 0 стоп, 1 пуск, 2 работа, 3 останов, 4 отказ
-P101;speed;P101.SpeedAct;analog;%;0.5;;;Application.GVL_Devices.fbP101.stSts.rSpeedAct_pct;Насос Н1: фактическая скорость
-P101;speed_ref;P101.SpeedRef;analog;%;0.5;;;Application.GVL_Devices.fbP101.stSts.rSpeedRef_pct;Насос Н1: задание на ПЧ после ограничений и рампы
-P101;run_hours;P101.RunTime;counter;h;0.01;;;Application.GVL_Devices.fbP101.stSts.rRunTime_h;Насос Н1: наработка всего
-P101;starts;P101.Starts;counter;;;;;Application.GVL_Devices.fbP101.stSts.udiStarts;Насос Н1: пусков всего
-P101;starts_last_hour;P101.StartsLastHour;integer;;;;;Application.GVL_Devices.fbP101.stSts.uiStartsLastHour;Насос Н1: пусков за скользящий час
-P101;run_hours_maint;P101.RunTimeMaint;counter;h;0.01;;;Application.GVL_Devices.fbP101.stSts.rRunTimeMaint_h;Насос Н1: наработка с последнего ТО
-P101;starts_maint;P101.StartsMaint;counter;;;;;Application.GVL_Devices.fbP101.stSts.udiStartsMaint;Насос Н1: пусков с последнего ТО
-P101;vfd_fault_code;P101_FCODE;enum;;;;;Application.GVL_IO.uiP101_FCODE;Насос Н1: код последней аварии ПЧ (читает адаптер ПЧ)
-P101;mode;P101.Mode;enum;;;;;Application.GVL_Devices.fbP101.stSts.stCommon.eMode;Насос Н1: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-P101;ne107;P101.Ne107;enum;;;;;Application.GVL_Devices.fbP101.stSts.stCommon.eNe107;Насос Н1: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-P102;running;P102.Running;discrete;;;;;Application.GVL_Devices.fbP102.xRunning;Насос Н2: работает
-P102;state;P102.State;enum;;;;;Application.GVL_Devices.fbP102.stSts.eState;Насос Н2: состояние: 0 стоп, 1 пуск, 2 работа, 3 останов, 4 отказ
-P102;speed;P102.SpeedAct;analog;%;0.5;;;Application.GVL_Devices.fbP102.stSts.rSpeedAct_pct;Насос Н2: фактическая скорость
-P102;speed_ref;P102.SpeedRef;analog;%;0.5;;;Application.GVL_Devices.fbP102.stSts.rSpeedRef_pct;Насос Н2: задание на ПЧ после ограничений и рампы
-P102;run_hours;P102.RunTime;counter;h;0.01;;;Application.GVL_Devices.fbP102.stSts.rRunTime_h;Насос Н2: наработка всего
-P102;starts;P102.Starts;counter;;;;;Application.GVL_Devices.fbP102.stSts.udiStarts;Насос Н2: пусков всего
-P102;starts_last_hour;P102.StartsLastHour;integer;;;;;Application.GVL_Devices.fbP102.stSts.uiStartsLastHour;Насос Н2: пусков за скользящий час
-P102;run_hours_maint;P102.RunTimeMaint;counter;h;0.01;;;Application.GVL_Devices.fbP102.stSts.rRunTimeMaint_h;Насос Н2: наработка с последнего ТО
-P102;starts_maint;P102.StartsMaint;counter;;;;;Application.GVL_Devices.fbP102.stSts.udiStartsMaint;Насос Н2: пусков с последнего ТО
-P102;vfd_fault_code;P102_FCODE;enum;;;;;Application.GVL_IO.uiP102_FCODE;Насос Н2: код последней аварии ПЧ (читает адаптер ПЧ)
-P102;mode;P102.Mode;enum;;;;;Application.GVL_Devices.fbP102.stSts.stCommon.eMode;Насос Н2: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-P102;ne107;P102.Ne107;enum;;;;;Application.GVL_Devices.fbP102.stSts.stCommon.eNe107;Насос Н2: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-P103;running;P103.Running;discrete;;;;;Application.GVL_Devices.fbP103.xRunning;Насос Н3: работает
-P103;state;P103.State;enum;;;;;Application.GVL_Devices.fbP103.stSts.eState;Насос Н3: состояние: 0 стоп, 1 пуск, 2 работа, 3 останов, 4 отказ
-P103;speed;P103.SpeedAct;analog;%;0.5;;;Application.GVL_Devices.fbP103.stSts.rSpeedAct_pct;Насос Н3: фактическая скорость
-P103;speed_ref;P103.SpeedRef;analog;%;0.5;;;Application.GVL_Devices.fbP103.stSts.rSpeedRef_pct;Насос Н3: задание на ПЧ после ограничений и рампы
-P103;run_hours;P103.RunTime;counter;h;0.01;;;Application.GVL_Devices.fbP103.stSts.rRunTime_h;Насос Н3: наработка всего
-P103;starts;P103.Starts;counter;;;;;Application.GVL_Devices.fbP103.stSts.udiStarts;Насос Н3: пусков всего
-P103;starts_last_hour;P103.StartsLastHour;integer;;;;;Application.GVL_Devices.fbP103.stSts.uiStartsLastHour;Насос Н3: пусков за скользящий час
-P103;run_hours_maint;P103.RunTimeMaint;counter;h;0.01;;;Application.GVL_Devices.fbP103.stSts.rRunTimeMaint_h;Насос Н3: наработка с последнего ТО
-P103;starts_maint;P103.StartsMaint;counter;;;;;Application.GVL_Devices.fbP103.stSts.udiStartsMaint;Насос Н3: пусков с последнего ТО
-P103;vfd_fault_code;P103_FCODE;enum;;;;;Application.GVL_IO.uiP103_FCODE;Насос Н3: код последней аварии ПЧ (читает адаптер ПЧ)
-P103;mode;P103.Mode;enum;;;;;Application.GVL_Devices.fbP103.stSts.stCommon.eMode;Насос Н3: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-P103;ne107;P103.Ne107;enum;;;;;Application.GVL_Devices.fbP103.stSts.stCommon.eNe107;Насос Н3: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-V1;running;V1.Running;discrete;;;;;Application.GVL_Devices.fbV1.xRunning;Вытяжной вентилятор В1 павильона: работает
-V1;state;V1.State;enum;;;;;Application.GVL_Devices.fbV1.stSts.eState;Вытяжной вентилятор В1 павильона: состояние: 0 стоп, 1 пуск, 2 работа, 3 останов, 4 отказ
-V1;run_hours;V1.RunTime;counter;h;0.01;;;Application.GVL_Devices.fbV1.stSts.rRunTime_h;Вытяжной вентилятор В1 павильона: наработка всего
-V1;starts;V1.Starts;counter;;;;;Application.GVL_Devices.fbV1.stSts.udiStarts;Вытяжной вентилятор В1 павильона: пусков всего
-V1;starts_last_hour;V1.StartsLastHour;integer;;;;;Application.GVL_Devices.fbV1.stSts.uiStartsLastHour;Вытяжной вентилятор В1 павильона: пусков за скользящий час
-V1;run_hours_maint;V1.RunTimeMaint;counter;h;0.01;;;Application.GVL_Devices.fbV1.stSts.rRunTimeMaint_h;Вытяжной вентилятор В1 павильона: наработка с последнего ТО
-V1;starts_maint;V1.StartsMaint;counter;;;;;Application.GVL_Devices.fbV1.stSts.udiStartsMaint;Вытяжной вентилятор В1 павильона: пусков с последнего ТО
-V1;mode;V1.Mode;enum;;;;;Application.GVL_Devices.fbV1.stSts.stCommon.eMode;Вытяжной вентилятор В1 павильона: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-V1;ne107;V1.Ne107;enum;;;;;Application.GVL_Devices.fbV1.stSts.stCommon.eNe107;Вытяжной вентилятор В1 павильона: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-LT101;level;LT101.Value;analog;m;0.01;0;5;Application.GVL_Devices.fbLT101.stSts.rValue_eu;Уровень в приёмном резервуаре: итоговое значение
-LT101;mode;LT101.Mode;enum;;;;;Application.GVL_Devices.fbLT101.stSts.stCommon.eMode;Уровень в приёмном резервуаре: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-LT101;ne107;LT101.Ne107;enum;;;;;Application.GVL_Devices.fbLT101.stSts.stCommon.eNe107;Уровень в приёмном резервуаре: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-LS102;level_high;LS102.Value;discrete;;;;;Application.GVL_Devices.fbLS102.xValue;Поплавок «аварийно высокий уровень» (H, 4,2 м): значение для логики
-LS102;mode;LS102.Mode;enum;;;;;Application.GVL_Devices.fbLS102.stSts.stCommon.eMode;Поплавок «аварийно высокий уровень» (H, 4,2 м): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-LS102;ne107;LS102.Ne107;enum;;;;;Application.GVL_Devices.fbLS102.stSts.stCommon.eNe107;Поплавок «аварийно высокий уровень» (H, 4,2 м): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-LS103;dry_run;LS103.Value;discrete;;;;;Application.GVL_Devices.fbLS103.xValue;Поплавок «сухой ход» (L, 0,4 м): значение для логики
-LS103;mode;LS103.Mode;enum;;;;;Application.GVL_Devices.fbLS103.stSts.stCommon.eMode;Поплавок «сухой ход» (L, 0,4 м): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-LS103;ne107;LS103.Ne107;enum;;;;;Application.GVL_Devices.fbLS103.stSts.stCommon.eNe107;Поплавок «сухой ход» (L, 0,4 м): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-IT111;current;IT111.Value;analog;A;0.2;0;60;Application.GVL_Devices.fbIT111.stSts.rValue_eu;Насос Н1: ток двигателя (измеряет ПЧ): итоговое значение
-IT111;mode;IT111.Mode;enum;;;;;Application.GVL_Devices.fbIT111.stSts.stCommon.eMode;Насос Н1: ток двигателя (измеряет ПЧ): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-IT111;ne107;IT111.Ne107;enum;;;;;Application.GVL_Devices.fbIT111.stSts.stCommon.eNe107;Насос Н1: ток двигателя (измеряет ПЧ): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-TS112;overheat;TS112.Value;discrete;;;;;Application.GVL_Devices.fbTS112.xValue;Насос Н1: перегрев обмотки (термовыключатели, реле защиты насоса): значение для логики
-TS112;mode;TS112.Mode;enum;;;;;Application.GVL_Devices.fbTS112.stSts.stCommon.eMode;Насос Н1: перегрев обмотки (термовыключатели, реле защиты насоса): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-TS112;ne107;TS112.Ne107;enum;;;;;Application.GVL_Devices.fbTS112.stSts.stCommon.eNe107;Насос Н1: перегрев обмотки (термовыключатели, реле защиты насоса): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-MS113;leak;MS113.Value;discrete;;;;;Application.GVL_Devices.fbMS113.xValue;Насос Н1: протечка в камеру статора (датчик влажности, реле защиты насоса): значение для логики
-MS113;mode;MS113.Mode;enum;;;;;Application.GVL_Devices.fbMS113.stSts.stCommon.eMode;Насос Н1: протечка в камеру статора (датчик влажности, реле защиты насоса): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-MS113;ne107;MS113.Ne107;enum;;;;;Application.GVL_Devices.fbMS113.stSts.stCommon.eNe107;Насос Н1: протечка в камеру статора (датчик влажности, реле защиты насоса): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-IT121;current;IT121.Value;analog;A;0.2;0;60;Application.GVL_Devices.fbIT121.stSts.rValue_eu;Насос Н2: ток двигателя (измеряет ПЧ): итоговое значение
-IT121;mode;IT121.Mode;enum;;;;;Application.GVL_Devices.fbIT121.stSts.stCommon.eMode;Насос Н2: ток двигателя (измеряет ПЧ): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-IT121;ne107;IT121.Ne107;enum;;;;;Application.GVL_Devices.fbIT121.stSts.stCommon.eNe107;Насос Н2: ток двигателя (измеряет ПЧ): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-TS122;overheat;TS122.Value;discrete;;;;;Application.GVL_Devices.fbTS122.xValue;Насос Н2: перегрев обмотки (термовыключатели, реле защиты насоса): значение для логики
-TS122;mode;TS122.Mode;enum;;;;;Application.GVL_Devices.fbTS122.stSts.stCommon.eMode;Насос Н2: перегрев обмотки (термовыключатели, реле защиты насоса): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-TS122;ne107;TS122.Ne107;enum;;;;;Application.GVL_Devices.fbTS122.stSts.stCommon.eNe107;Насос Н2: перегрев обмотки (термовыключатели, реле защиты насоса): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-MS123;leak;MS123.Value;discrete;;;;;Application.GVL_Devices.fbMS123.xValue;Насос Н2: протечка в камеру статора (датчик влажности, реле защиты насоса): значение для логики
-MS123;mode;MS123.Mode;enum;;;;;Application.GVL_Devices.fbMS123.stSts.stCommon.eMode;Насос Н2: протечка в камеру статора (датчик влажности, реле защиты насоса): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-MS123;ne107;MS123.Ne107;enum;;;;;Application.GVL_Devices.fbMS123.stSts.stCommon.eNe107;Насос Н2: протечка в камеру статора (датчик влажности, реле защиты насоса): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-IT131;current;IT131.Value;analog;A;0.2;0;60;Application.GVL_Devices.fbIT131.stSts.rValue_eu;Насос Н3: ток двигателя (измеряет ПЧ): итоговое значение
-IT131;mode;IT131.Mode;enum;;;;;Application.GVL_Devices.fbIT131.stSts.stCommon.eMode;Насос Н3: ток двигателя (измеряет ПЧ): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-IT131;ne107;IT131.Ne107;enum;;;;;Application.GVL_Devices.fbIT131.stSts.stCommon.eNe107;Насос Н3: ток двигателя (измеряет ПЧ): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-TS132;overheat;TS132.Value;discrete;;;;;Application.GVL_Devices.fbTS132.xValue;Насос Н3: перегрев обмотки (термовыключатели, реле защиты насоса): значение для логики
-TS132;mode;TS132.Mode;enum;;;;;Application.GVL_Devices.fbTS132.stSts.stCommon.eMode;Насос Н3: перегрев обмотки (термовыключатели, реле защиты насоса): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-TS132;ne107;TS132.Ne107;enum;;;;;Application.GVL_Devices.fbTS132.stSts.stCommon.eNe107;Насос Н3: перегрев обмотки (термовыключатели, реле защиты насоса): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-MS133;leak;MS133.Value;discrete;;;;;Application.GVL_Devices.fbMS133.xValue;Насос Н3: протечка в камеру статора (датчик влажности, реле защиты насоса): значение для логики
-MS133;mode;MS133.Mode;enum;;;;;Application.GVL_Devices.fbMS133.stSts.stCommon.eMode;Насос Н3: протечка в камеру статора (датчик влажности, реле защиты насоса): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-MS133;ne107;MS133.Ne107;enum;;;;;Application.GVL_Devices.fbMS133.stSts.stCommon.eNe107;Насос Н3: протечка в камеру статора (датчик влажности, реле защиты насоса): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-PT201;pressure;PT201.Value;analog;bar;0.02;0;10;Application.GVL_Devices.fbPT201.stSts.rValue_eu;Давление в напорном коллекторе: итоговое значение
-PT201;mode;PT201.Mode;enum;;;;;Application.GVL_Devices.fbPT201.stSts.stCommon.eMode;Давление в напорном коллекторе: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-PT201;ne107;PT201.Ne107;enum;;;;;Application.GVL_Devices.fbPT201.stSts.stCommon.eNe107;Давление в напорном коллекторе: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-FT202;flow;FT202.Value;analog;m3/h;2.0;0;500;Application.GVL_Devices.fbFT202.stSts.rValue_eu;Расход в напорном коллекторе: итоговое значение
-FT202;mode;FT202.Mode;enum;;;;;Application.GVL_Devices.fbFT202.stSts.stCommon.eMode;Расход в напорном коллекторе: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-FT202;ne107;FT202.Ne107;enum;;;;;Application.GVL_Devices.fbFT202.stSts.stCommon.eNe107;Расход в напорном коллекторе: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-LS203;flood;LS203.Value;discrete;;;;;Application.GVL_Devices.fbLS203.xValue;Затопление камеры задвижек: значение для логики
-LS203;mode;LS203.Mode;enum;;;;;Application.GVL_Devices.fbLS203.stSts.stCommon.eMode;Затопление камеры задвижек: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-LS203;ne107;LS203.Ne107;enum;;;;;Application.GVL_Devices.fbLS203.stSts.stCommon.eNe107;Затопление камеры задвижек: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-ES301;power_ok;ES301.Value;discrete;;;;;Application.GVL_Devices.fbES301.xValue;Напряжение на вводе в норме (реле контроля фаз): значение для логики
-ES301;mode;ES301.Mode;enum;;;;;Application.GVL_Devices.fbES301.stSts.stCommon.eMode;Напряжение на вводе в норме (реле контроля фаз): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-ES301;ne107;ES301.Ne107;enum;;;;;Application.GVL_Devices.fbES301.stSts.stCommon.eNe107;Напряжение на вводе в норме (реле контроля фаз): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-YS302;on_battery;YS302.Value;discrete;;;;;Application.GVL_Devices.fbYS302.xValue;ИБП шкафа управления: работа от батарей: значение для логики
-YS302;mode;YS302.Mode;enum;;;;;Application.GVL_Devices.fbYS302.stSts.stCommon.eMode;ИБП шкафа управления: работа от батарей: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-YS302;ne107;YS302.Ne107;enum;;;;;Application.GVL_Devices.fbYS302.stSts.stCommon.eNe107;ИБП шкафа управления: работа от батарей: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-YS303;ups_fault;YS303.Value;discrete;;;;;Application.GVL_Devices.fbYS303.xValue;ИБП шкафа управления: неисправность или разряд батарей: значение для логики
-YS303;mode;YS303.Mode;enum;;;;;Application.GVL_Devices.fbYS303.stSts.stCommon.eMode;ИБП шкафа управления: неисправность или разряд батарей: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-YS303;ne107;YS303.Ne107;enum;;;;;Application.GVL_Devices.fbYS303.stSts.stCommon.eNe107;ИБП шкафа управления: неисправность или разряд батарей: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-AT401;h2s;AT401.Value;analog;mg/m3;0.2;0;40;Application.GVL_Devices.fbAT401.stSts.rValue_eu;Концентрация сероводорода H₂S в павильоне: итоговое значение
-AT401;mode;AT401.Mode;enum;;;;;Application.GVL_Devices.fbAT401.stSts.stCommon.eMode;Концентрация сероводорода H₂S в павильоне: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-AT401;ne107;AT401.Ne107;enum;;;;;Application.GVL_Devices.fbAT401.stSts.stCommon.eNe107;Концентрация сероводорода H₂S в павильоне: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-AT402;ch4;AT402.Value;analog;%LEL;0.5;0;100;Application.GVL_Devices.fbAT402.stSts.rValue_eu;Концентрация метана CH₄ в павильоне: итоговое значение
-AT402;mode;AT402.Mode;enum;;;;;Application.GVL_Devices.fbAT402.stSts.stCommon.eMode;Концентрация метана CH₄ в павильоне: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-AT402;ne107;AT402.Ne107;enum;;;;;Application.GVL_Devices.fbAT402.stSts.stCommon.eNe107;Концентрация метана CH₄ в павильоне: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-TT403;temperature;TT403.Value;analog;degC;0.2;-40;60;Application.GVL_Devices.fbTT403.stSts.rValue_eu;Температура воздуха в павильоне: итоговое значение
-TT403;mode;TT403.Mode;enum;;;;;Application.GVL_Devices.fbTT403.stSts.stCommon.eMode;Температура воздуха в павильоне: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-TT403;ne107;TT403.Ne107;enum;;;;;Application.GVL_Devices.fbTT403.stSts.stCommon.eNe107;Температура воздуха в павильоне: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-ZS404;door_open;ZS404.Value;discrete;;;;;Application.GVL_Devices.fbZS404.xValue;Дверь павильона открыта: значение для логики
-ZS404;mode;ZS404.Mode;enum;;;;;Application.GVL_Devices.fbZS404.stSts.stCommon.eMode;Дверь павильона открыта: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-ZS404;ne107;ZS404.Ne107;enum;;;;;Application.GVL_Devices.fbZS404.stSts.stCommon.eNe107;Дверь павильона открыта: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-YS405;fire;YS405.Value;discrete;;;;;Application.GVL_Devices.fbYS405.xValue;Пожар (сигнал прибора пожарной сигнализации): значение для логики
-YS405;mode;YS405.Mode;enum;;;;;Application.GVL_Devices.fbYS405.stSts.stCommon.eMode;Пожар (сигнал прибора пожарной сигнализации): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
-YS405;ne107;YS405.Ne107;enum;;;;;Application.GVL_Devices.fbYS405.stSts.stCommon.eNe107;Пожар (сигнал прибора пожарной сигнализации): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
-K1;general_alarm;K1;discrete;;;;;Application.GVL_IO.xK1;Реле «Общая авария» (сухой контакт в диспетчерскую)
-PLC1;uptime;;counter;s;;;;;Шлюз MQTT ПЛК: время работы ПЛК с последнего запуска приложения
-PLC1;reconnects;;counter;;;;;;Шлюз MQTT ПЛК: переподключений к брокеру MQTT с запуска
-PLC1;queue;;integer;;;;;;Шлюз MQTT ПЛК: сообщений в очереди на отправку
-PLC1;dropped;;counter;;;;;;Шлюз MQTT ПЛК: сообщений, отброшенных при переполнении очереди
-PLC1;cmd_accepted;;counter;;;;;;Шлюз MQTT ПЛК: принятых команд MQTT с запуска
-PLC1;cmd_rejected;;counter;;;;;;Шлюз MQTT ПЛК: отклонённых команд MQTT с запуска
+# Источник тегов — scada_tags.csv (iolistgen) и station_tags.csv (снимок флагмана); имена метрик, вид и зона нечувствительности — решения схемы данных; invert = 1 — значение метрики обратно сигналу ПЛК (0/1)
+device;metric;scada_tag;kind;unit;deadband;eng_min;eng_max;plc_path;invert;description
+P101;running;P101.Running;discrete;;;;;Application.GVL_Devices.fbP101.xRunning;;Насос Н1: работает
+P101;state;P101.State;enum;;;;;Application.GVL_Devices.fbP101.stSts.eState;;Насос Н1: состояние: 0 стоп, 1 пуск, 2 работа, 3 останов, 4 отказ
+P101;speed;P101.SpeedAct;analog;%;0.5;;;Application.GVL_Devices.fbP101.stSts.rSpeedAct_pct;;Насос Н1: фактическая скорость
+P101;speed_ref;P101.SpeedRef;analog;%;0.5;;;Application.GVL_Devices.fbP101.stSts.rSpeedRef_pct;;Насос Н1: задание на ПЧ после ограничений и рампы
+P101;run_hours;P101.RunTime;counter;h;0.01;;;Application.GVL_Devices.fbP101.stSts.rRunTime_h;;Насос Н1: наработка всего
+P101;starts;P101.Starts;counter;;;;;Application.GVL_Devices.fbP101.stSts.udiStarts;;Насос Н1: пусков всего
+P101;starts_last_hour;P101.StartsLastHour;integer;;;;;Application.GVL_Devices.fbP101.stSts.uiStartsLastHour;;Насос Н1: пусков за скользящий час
+P101;run_hours_maint;P101.RunTimeMaint;counter;h;0.01;;;Application.GVL_Devices.fbP101.stSts.rRunTimeMaint_h;;Насос Н1: наработка с последнего ТО
+P101;starts_maint;P101.StartsMaint;counter;;;;;Application.GVL_Devices.fbP101.stSts.udiStartsMaint;;Насос Н1: пусков с последнего ТО
+P101;vfd_fault_code;P101_FCODE;enum;;;;;Application.GVL_IO.uiP101_FCODE;;Насос Н1: код последней аварии ПЧ (читает адаптер ПЧ)
+P101;mode;P101.Mode;enum;;;;;Application.GVL_Devices.fbP101.stSts.stCommon.eMode;;Насос Н1: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+P101;ne107;P101.Ne107;enum;;;;;Application.GVL_Devices.fbP101.stSts.stCommon.eNe107;;Насос Н1: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+P102;running;P102.Running;discrete;;;;;Application.GVL_Devices.fbP102.xRunning;;Насос Н2: работает
+P102;state;P102.State;enum;;;;;Application.GVL_Devices.fbP102.stSts.eState;;Насос Н2: состояние: 0 стоп, 1 пуск, 2 работа, 3 останов, 4 отказ
+P102;speed;P102.SpeedAct;analog;%;0.5;;;Application.GVL_Devices.fbP102.stSts.rSpeedAct_pct;;Насос Н2: фактическая скорость
+P102;speed_ref;P102.SpeedRef;analog;%;0.5;;;Application.GVL_Devices.fbP102.stSts.rSpeedRef_pct;;Насос Н2: задание на ПЧ после ограничений и рампы
+P102;run_hours;P102.RunTime;counter;h;0.01;;;Application.GVL_Devices.fbP102.stSts.rRunTime_h;;Насос Н2: наработка всего
+P102;starts;P102.Starts;counter;;;;;Application.GVL_Devices.fbP102.stSts.udiStarts;;Насос Н2: пусков всего
+P102;starts_last_hour;P102.StartsLastHour;integer;;;;;Application.GVL_Devices.fbP102.stSts.uiStartsLastHour;;Насос Н2: пусков за скользящий час
+P102;run_hours_maint;P102.RunTimeMaint;counter;h;0.01;;;Application.GVL_Devices.fbP102.stSts.rRunTimeMaint_h;;Насос Н2: наработка с последнего ТО
+P102;starts_maint;P102.StartsMaint;counter;;;;;Application.GVL_Devices.fbP102.stSts.udiStartsMaint;;Насос Н2: пусков с последнего ТО
+P102;vfd_fault_code;P102_FCODE;enum;;;;;Application.GVL_IO.uiP102_FCODE;;Насос Н2: код последней аварии ПЧ (читает адаптер ПЧ)
+P102;mode;P102.Mode;enum;;;;;Application.GVL_Devices.fbP102.stSts.stCommon.eMode;;Насос Н2: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+P102;ne107;P102.Ne107;enum;;;;;Application.GVL_Devices.fbP102.stSts.stCommon.eNe107;;Насос Н2: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+P103;running;P103.Running;discrete;;;;;Application.GVL_Devices.fbP103.xRunning;;Насос Н3: работает
+P103;state;P103.State;enum;;;;;Application.GVL_Devices.fbP103.stSts.eState;;Насос Н3: состояние: 0 стоп, 1 пуск, 2 работа, 3 останов, 4 отказ
+P103;speed;P103.SpeedAct;analog;%;0.5;;;Application.GVL_Devices.fbP103.stSts.rSpeedAct_pct;;Насос Н3: фактическая скорость
+P103;speed_ref;P103.SpeedRef;analog;%;0.5;;;Application.GVL_Devices.fbP103.stSts.rSpeedRef_pct;;Насос Н3: задание на ПЧ после ограничений и рампы
+P103;run_hours;P103.RunTime;counter;h;0.01;;;Application.GVL_Devices.fbP103.stSts.rRunTime_h;;Насос Н3: наработка всего
+P103;starts;P103.Starts;counter;;;;;Application.GVL_Devices.fbP103.stSts.udiStarts;;Насос Н3: пусков всего
+P103;starts_last_hour;P103.StartsLastHour;integer;;;;;Application.GVL_Devices.fbP103.stSts.uiStartsLastHour;;Насос Н3: пусков за скользящий час
+P103;run_hours_maint;P103.RunTimeMaint;counter;h;0.01;;;Application.GVL_Devices.fbP103.stSts.rRunTimeMaint_h;;Насос Н3: наработка с последнего ТО
+P103;starts_maint;P103.StartsMaint;counter;;;;;Application.GVL_Devices.fbP103.stSts.udiStartsMaint;;Насос Н3: пусков с последнего ТО
+P103;vfd_fault_code;P103_FCODE;enum;;;;;Application.GVL_IO.uiP103_FCODE;;Насос Н3: код последней аварии ПЧ (читает адаптер ПЧ)
+P103;mode;P103.Mode;enum;;;;;Application.GVL_Devices.fbP103.stSts.stCommon.eMode;;Насос Н3: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+P103;ne107;P103.Ne107;enum;;;;;Application.GVL_Devices.fbP103.stSts.stCommon.eNe107;;Насос Н3: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+V1;running;V1.Running;discrete;;;;;Application.GVL_Devices.fbV1.xRunning;;Вытяжной вентилятор В1 павильона: работает
+V1;state;V1.State;enum;;;;;Application.GVL_Devices.fbV1.stSts.eState;;Вытяжной вентилятор В1 павильона: состояние: 0 стоп, 1 пуск, 2 работа, 3 останов, 4 отказ
+V1;run_hours;V1.RunTime;counter;h;0.01;;;Application.GVL_Devices.fbV1.stSts.rRunTime_h;;Вытяжной вентилятор В1 павильона: наработка всего
+V1;starts;V1.Starts;counter;;;;;Application.GVL_Devices.fbV1.stSts.udiStarts;;Вытяжной вентилятор В1 павильона: пусков всего
+V1;starts_last_hour;V1.StartsLastHour;integer;;;;;Application.GVL_Devices.fbV1.stSts.uiStartsLastHour;;Вытяжной вентилятор В1 павильона: пусков за скользящий час
+V1;run_hours_maint;V1.RunTimeMaint;counter;h;0.01;;;Application.GVL_Devices.fbV1.stSts.rRunTimeMaint_h;;Вытяжной вентилятор В1 павильона: наработка с последнего ТО
+V1;starts_maint;V1.StartsMaint;counter;;;;;Application.GVL_Devices.fbV1.stSts.udiStartsMaint;;Вытяжной вентилятор В1 павильона: пусков с последнего ТО
+V1;mode;V1.Mode;enum;;;;;Application.GVL_Devices.fbV1.stSts.stCommon.eMode;;Вытяжной вентилятор В1 павильона: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+V1;ne107;V1.Ne107;enum;;;;;Application.GVL_Devices.fbV1.stSts.stCommon.eNe107;;Вытяжной вентилятор В1 павильона: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+LT101;level;LT101.Value;analog;m;0.01;0;5;Application.GVL_Devices.fbLT101.stSts.rValue_eu;;Уровень в приёмном резервуаре: итоговое значение
+LT101;mode;LT101.Mode;enum;;;;;Application.GVL_Devices.fbLT101.stSts.stCommon.eMode;;Уровень в приёмном резервуаре: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+LT101;ne107;LT101.Ne107;enum;;;;;Application.GVL_Devices.fbLT101.stSts.stCommon.eNe107;;Уровень в приёмном резервуаре: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+LS102;level_high;LS102.Value;discrete;;;;;Application.GVL_Devices.fbLS102.xValue;;Поплавок «аварийно высокий уровень» (H, 4,2 м): значение для логики
+LS102;mode;LS102.Mode;enum;;;;;Application.GVL_Devices.fbLS102.stSts.stCommon.eMode;;Поплавок «аварийно высокий уровень» (H, 4,2 м): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+LS102;ne107;LS102.Ne107;enum;;;;;Application.GVL_Devices.fbLS102.stSts.stCommon.eNe107;;Поплавок «аварийно высокий уровень» (H, 4,2 м): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+LS103;dry_run;LS103.Value;discrete;;;;;Application.GVL_Devices.fbLS103.xValue;;Поплавок «сухой ход» (L, 0,4 м): значение для логики
+LS103;mode;LS103.Mode;enum;;;;;Application.GVL_Devices.fbLS103.stSts.stCommon.eMode;;Поплавок «сухой ход» (L, 0,4 м): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+LS103;ne107;LS103.Ne107;enum;;;;;Application.GVL_Devices.fbLS103.stSts.stCommon.eNe107;;Поплавок «сухой ход» (L, 0,4 м): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+IT111;current;IT111.Value;analog;A;0.2;0;60;Application.GVL_Devices.fbIT111.stSts.rValue_eu;;Насос Н1: ток двигателя (измеряет ПЧ): итоговое значение
+IT111;mode;IT111.Mode;enum;;;;;Application.GVL_Devices.fbIT111.stSts.stCommon.eMode;;Насос Н1: ток двигателя (измеряет ПЧ): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+IT111;ne107;IT111.Ne107;enum;;;;;Application.GVL_Devices.fbIT111.stSts.stCommon.eNe107;;Насос Н1: ток двигателя (измеряет ПЧ): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+TS112;overheat;TS112.Value;discrete;;;;;Application.GVL_Devices.fbTS112.xValue;;Насос Н1: перегрев обмотки (термовыключатели, реле защиты насоса): значение для логики
+TS112;mode;TS112.Mode;enum;;;;;Application.GVL_Devices.fbTS112.stSts.stCommon.eMode;;Насос Н1: перегрев обмотки (термовыключатели, реле защиты насоса): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+TS112;ne107;TS112.Ne107;enum;;;;;Application.GVL_Devices.fbTS112.stSts.stCommon.eNe107;;Насос Н1: перегрев обмотки (термовыключатели, реле защиты насоса): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+MS113;leak;MS113.Value;discrete;;;;;Application.GVL_Devices.fbMS113.xValue;;Насос Н1: протечка в камеру статора (датчик влажности, реле защиты насоса): значение для логики
+MS113;mode;MS113.Mode;enum;;;;;Application.GVL_Devices.fbMS113.stSts.stCommon.eMode;;Насос Н1: протечка в камеру статора (датчик влажности, реле защиты насоса): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+MS113;ne107;MS113.Ne107;enum;;;;;Application.GVL_Devices.fbMS113.stSts.stCommon.eNe107;;Насос Н1: протечка в камеру статора (датчик влажности, реле защиты насоса): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+IT121;current;IT121.Value;analog;A;0.2;0;60;Application.GVL_Devices.fbIT121.stSts.rValue_eu;;Насос Н2: ток двигателя (измеряет ПЧ): итоговое значение
+IT121;mode;IT121.Mode;enum;;;;;Application.GVL_Devices.fbIT121.stSts.stCommon.eMode;;Насос Н2: ток двигателя (измеряет ПЧ): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+IT121;ne107;IT121.Ne107;enum;;;;;Application.GVL_Devices.fbIT121.stSts.stCommon.eNe107;;Насос Н2: ток двигателя (измеряет ПЧ): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+TS122;overheat;TS122.Value;discrete;;;;;Application.GVL_Devices.fbTS122.xValue;;Насос Н2: перегрев обмотки (термовыключатели, реле защиты насоса): значение для логики
+TS122;mode;TS122.Mode;enum;;;;;Application.GVL_Devices.fbTS122.stSts.stCommon.eMode;;Насос Н2: перегрев обмотки (термовыключатели, реле защиты насоса): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+TS122;ne107;TS122.Ne107;enum;;;;;Application.GVL_Devices.fbTS122.stSts.stCommon.eNe107;;Насос Н2: перегрев обмотки (термовыключатели, реле защиты насоса): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+MS123;leak;MS123.Value;discrete;;;;;Application.GVL_Devices.fbMS123.xValue;;Насос Н2: протечка в камеру статора (датчик влажности, реле защиты насоса): значение для логики
+MS123;mode;MS123.Mode;enum;;;;;Application.GVL_Devices.fbMS123.stSts.stCommon.eMode;;Насос Н2: протечка в камеру статора (датчик влажности, реле защиты насоса): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+MS123;ne107;MS123.Ne107;enum;;;;;Application.GVL_Devices.fbMS123.stSts.stCommon.eNe107;;Насос Н2: протечка в камеру статора (датчик влажности, реле защиты насоса): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+IT131;current;IT131.Value;analog;A;0.2;0;60;Application.GVL_Devices.fbIT131.stSts.rValue_eu;;Насос Н3: ток двигателя (измеряет ПЧ): итоговое значение
+IT131;mode;IT131.Mode;enum;;;;;Application.GVL_Devices.fbIT131.stSts.stCommon.eMode;;Насос Н3: ток двигателя (измеряет ПЧ): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+IT131;ne107;IT131.Ne107;enum;;;;;Application.GVL_Devices.fbIT131.stSts.stCommon.eNe107;;Насос Н3: ток двигателя (измеряет ПЧ): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+TS132;overheat;TS132.Value;discrete;;;;;Application.GVL_Devices.fbTS132.xValue;;Насос Н3: перегрев обмотки (термовыключатели, реле защиты насоса): значение для логики
+TS132;mode;TS132.Mode;enum;;;;;Application.GVL_Devices.fbTS132.stSts.stCommon.eMode;;Насос Н3: перегрев обмотки (термовыключатели, реле защиты насоса): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+TS132;ne107;TS132.Ne107;enum;;;;;Application.GVL_Devices.fbTS132.stSts.stCommon.eNe107;;Насос Н3: перегрев обмотки (термовыключатели, реле защиты насоса): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+MS133;leak;MS133.Value;discrete;;;;;Application.GVL_Devices.fbMS133.xValue;;Насос Н3: протечка в камеру статора (датчик влажности, реле защиты насоса): значение для логики
+MS133;mode;MS133.Mode;enum;;;;;Application.GVL_Devices.fbMS133.stSts.stCommon.eMode;;Насос Н3: протечка в камеру статора (датчик влажности, реле защиты насоса): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+MS133;ne107;MS133.Ne107;enum;;;;;Application.GVL_Devices.fbMS133.stSts.stCommon.eNe107;;Насос Н3: протечка в камеру статора (датчик влажности, реле защиты насоса): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+PT201;pressure;PT201.Value;analog;bar;0.02;0;10;Application.GVL_Devices.fbPT201.stSts.rValue_eu;;Давление в напорном коллекторе: итоговое значение
+PT201;mode;PT201.Mode;enum;;;;;Application.GVL_Devices.fbPT201.stSts.stCommon.eMode;;Давление в напорном коллекторе: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+PT201;ne107;PT201.Ne107;enum;;;;;Application.GVL_Devices.fbPT201.stSts.stCommon.eNe107;;Давление в напорном коллекторе: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+FT202;flow;FT202.Value;analog;m3/h;2.0;0;500;Application.GVL_Devices.fbFT202.stSts.rValue_eu;;Расход в напорном коллекторе: итоговое значение
+FT202;mode;FT202.Mode;enum;;;;;Application.GVL_Devices.fbFT202.stSts.stCommon.eMode;;Расход в напорном коллекторе: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+FT202;ne107;FT202.Ne107;enum;;;;;Application.GVL_Devices.fbFT202.stSts.stCommon.eNe107;;Расход в напорном коллекторе: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+LS203;flood;LS203.Value;discrete;;;;;Application.GVL_Devices.fbLS203.xValue;;Затопление камеры задвижек: значение для логики
+LS203;mode;LS203.Mode;enum;;;;;Application.GVL_Devices.fbLS203.stSts.stCommon.eMode;;Затопление камеры задвижек: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+LS203;ne107;LS203.Ne107;enum;;;;;Application.GVL_Devices.fbLS203.stSts.stCommon.eNe107;;Затопление камеры задвижек: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+ES301;power_ok;ES301.Value;discrete;;;;;Application.GVL_Devices.fbES301.xValue;;Напряжение на вводе в норме (реле контроля фаз): значение для логики
+ES301;mode;ES301.Mode;enum;;;;;Application.GVL_Devices.fbES301.stSts.stCommon.eMode;;Напряжение на вводе в норме (реле контроля фаз): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+ES301;ne107;ES301.Ne107;enum;;;;;Application.GVL_Devices.fbES301.stSts.stCommon.eNe107;;Напряжение на вводе в норме (реле контроля фаз): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+YS302;on_battery;YS302.Value;discrete;;;;;Application.GVL_Devices.fbYS302.xValue;;ИБП шкафа управления: работа от батарей: значение для логики
+YS302;mode;YS302.Mode;enum;;;;;Application.GVL_Devices.fbYS302.stSts.stCommon.eMode;;ИБП шкафа управления: работа от батарей: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+YS302;ne107;YS302.Ne107;enum;;;;;Application.GVL_Devices.fbYS302.stSts.stCommon.eNe107;;ИБП шкафа управления: работа от батарей: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+YS303;ups_fault;YS303.Value;discrete;;;;;Application.GVL_Devices.fbYS303.xValue;;ИБП шкафа управления: неисправность или разряд батарей: значение для логики
+YS303;mode;YS303.Mode;enum;;;;;Application.GVL_Devices.fbYS303.stSts.stCommon.eMode;;ИБП шкафа управления: неисправность или разряд батарей: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+YS303;ne107;YS303.Ne107;enum;;;;;Application.GVL_Devices.fbYS303.stSts.stCommon.eNe107;;ИБП шкафа управления: неисправность или разряд батарей: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+AT401;h2s;AT401.Value;analog;mg/m3;0.2;0;40;Application.GVL_Devices.fbAT401.stSts.rValue_eu;;Концентрация сероводорода H₂S в павильоне: итоговое значение
+AT401;mode;AT401.Mode;enum;;;;;Application.GVL_Devices.fbAT401.stSts.stCommon.eMode;;Концентрация сероводорода H₂S в павильоне: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+AT401;ne107;AT401.Ne107;enum;;;;;Application.GVL_Devices.fbAT401.stSts.stCommon.eNe107;;Концентрация сероводорода H₂S в павильоне: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+AT402;ch4;AT402.Value;analog;%LEL;0.5;0;100;Application.GVL_Devices.fbAT402.stSts.rValue_eu;;Концентрация метана CH₄ в павильоне: итоговое значение
+AT402;mode;AT402.Mode;enum;;;;;Application.GVL_Devices.fbAT402.stSts.stCommon.eMode;;Концентрация метана CH₄ в павильоне: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+AT402;ne107;AT402.Ne107;enum;;;;;Application.GVL_Devices.fbAT402.stSts.stCommon.eNe107;;Концентрация метана CH₄ в павильоне: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+TT403;temperature;TT403.Value;analog;degC;0.2;-40;60;Application.GVL_Devices.fbTT403.stSts.rValue_eu;;Температура воздуха в павильоне: итоговое значение
+TT403;mode;TT403.Mode;enum;;;;;Application.GVL_Devices.fbTT403.stSts.stCommon.eMode;;Температура воздуха в павильоне: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+TT403;ne107;TT403.Ne107;enum;;;;;Application.GVL_Devices.fbTT403.stSts.stCommon.eNe107;;Температура воздуха в павильоне: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+ZS404;door_open;ZS404.Value;discrete;;;;;Application.GVL_Devices.fbZS404.xValue;;Дверь павильона открыта: значение для логики
+ZS404;mode;ZS404.Mode;enum;;;;;Application.GVL_Devices.fbZS404.stSts.stCommon.eMode;;Дверь павильона открыта: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+ZS404;ne107;ZS404.Ne107;enum;;;;;Application.GVL_Devices.fbZS404.stSts.stCommon.eNe107;;Дверь павильона открыта: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+YS405;fire;YS405.Value;discrete;;;;;Application.GVL_Devices.fbYS405.xValue;;Пожар (сигнал прибора пожарной сигнализации): значение для логики
+YS405;mode;YS405.Mode;enum;;;;;Application.GVL_Devices.fbYS405.stSts.stCommon.eMode;;Пожар (сигнал прибора пожарной сигнализации): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+YS405;ne107;YS405.Ne107;enum;;;;;Application.GVL_Devices.fbYS405.stSts.stCommon.eNe107;;Пожар (сигнал прибора пожарной сигнализации): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+K1;general_alarm;K1;discrete;;;;;Application.GVL_IO.xK1;1;Общая авария: реле K1 «Общая авария» обесточено (в норме реле под напряжением, сухой контакт в диспетчерскую)
+KNS1;mode;KNS1.Mode;enum;;;;;Application.GVL_Station.stStationSts.eMode;;Станция КНС-1: режим: 1 Auto, 2 Manual
+KNS1;method;KNS1.Method;enum;;;;;Application.GVL_Station.stStationSts.eMethod;;Станция КНС-1: способ регулирования: 1 ступенчатое, 2 ПИД уровня
+KNS1;control;KNS1.ControlAct;enum;;;;;Application.GVL_Station.stStationSts.eControlAct;;Станция КНС-1: действующее управление: 0 ручное, 1 ступенчатое, 2 ПИД уровня, 3 по поплавкам, 4 аварийный уровень, 5 сухой ход, 6 нет напряжения, 7 перезапуск
+KNS1;ne107;KNS1.Ne107;enum;;;;;Application.GVL_Station.stStationSts.eNe107;;Станция КНС-1: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+KNS1;state;KNS1.State;integer;;;;;Application.GVL_Station.stStationSts.wState;;Станция КНС-1: слово состояния (биты STN_ST_* флагмана)
+KNS1;pumps_required;KNS1.PumpsRequired;integer;;;;;Application.GVL_Station.stStationSts.uiPumpsRequired;;Станция КНС-1: требуется насосов
+KNS1;pumps_running;KNS1.PumpsRunning;integer;;;;;Application.GVL_Station.stStationSts.uiPumpsRunning;;Станция КНС-1: насосов в работе
+KNS1;pumps_available;KNS1.PumpsAvailable;integer;;;;;Application.GVL_Station.stStationSts.uiPumpsAvailable;;Станция КНС-1: насосов доступно в автомате
+KNS1;lead;KNS1.LeadPump;integer;;;;;Application.GVL_Station.stStationSts.uiLeadPump;;Станция КНС-1: ведущий насос: 1–3, 0 — нет
+KNS1;seq_remain;KNS1.SeqRemain;integer;s;;;;Application.GVL_Station.stStationSts.uiSeqRemain_s;;Станция КНС-1: до следующего шага последовательного пуска
+KNS1;level;KNS1.Level;analog;m;0.01;;;Application.GVL_Station.stStationSts.rLevel_m;;Станция КНС-1: уровень, по которому работает станция
+KNS1;level_sp;KNS1.LevelSp;analog;m;0.01;;;Application.GVL_Station.stStationSts.rLevelSp_m;;Станция КНС-1: действующее задание уровня
+KNS1;speed_sp;KNS1.SpeedSp;analog;%;0.5;;;Application.GVL_Station.stStationSts.rSpeedSp_pct;;Станция КНС-1: общее задание частоты насосам
+LIC101;pv;LIC101.Pv;analog;m;0.01;;;Application.GVL_Station.fbLIC101.stSts.rPv_eu;;Регулятор уровня LIC101: регулируемая величина (уровень)
+LIC101;sp;LIC101.Sp;analog;m;0.01;;;Application.GVL_Station.fbLIC101.stSts.rSp_eu;;Регулятор уровня LIC101: действующее задание
+LIC101;out;LIC101.Out;analog;%;0.5;;;Application.GVL_Station.fbLIC101.stSts.rOut_pct;;Регулятор уровня LIC101: выход (задание частоты)
+LIC101;mode;LIC101.Mode;enum;;;;;Application.GVL_Station.fbLIC101.stSts.stCommon.eMode;;Регулятор уровня LIC101: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService
+LIC101;ne107;LIC101.Ne107;enum;;;;;Application.GVL_Station.fbLIC101.stSts.stCommon.eNe107;;Регулятор уровня LIC101: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F
+PLC1;uptime;;counter;s;;;;;;Шлюз MQTT ПЛК: время работы ПЛК с последнего запуска приложения
+PLC1;reconnects;;counter;;;;;;;Шлюз MQTT ПЛК: переподключений к брокеру MQTT с запуска
+PLC1;queue;;integer;;;;;;;Шлюз MQTT ПЛК: сообщений в очереди на отправку
+PLC1;dropped;;counter;;;;;;;Шлюз MQTT ПЛК: сообщений, отброшенных при переполнении очереди
+PLC1;cmd_accepted;;counter;;;;;;;Шлюз MQTT ПЛК: принятых команд MQTT с запуска
+PLC1;cmd_rejected;;counter;;;;;;;Шлюз MQTT ПЛК: отклонённых команд MQTT с запуска

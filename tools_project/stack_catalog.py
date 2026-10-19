@@ -2,14 +2,15 @@
 
 Назначение: единственное место, где читаются файлы ``schema/`` (docs/data_schema.md). Модуль
 используют генератор конфигурации (``gen_config.py``) и тесты согласованности (``tests_stack/``).
-Автор: <ИМЯ ФАМИЛИЯ>. Версия схемы данных: 1.0.
+Автор: kr0nsch. Версия схемы данных: 1.0.
 
 Источники:
 - ``schema/telemetry_catalog.csv`` — метрики телеметрии (решение схемы данных);
 - ``schema/command_whitelist.csv`` — команды, разрешённые по MQTT;
 - ``schema/topics.json`` — грамматика топиков и параметры станции;
 - ``schema/source/scada_tags.csv``, ``scada_alarms.csv`` — выход iolistgen по перечню сигналов
-  флагмана КНС-1 (не редактируются вручную).
+  флагмана КНС-1, ``station_tags.csv``, ``station_alarms.csv`` — теги и тревоги станции и регулятора
+  LIC101 флагмана (все четыре пишет ``flagship_snapshot.py``, вручную не редактируются).
 """
 
 from __future__ import annotations
@@ -47,6 +48,7 @@ class Metric:
     eng_min: float | None
     eng_max: float | None
     plc_path: str
+    invert: bool  # значение метрики обратно сигналу ПЛК (0/1): K1 в норме под напряжением
     description: str
 
 
@@ -66,12 +68,13 @@ class WhitelistEntry:
 
 @dataclass(frozen=True)
 class Alarm:
-    """Тревога устройства из перечня iolistgen (id = dev_no * 10 + слот)."""
+    """Тревога флагмана: устройства (iolistgen, id = dev_no * 10 + слот) или станции (id = 100000 + slot)."""
 
     id: int
     code: str
     device: str
     slot: int
+    bit: int  # бит в словах тревог: у устройств = slot, у станции = slot - 1
     priority: str
     text: str
     setpoint: float | None
@@ -80,7 +83,7 @@ class Alarm:
 
 @dataclass(frozen=True)
 class ScadaTag:
-    """Строка scada_tags.csv (iolistgen)."""
+    """Строка scada_tags.csv (iolistgen) или station_tags.csv (теги станции того же формата)."""
 
     tag: str
     description: str
@@ -124,6 +127,7 @@ def load_catalog(root: Path = REPO) -> tuple[Metric, ...]:
             eng_min=_opt_float(r["eng_min"]),
             eng_max=_opt_float(r["eng_max"]),
             plc_path=r["plc_path"].strip(),
+            invert=r["invert"].strip() == "1",
             description=r["description"].strip(),
         )
         for r in rows
@@ -147,14 +151,20 @@ def load_whitelist(root: Path = REPO) -> tuple[WhitelistEntry, ...]:
     )
 
 
+ALARM_FILES = ("scada_alarms.csv", "station_alarms.csv")
+TAG_FILES = ("scada_tags.csv", "station_tags.csv")
+
+
 def load_alarms(root: Path = REPO) -> tuple[Alarm, ...]:
-    rows = read_semicolon_csv(root / "schema" / "source" / "scada_alarms.csv")
+    """Тревоги устройств, затем тревоги станции (порядок файлов)."""
+    rows = [r for name in ALARM_FILES for r in read_semicolon_csv(root / "schema" / "source" / name)]
     return tuple(
         Alarm(
             id=int(r["id"]),
             code=r["code"].strip(),
             device=r["device"].strip(),
             slot=int(r["slot"]),
+            bit=int(r["bit"]),
             priority=r["priority"].strip(),
             text=r["text"].strip(),
             setpoint=_opt_float(r["setpoint"]),
@@ -165,7 +175,8 @@ def load_alarms(root: Path = REPO) -> tuple[Alarm, ...]:
 
 
 def load_scada_tags(root: Path = REPO) -> tuple[ScadaTag, ...]:
-    rows = read_semicolon_csv(root / "schema" / "source" / "scada_tags.csv")
+    """Теги устройств (iolistgen), затем теги станции и LIC101."""
+    rows = [r for name in TAG_FILES for r in read_semicolon_csv(root / "schema" / "source" / name)]
     return tuple(
         ScadaTag(
             tag=r["tag"].strip(),

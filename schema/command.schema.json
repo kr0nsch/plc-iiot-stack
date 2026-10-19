@@ -27,8 +27,8 @@
       "pattern": "^[ -~]{1,64}$"
     },
     "command": {
-      "description": "Имя поля ST_<Dev>Cmd без префикса типа; совпадает с последним уровнем топика",
-      "enum": ["SetAuto", "SetManual", "SetOos", "Start", "Stop", "SpeedSp", "ResetMaint", "SubstValue", "Ack", "Reset", "AckReq", "ShelveReq", "UnshelveReq"]
+      "description": "Имя поля ST_<Dev>Cmd устройства или ST_StationCmd станции без префикса типа; совпадает с последним уровнем топика",
+      "enum": ["SetAuto", "SetManual", "SetOos", "Start", "Stop", "SpeedSp", "ResetMaint", "SubstValue", "Ack", "Reset", "AckReq", "ShelveReq", "UnshelveReq", "SetStepped", "SetLevelPid", "AckAll", "ResetAll", "Silence"]
     },
     "value": {
       "description": "Значение: только у SpeedSp, SubstValue (число) и масок AckReq, ShelveReq, UnshelveReq (0…65535)",
@@ -50,7 +50,7 @@
       "then": {"required": ["value"], "properties": {"value": {"type": "integer", "minimum": 0, "maximum": 65535}}}
     },
     {
-      "if": {"properties": {"command": {"enum": ["SetAuto", "SetManual", "SetOos", "Start", "Stop", "ResetMaint", "Ack", "Reset"]}}, "required": ["command"]},
+      "if": {"properties": {"command": {"enum": ["SetAuto", "SetManual", "SetOos", "Start", "Stop", "ResetMaint", "Ack", "Reset", "SetStepped", "SetLevelPid", "AckAll", "ResetAll", "Silence"]}}, "required": ["command"]},
       "then": {"not": {"required": ["value"]}}
     }
   ]

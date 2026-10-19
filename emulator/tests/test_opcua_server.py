@@ -100,7 +100,17 @@ def test_browse_read_and_types(pki: Path) -> None:
             # все узлы перечня существуют
             nodes = [c.get_node(t.opcua_node_id) for t in load_tags()]
             values = await c.read_values(nodes)
-            assert len(values) == 814
+            assert len(values) == 914
+            # станция и регулятор уровня — узлы GVL_Station флагмана
+            for path, vt in {
+                "GVL_Station.stStationSts.eMode": ua.VariantType.Int16,
+                "GVL_Station.stStationSts.uiPumpsRunning": ua.VariantType.UInt16,
+                "GVL_Station.stStationSts.rLevelSp_m": ua.VariantType.Float,
+                "GVL_Station.stStationCmd.xSetStepped": ua.VariantType.Boolean,
+                "GVL_Station.fbLIC101.stSts.rPv_eu": ua.VariantType.Float,
+            }.items():
+                dv = await c.get_node(NS + path).read_data_value()
+                assert dv.Value is not None and dv.Value.VariantType == vt, path
 
     run(pki, body)
 

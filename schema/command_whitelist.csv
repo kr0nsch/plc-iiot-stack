@@ -78,3 +78,12 @@ HS501;Ack;pulse;;;;HS501.Cmd.Ack;Application.GVL_Hmi.stHS501Cmd.stCommon.xAck
 HS501;Reset;pulse;;;;HS501.Cmd.Reset;Application.GVL_Hmi.stHS501Cmd.stCommon.xReset
 HS502;Ack;pulse;;;;HS502.Cmd.Ack;Application.GVL_Hmi.stHS502Cmd.stCommon.xAck
 HS502;Reset;pulse;;;;HS502.Cmd.Reset;Application.GVL_Hmi.stHS502Cmd.stCommon.xReset
+KNS1;SetAuto;pulse;;;;KNS1.Cmd.SetAuto;Application.GVL_Station.stStationCmd.xSetAuto
+KNS1;SetManual;pulse;;;;KNS1.Cmd.SetManual;Application.GVL_Station.stStationCmd.xSetManual
+KNS1;SetStepped;pulse;;;;KNS1.Cmd.SetStepped;Application.GVL_Station.stStationCmd.xSetStepped
+KNS1;SetLevelPid;pulse;;;;KNS1.Cmd.SetLevelPid;Application.GVL_Station.stStationCmd.xSetLevelPid
+KNS1;AckAll;pulse;;;;KNS1.Cmd.AckAll;Application.GVL_Station.stStationCmd.xAckAll
+KNS1;ResetAll;pulse;;;;KNS1.Cmd.ResetAll;Application.GVL_Station.stStationCmd.xResetAll
+KNS1;Silence;pulse;;;;KNS1.Cmd.Silence;Application.GVL_Station.stStationCmd.xSilence
+LIC101;SetAuto;pulse;;;;LIC101.Cmd.SetAuto;Application.GVL_Station.stLIC101Cmd.stCommon.xSetAuto
+LIC101;SetManual;pulse;;;;LIC101.Cmd.SetManual;Application.GVL_Station.stLIC101Cmd.stCommon.xSetManual

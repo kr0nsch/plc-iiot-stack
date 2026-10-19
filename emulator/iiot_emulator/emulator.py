@@ -1,10 +1,10 @@
 """Эмулятор ПЛК КНС-1: модель объекта + устройства + логика станции за один цикл.
 
-Порядок цикла как у приложения CODESYS флагмана: входы (из модели объекта) → логика станции →
-вызовы устройств (``PRG_Devices``) → выходы → шаг модели объекта (``PRG_PlantModel``).
-Состояние ПЛК для внешнего мира — «образ» ``image()``: тег перечня → значение. Команды HMI и
-SCADA пишутся в ``st<DEV>Cmd`` через ``write_tag()`` и обрабатываются в ближайшем цикле: импульсы
-и маски сбрасываются (API 2.1).
+Порядок цикла как у приложения CODESYS флагмана: входы (из модели объекта) → логика станции
+(``PRG_Station``: состояние и команды станции KNS1) → вызовы устройств (``PRG_Devices``) → выходы →
+шаг модели объекта (``PRG_PlantModel``). Состояние ПЛК для внешнего мира — «образ» ``image()``: тег
+флагмана → значение. Команды HMI и SCADA пишутся в ``st<DEV>Cmd``, ``stStationCmd`` и ``stLIC101Cmd``
+через ``write_tag()`` и обрабатываются в ближайшем цикле: импульсы и маски сбрасываются (API 2.1).
 
 Детерминизм: при одинаковых seed, шаге и последовательности команд результат один и тот же —
 шум измерений берётся из собственного ГПСЧ, приток и сценарий — чистые функции (seed, t).
@@ -34,7 +34,8 @@ from .devices import (
 from .faults import ACTIONS, FAULTS, AutoScenario, ScenarioEvent
 from .plant import Plant, PlantParams
 from .station import Station, StationParams
-from .tagmodel import IEC_INT_RANGES, TagDef, alarms_of, devices, load_tags
+from .station_devices import LevelController, StationDevice
+from .tagmodel import IEC_INT_RANGES, TagDef, alarms_of, devices, load_tags, tags_of
 
 # --- конфигурация устройств флагмана (перечень КНС, колонка params; см. iolistgen/examples/kns) ---
 AI_CFG: dict[str, AiConfig] = {
@@ -134,15 +135,26 @@ class KnsEmulator:
             self.devs[name] = dev
         self.pumps: list[MotorVfd] = [d for d in self.devs.values() if isinstance(d, MotorVfd)]
         self.plant = Plant(seed=self.cfg.seed, params=plant_params or PlantParams(), t0_s=self.cfg.start_hour * 3600)
-        self.station = Station(self.devs, StationParams())
+        self.station = Station(dict(self.devs), StationParams())
+        # Станция KNS1 — первой: её команды (общий сброс) устройства выполняют в том же цикле, как
+        # PRG_Station до PRG_Devices во флагмане; регулятор LIC101 — последним
+        field_devs = self.devs
+        self.devs = {}
+        self.station_dev = StationDevice(tags_of("KNS1"), alarms_of("KNS1"), self._sink, self.station, self.devs)
+        self.lic = LevelController(tags_of("LIC101"), self._sink, self.station, field_devs["LT101"])
+        self.devs.update({"KNS1": self.station_dev, **field_devs, "LIC101": self.lic})
         self.scenario = AutoScenario(self.cfg.seed, self.cfg.start_hour * 3600) if self.cfg.auto_faults else None
         self.faults: dict[str, bool] = dict.fromkeys(FAULTS, False)
         self._last_ack_sweep = 0.0
         self._speed_act_hold = [0.0] * len(self.pumps)
         self._speed_ref_hold = [0.0] * len(self.pumps)
         self.scenario_log: deque[ScenarioEvent] = deque(maxlen=200)
-        # первый цикл без шага модели: Sts заполнены до первого чтения
+        # первый цикл без шага модели: Sts заполнены до первого чтения. Устройства — до станции: станция
+        # работает только по действительным входам (как GVL_Sim.xIoReady флагмана), иначе при старте
+        # отказ уровнемера и тревога KNS1.FLOAT на один цикл
         self._apply_inputs()
+        for d in field_devs.values():
+            d.scan(0.0, 0.0)
         self.station.step(0.0, 0.0)
         for d in self.devs.values():
             d.scan(0.0, 0.0)
@@ -316,7 +328,7 @@ class KnsEmulator:
             out.update(dev.image())
         out["HA1"] = self.station.horn
         out["HL1"] = self.station.lamp
-        out["K1"] = self.station.general_alarm
+        out["K1"] = not self.station.general_alarm  # реле «Общая авария» под напряжением в норме (как во флагмане)
         return out
 
     def read_tag(self, tag: str) -> Value:
@@ -326,14 +338,14 @@ class KnsEmulator:
         return self.devs[t.device].image()[tag]
 
     def write_tag(self, tag: str, value: object) -> Value:
-        """Запись в ``GVL_Hmi.st<DEV>Cmd`` (как запись OPC UA или WebVisu).
+        """Запись в ``GVL_Hmi.st<DEV>Cmd``, ``GVL_Station.stStationCmd`` или ``stLIC101Cmd`` (как OPC UA, WebVisu).
 
         Проверяются только тип и диапазон типа IEC: ограничения по смыслу (задание скорости в
         пределах ПЧ, допустимость команды в режиме) применяет «ФБ» в цикле, как в ПЛК.
         """
         t = self.tag_map.get(tag)
         if t is None or not t.writable or not t.device:
-            raise CommandError(f"{tag}: не команда (нет в GVL_Hmi или только чтение)")
+            raise CommandError(f"{tag}: не команда (нет в GVL_Hmi и GVL_Station или только чтение)")
         coerced = coerce_iec(t.data_type, value)
         self.devs[t.device].cmd[t.key] = coerced
         return coerced

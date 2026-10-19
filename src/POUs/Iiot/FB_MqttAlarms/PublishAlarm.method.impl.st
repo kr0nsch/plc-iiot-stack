@@ -18,7 +18,7 @@ sTopic := F_IiotTopic(sPrefix := sTopicPrefix, sPath := sPath);
 fbJson.Begin();
 fbJson.AddString(sKey := 'schema_version', sValue := GVL_Const.IIOT_SCHEMA_VERSION);
 fbJson.AddInt(sKey := 'ts', liValue := ULINT_TO_LINT(uliTs));
-fbJson.AddInt(sKey := 'id', liValue := UINT_TO_LINT(stAlarm.stCfg.uiId));
+fbJson.AddInt(sKey := 'id', liValue := UDINT_TO_LINT(stAlarm.stCfg.udiId));
 fbJson.AddString(sKey := 'code', sValue := sCode);
 fbJson.AddString(sKey := 'priority', sValue := sPriority);
 fbJson.AddString(sKey := 'state', sValue := F_IiotAlarmStateText(eState := stAlarm.eState));

@@ -6,7 +6,7 @@ pBits := ADR(lwNan);
 aPts[1].lrValue := pBits^;
 fbFake.ClearPublished();
 Run(fbTelemetry := fbTel, fbClient := fbFake, aPointTable := aPts, ltAt := LTIME#1H + LTIME#2S, xReadyIn := TRUE);
-AssertEquals_STRING(Expected := '{"schema_version":"1.0","ts":1792137600250,"value":2.35,"quality":"bad","unit":"m"}',
+AssertEquals_STRING(Expected := '{"schema_version":"1.1","ts":1792137600250,"value":2.35,"quality":"bad","unit":"m"}',
     Actual := fbFake.LastPayload(sTopic := 'vodokanal/kns1/station/LT101/level'),
     Message := 'NaN: last finite value, quality bad');
 aPts[1].lrValue := 2.5;

@@ -1,13 +1,13 @@
 {
   "description": "Грамматика топиков MQTT стенда (docs/data_schema.md, раздел 2). pattern — регулярное выражение для полного топика, groups — имена групп по порядку, filter — подписка MQTT на весь класс.",
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "segments": {
     "site": "[a-z][a-z0-9_]{0,31}",
     "area": "[a-z][a-z0-9_]{0,31}",
     "unit": "[a-z][a-z0-9_]{0,31}",
     "device": "[A-Z][A-Z0-9_]{0,15}",
     "metric": "[a-z][a-z0-9_]{0,31}",
-    "suffix": "[A-Z]{1,4}",
+    "suffix": "[A-Z][A-Z0-9]{0,7}",
     "command": "[A-Za-z][A-Za-z0-9_]{0,31}"
   },
   "reserved_metrics": ["alarm", "cmd", "cmd_ack", "status"],
@@ -22,7 +22,7 @@
       "publisher": "plc"
     },
     "alarm": {
-      "pattern": "^([a-z][a-z0-9_]{0,31})/([a-z][a-z0-9_]{0,31})/([a-z][a-z0-9_]{0,31})/([A-Z][A-Z0-9_]{0,15})/alarm/([A-Z]{1,4})$",
+      "pattern": "^([a-z][a-z0-9_]{0,31})/([a-z][a-z0-9_]{0,31})/([a-z][a-z0-9_]{0,31})/([A-Z][A-Z0-9_]{0,15})/alarm/([A-Z][A-Z0-9]{0,7})$",
       "groups": ["site", "area", "unit", "device", "suffix"],
       "filter": "vodokanal/+/+/+/alarm/+",
       "schema": "alarm.schema.json",

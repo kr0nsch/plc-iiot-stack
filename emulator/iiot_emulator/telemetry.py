@@ -19,6 +19,7 @@ from typing import Any
 from .devices import AnalogInput, DigitalInput, MotorVfd
 from .emulator import KnsEmulator
 from .schema import Metric, Topics, quality_from_ne107, telemetry_catalog, telemetry_payload
+from .station_devices import StationDevice
 
 # Метрики ПЧ, которые ПЛК читает по Modbus: при потере связи значение замирает (quality = bad)
 VFD_COMM_METRICS = frozenset({"speed", "vfd_fault_code"})
@@ -78,8 +79,8 @@ class TelemetryTracker:
     def quality(self, emu: KnsEmulator, m: Metric) -> str:
         """Достоверность метрики — по устройству-источнику (data_schema.md, 3.2)."""
         dev = emu.devs.get(m.device)
-        if dev is None:
-            return "good"  # диагностика узла PLC1 и сигналы без ФБ (K1)
+        if dev is None or isinstance(dev, StationDevice):
+            return "good"  # диагностика узла PLC1, сигналы без ФБ (K1), расчётные значения станции KNS1
         if isinstance(dev, MotorVfd) and m.metric in VFD_COMM_METRICS and dev.comm_loss:
             return "bad"
         valid = dev.valid if isinstance(dev, AnalogInput | DigitalInput) else True
@@ -87,7 +88,10 @@ class TelemetryTracker:
 
     def value(self, emu: KnsEmulator, image: dict[str, Any], m: Metric, diag: NodeDiag, now_s: float) -> float | int:
         if m.scada_tag:
-            return _number(image[m.scada_tag], m.kind)
+            value = image[m.scada_tag]
+            if m.invert:
+                value = not bool(value)  # K1: реле под напряжением в норме, метрика — «общая авария»
+            return _number(value, m.kind)
         return {
             "uptime": int(max(0.0, now_s - diag.start_monotonic)),
             "reconnects": diag.reconnects,

@@ -24,6 +24,16 @@ ELSIF sCommand = 'ShelveReq' THEN
     F_IiotCmdFromString := E_IiotCommand.ShelveReq;
 ELSIF sCommand = 'UnshelveReq' THEN
     F_IiotCmdFromString := E_IiotCommand.UnshelveReq;
+ELSIF sCommand = 'SetStepped' THEN
+    F_IiotCmdFromString := E_IiotCommand.SetStepped;
+ELSIF sCommand = 'SetLevelPid' THEN
+    F_IiotCmdFromString := E_IiotCommand.SetLevelPid;
+ELSIF sCommand = 'AckAll' THEN
+    F_IiotCmdFromString := E_IiotCommand.AckAll;
+ELSIF sCommand = 'ResetAll' THEN
+    F_IiotCmdFromString := E_IiotCommand.ResetAll;
+ELSIF sCommand = 'Silence' THEN
+    F_IiotCmdFromString := E_IiotCommand.Silence;
 ELSE
     F_IiotCmdFromString := E_IiotCommand.None;
 END_IF

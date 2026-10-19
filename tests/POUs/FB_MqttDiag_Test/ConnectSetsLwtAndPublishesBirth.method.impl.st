@@ -9,10 +9,10 @@ AssertTrue(Condition := fbDiag.xReady AND fbDiag.eNe107 = E_IiotNe107.Good, Mess
 AssertEquals_STRING(Expected := 'vodokanal/kns1/station/PLC1/status/connection', Actual := fbFake.stLastCfg.sWillTopic,
     Message := 'LWT topic');
 AssertEquals_STRING(
-    Expected := '{"schema_version":"1.0","ts":1792137600250,"node":"PLC1","state":"offline","reason":"lwt"}',
+    Expected := '{"schema_version":"1.1","ts":1792137600250,"node":"PLC1","state":"offline","reason":"lwt"}',
     Actual := fbFake.stLastCfg.sWillPayload, Message := 'LWT payload');
 AssertTrue(Condition := fbFake.stLastCfg.xWillRetain, Message := 'LWT retained');
-AssertEquals_STRING(Expected := CONCAT('{"schema_version":"1.0","ts":1792137600250,"node":"PLC1","state":"online",',
+AssertEquals_STRING(Expected := CONCAT('{"schema_version":"1.1","ts":1792137600250,"node":"PLC1","state":"online",',
     '"reason":"birth","source":"codesys","sw_version":"0.1.0","period_ms":60000}'),
     Actual := fbFake.LastPayload(sTopic := 'vodokanal/kns1/station/PLC1/status/connection'),
         Message := 'birth payload');

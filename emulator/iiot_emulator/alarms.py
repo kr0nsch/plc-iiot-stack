@@ -173,10 +173,10 @@ class AlarmSlot:
 
 
 class AlarmBlock:
-    """Тревоги одного устройства: слоты по scada_alarms.csv и слова wAlm* для Sts."""
+    """Тревоги одного источника: слоты по перечню (ключ — бит в словах тревог) и слова wAlm* для Sts."""
 
     def __init__(self, alarms: list[AlarmDef], sink: EventSink) -> None:
-        self.slots: dict[int, AlarmSlot] = {a.slot: AlarmSlot(a) for a in alarms}
+        self.slots: dict[int, AlarmSlot] = {a.bit: AlarmSlot(a) for a in alarms}
         self._sink = sink
 
     def update(self, conds: dict[int, bool], t: float, values: dict[int, float | None] | None = None) -> None:
@@ -207,6 +207,14 @@ class AlarmBlock:
         for slot in self.slots.values():
             slot.set_oos(oos, t, self._sink)
 
+    def by_id(self, alarm_id: int, action: str, t: float) -> bool:
+        """Квитировать (ack), отложить (shelve) или вернуть (unshelve) тревогу по номеру; False — нет такой."""
+        for slot in self.slots.values():
+            if slot.alarm.id == alarm_id:
+                {"ack": slot.ack, "shelve": slot.shelve, "unshelve": slot.unshelve}[action](t, None, self._sink)
+                return True
+        return False
+
     @property
     def w_active(self) -> int:
         return sum(1 << n for n, s in self.slots.items() if s.active)
@@ -217,7 +225,13 @@ class AlarmBlock:
 
     @property
     def w_shelved(self) -> int:
-        return sum(1 << n for n, s in self.slots.items() if s.oos or s.shelved_until is not None)
+        """Отложенные оператором (plc-process-lib 1.0: Shelved; вывод из работы виден по режиму устройства)."""
+        return sum(1 << n for n, s in self.slots.items() if s.shelved_until is not None)
+
+    @property
+    def w_suppressed(self) -> int:
+        """Подавленные логикой (SuppressedByDesign): эмулятор подавление не моделирует — условие снимается."""
+        return 0
 
     @property
     def prio_unack(self) -> AlarmPriority:

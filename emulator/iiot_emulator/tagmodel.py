@@ -1,13 +1,13 @@
-"""Модель тегов КНС-1: перечень тегов SCADA и тревог, сгенерированный iolistgen.
+"""Модель тегов КНС-1: теги SCADA и тревоги флагмана kns-pump-station.
 
-Источник истины — перечень сигналов флагмана (проект 02, ``io_list.csv``). Из него генератор
-``iolistgen`` (проект 07) строит ``scada_tags.csv`` и ``scada_alarms.csv``; копии лежат в
-``iiot_emulator/data/``. Эмулятор не придумывает теги: узлы OPC UA, типы данных и права доступа
-берутся из этих файлов, поэтому клиент (Telegraf, отчёт, сценарии ПМИ) работает с эмулятором и
-с настоящим рантаймом CODESYS одинаково.
-
-Обновить копии: ``python -m iolistgen generate examples/kns/io_list.csv --out <каталог>`` в
-репозитории iolistgen и скопировать ``scada/*.csv`` сюда.
+Источник истины — флагман (проект 02): ``scada_tags.csv`` и ``scada_alarms.csv`` его генератор
+iolistgen строит по перечню сигналов (устройства ``GVL_Devices``, команды ``GVL_Hmi``, сигналы
+``GVL_IO``), ``station_tags.csv`` и ``station_alarms.csv`` — станция ``GVL_Station.stStationSts`` и
+``stStationCmd``, регулятор уровня ``fbLIC101`` и тревоги станции ``KNS1.*`` в том же формате. Все
+четыре файла снимает ``tools_project/flagship_snapshot.py`` в ``schema/source/`` репозитория; копии
+лежат в ``iiot_emulator/data/``. Эмулятор не придумывает теги: узлы OPC UA, типы данных и права
+доступа берутся из этих файлов, поэтому клиент (Telegraf, отчёт, сценарии ПМИ) работает с эмулятором
+и с настоящим рантаймом CODESYS одинаково.
 """
 
 from __future__ import annotations
@@ -38,14 +38,14 @@ DEFAULT_SYMBOL_NS = 4
 class TagDef:
     """Тег SCADA: строка scada_tags.csv."""
 
-    tag: str  # P101.Cmd.Start, LT101.Value, HA1
+    tag: str  # P101.Cmd.Start, LT101.Value, HA1, KNS1.Mode
     description: str
-    device: str  # P101; пусто у сигналов без ФБ (AUX)
-    dev_no: int | None
-    device_type: str  # MotorVfd, Motor, AnalogInput, DigitalInput; пусто у AUX
+    device: str  # P101, KNS1, LIC101; пусто у сигналов без ФБ (AUX)
+    dev_no: int | None  # у станции и регулятора LIC101 — нет
+    device_type: str  # MotorVfd, Motor, AnalogInput, DigitalInput, Station, Pid; пусто у AUX
     hmi_group: str
     data_type: str  # BOOL, INT, WORD, UINT, UDINT, REAL
-    writable: bool  # access RW — команда HMI/SCADA (GVL_Hmi)
+    writable: bool  # access RW — команда HMI/SCADA (GVL_Hmi, GVL_Station.stStationCmd, stLIC101Cmd)
     units: str
     eng_min: float | None
     eng_max: float | None
@@ -80,8 +80,8 @@ class TagDef:
 
     @property
     def is_value_cmd(self) -> bool:
-        """Значение команды (SpeedSp, SubstValue): ПЛК не сбрасывает, а в Auto пишет текущее."""
-        return self.writable and self.key in ("Cmd.SpeedSp", "Cmd.SubstValue")
+        """Значение команды (SpeedSp, SubstValue, задание и выход LIC101): ПЛК не сбрасывает, а следит за ним."""
+        return self.writable and self.key in ("Cmd.SpeedSp", "Cmd.SubstValue", "Cmd.Sp", "Cmd.ManualOut")
 
     def symbol_path(self) -> str:
         """Путь символа без префикса ``Application.``: ``GVL_Devices.fbLT101.stSts.rValue_eu``."""
@@ -90,12 +90,13 @@ class TagDef:
 
 @dataclass(frozen=True)
 class AlarmDef:
-    """Тревога устройства: строка scada_alarms.csv (id = dev_no · 10 + слот)."""
+    """Тревога: строка scada_alarms.csv (id = dev_no · 10 + слот) или station_alarms.csv (id = 100000 + slot)."""
 
     id: int
-    code: str  # LT101.HH
+    code: str  # LT101.HH, KNS1.NOAUTO
     device: str
     slot: int
+    bit: int  # бит в словах тревог: у устройств = slot, у станции = slot - 1
     priority: str  # Low, Medium, High, Critical
     text: str
     setpoint: float | None
@@ -118,11 +119,15 @@ def _read_csv(name: str) -> list[dict[str, str]]:
     return list(csv.DictReader(io.StringIO("\n".join(lines)), delimiter=";"))
 
 
+TAG_FILES = ("scada_tags.csv", "station_tags.csv")
+ALARM_FILES = ("scada_alarms.csv", "station_alarms.csv")
+
+
 @cache
 def load_tags() -> tuple[TagDef, ...]:
-    """Все теги перечня в порядке файла."""
+    """Все теги флагмана: устройства (iolistgen), затем станция и LIC101."""
     out: list[TagDef] = []
-    for row in _read_csv("scada_tags.csv"):
+    for row in (r for name in TAG_FILES for r in _read_csv(name)):
         dtype = row["data_type"].strip()
         if dtype not in IEC_TYPES:
             raise ValueError(f"scada_tags.csv: неизвестный тип {dtype!r} у тега {row['tag']}")
@@ -153,19 +158,20 @@ def load_tags() -> tuple[TagDef, ...]:
 
 @cache
 def load_alarms() -> tuple[AlarmDef, ...]:
-    """Все тревоги устройств в порядке файла."""
+    """Все тревоги: устройства, затем станция."""
     return tuple(
         AlarmDef(
             id=int(row["id"]),
             code=row["code"].strip(),
             device=row["device"].strip(),
             slot=int(row["slot"]),
+            bit=int(row["bit"]),
             priority=row["priority"].strip(),
             text=row["text"].strip(),
             setpoint=_opt_float(row["setpoint"]),
             delay_s=_opt_float(row["delay_s"]) or 0.0,
         )
-        for row in _read_csv("scada_alarms.csv")
+        for row in (r for name in ALARM_FILES for r in _read_csv(name))
     )
 
 
@@ -176,7 +182,10 @@ def tags_by_name() -> dict[str, TagDef]:
 
 @cache
 def devices() -> dict[str, tuple[str, int, str]]:
-    """Устройства перечня: тег → (тип устройства, dev_no, группа HMI), в порядке файла."""
+    """Устройства перечня сигналов: тег → (тип устройства, dev_no, группа HMI), в порядке файла.
+
+    Станция KNS1 и регулятор LIC101 (без dev_no) сюда не входят: их строит эмулятор отдельно.
+    """
     out: dict[str, tuple[str, int, str]] = {}
     for t in load_tags():
         if t.device and t.device_type and t.dev_no is not None and t.device not in out:
@@ -186,6 +195,10 @@ def devices() -> dict[str, tuple[str, int, str]]:
 
 def alarms_of(device: str) -> list[AlarmDef]:
     return [a for a in load_alarms() if a.device == device]
+
+
+def tags_of(device: str) -> list[TagDef]:
+    return [t for t in load_tags() if t.device == device]
 
 
 def node_id_for(tag: TagDef, *, ns: int = DEFAULT_SYMBOL_NS, device_name: str = DEFAULT_DEVICE_NAME) -> str:

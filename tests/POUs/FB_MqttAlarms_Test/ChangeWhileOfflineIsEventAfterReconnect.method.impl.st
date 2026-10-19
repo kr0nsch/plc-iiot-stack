@@ -16,7 +16,7 @@ fbFake.ClearPublished();
 fbAlm(xEnable := TRUE, xReady := TRUE, itfClient := fbFake, uliTs_ms := 1792137665000,
     sTopicPrefix := 'vodokanal/kns1/station',
       aAlarms := aAlm, aWords := aWords);
-AssertEquals_STRING(Expected := CONCAT('{"schema_version":"1.0","ts":1792137665000,"id":110,"code":"P101.FTS",',
+AssertEquals_STRING(Expected := CONCAT('{"schema_version":"1.1","ts":1792137665000,"id":110,"code":"P101.FTS",',
     '"priority":"Medium","state":"ActiveUnack","prev_state":"Normal","reason":"Activated"}'),
     Actual := fbFake.LastPayload(sTopic := 'vodokanal/kns1/station/P101/alarm/FTS'),
     Message := 'activation missed offline: event with the current ts');

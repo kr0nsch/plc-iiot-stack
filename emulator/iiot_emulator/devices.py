@@ -64,6 +64,9 @@ class DeviceType(IntEnum):
     DIGITAL_INPUT = 2
     MOTOR = 3
     MOTOR_VFD = 4
+    VALVE = 5
+    CONTROL_VALVE = 6
+    PID = 7
 
 
 class MotorState(IntEnum):
@@ -300,6 +303,7 @@ class Device:
             "AlmActive": self.alarms.w_active,
             "AlmUnack": w_unack,
             "AlmShelved": self.alarms.w_shelved,
+            "AlmSuppressed": self.alarms.w_suppressed,
             "PrioUnack": int(self.alarms.prio_unack),
             "CmdResult": int(self.cmd_result),
             "CmdSeq": self.cmd_seq,

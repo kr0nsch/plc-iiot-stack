@@ -1,7 +1,7 @@
 // Назначение: константы ПЛК-части IIoT-стека: размеры буферов, версия схемы сообщений, топики,
 //             правила шлюза команд, коды ошибок клиента MQTT, значения по умолчанию, коды символов ASCII.
 //             В логике нет «магических чисел» — только имена отсюда. Контракт — docs/data_schema.md.
-// Автор:      <ИМЯ ФАМИЛИЯ>
+// Автор:      kr0nsch
 // Версия:     0.1.0
 // Документ:   docs/plc_mqtt.md
 {attribute 'qualified_only'}
@@ -14,7 +14,7 @@ VAR_GLOBAL CONSTANT
     IIOT_PATH_LEN : UINT := 63;            // хвост топика device/metric
     IIOT_LEVEL_LEN : UINT := 31;           // один уровень топика (site, area, unit, metric, command)
     IIOT_DEVICE_LEN : UINT := 16;          // уровень device: [A-Z][A-Z0-9_]{0,15}
-    IIOT_SUFFIX_LEN : UINT := 4;           // суффикс тревоги: [A-Z]{1,4}
+    IIOT_SUFFIX_LEN : UINT := 8;           // суффикс тревоги: [A-Z][A-Z0-9]{0,7} (NOAUTO, UL1 — тревоги станции)
     IIOT_UNIT_LEN : UINT := 16;            // единица измерения (ASCII)
     IIOT_TEXT_LEN : UINT := 31;            // короткие тексты кодов (quality, reason, state)
     JSON_KEY_LEN : UINT := 31;             // ключ JSON
@@ -27,7 +27,7 @@ VAR_GLOBAL CONSTANT
     BROKER_WILL_LEN : UINT := 127;         // текст LWT
 
     // --- Схема сообщений (docs/data_schema.md, раздел 8) ---
-    IIOT_SCHEMA_VERSION : STRING(7) := '1.0';
+    IIOT_SCHEMA_VERSION : STRING(7) := '1.1';
     IIOT_SCHEMA_MAJOR : UINT := 1;          // команды другой мажорной версии — unsupported_version
     IIOT_SOURCE : STRING(15) := 'codesys';  // поле source сообщения рождения
     TS_MIN_MS : ULINT := 1577836800000;     // ts схемы: не раньше 2020-01-01T00:00:00Z
@@ -53,6 +53,10 @@ VAR_GLOBAL CONSTANT
     CMD_MASK_MAX : LREAL := 65535.0;         // маски AckReq, ShelveReq, UnshelveReq: 0..65535
     SPEED_SP_MIN_PCT : LREAL := 0.0;         // SpeedSp по схеме: 0..100 % независимо от белого списка
     SPEED_SP_MAX_PCT : LREAL := 100.0;
+    // Коды E_CmdResult plc-process-lib (API 4.1) в ответе устройства: 1 Accepted, 2…9 Rejected*; 10
+    // SubstExpired и 0 None — не ответ на команду. Станция флагмана отвечает теми же кодами (PL.E_CmdResult)
+    CMD_RESULT_ACCEPTED : INT := 1;
+    CMD_RESULT_LAST : INT := 9;
 
     // --- Числа JSON ---
     JSON_REAL_DECIMALS_DEFAULT : UINT := 3;
@@ -109,13 +113,6 @@ VAR_GLOBAL CONSTANT
     ASCII_RBRACE : BYTE := 16#7D;      // }
     ASCII_TILDE : BYTE := 16#7E;       // ~ — последний печатный символ
     ASCII_LAST : BYTE := 16#7F;        // больше — не ASCII
-
-    // --- Устройства флагмана (plc-process-lib, API 4.1 и 13.6) ---
-    DEV_MODE_OOS : INT := 4;           // E_DeviceMode.OutOfService
-    CMD_RESULT_ACCEPTED : INT := 1;    // E_CmdResult.Accepted
-    CMD_RESULT_LAST : INT := 9;        // E_CmdResult.RejectedCfg: дальше — не ответы на команды
-    MOT_FLT_COMM : WORD := 16#0020;    // wFault бит 5: потеря связи с ПЧ (MOT_FLT_COMM_LOSS plc-process-lib)
-    MOT_WRN_COMM : WORD := 16#0040;    // wWarning бит 6: то же при xCommLossIsFault = FALSE (MOT_WRN_COMM_LOSS)
 
     // --- MQTT ---
     MQTT_PORT_DEFAULT : UINT := 1883;

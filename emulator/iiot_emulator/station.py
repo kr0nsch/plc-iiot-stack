@@ -16,14 +16,22 @@
   (NE 43) — деградированный режим по поплавкам; перегрев обмотки — блокировка насоса.
 - **Питание:** пропадание — насосы стоят без отказа; восстановление — последовательный пуск с
   задержкой.
-- Вентилятор павильона, сирена, лампа и реле общей аварии.
+- Вентилятор павильона, сирена, лампа и реле общей аварии (K1 под напряжением в норме, как во
+  флагмане: обесточено — общая авария).
+- **Режим и способ** — как ``GVL_Station.stStationSts`` флагмана: режим «Автомат»/«Ручной» (в
+  «Ручном» запросов нет, действуют только блокировки), способ «ступенчатое» (все запрошенные насосы
+  на ``step_speed_pct``) или «ПИД уровня» (здесь — задание частоты пропорционально уровню; регулятор
+  LIC101 в ручном режиме задаёт выход сам), действующее управление по старшинству флагмана
+  PowerLost > Restart > DryRunStop > Float > Emergency > LevelPid > Stepped, переход в ступенчатый
+  режим при потере связи с ПЧ запрошенного насоса.
 
-Уставки станции — допущения эмулятора (флагман задаст свои в ``04_algorithms.md``); уставки
+Уставки станции — допущения эмулятора (флагман задаёт свои в ``04_algorithms.md``, раздел 18); уставки
 тревог устройств — из перечня сигналов.
 """
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 
 from .alarms import AlarmPriority
@@ -45,11 +53,43 @@ class StationParams:
     fan_period_s: float = 3600.0  # плановое проветривание: каждый час
     fan_on_s: float = 600.0  # на 10 минут
     fan_hold_s: float = 900.0  # по газу или температуре — не меньше 15 минут
+    level_sp_m: float = 1.40  # задание уровня ПИД (rLevelSp_m флагмана по умолчанию)
+    step_speed_pct: float = 100.0  # частота ступенчатого регулирования (rStepSpeed_pct флагмана)
+    underload_a: float = 12.0  # недогрузка по току (rUnderload_A флагмана) ...
+    underload_speed_pct: float = 80.0  # ... при скорости не меньше (rUnderloadSpeed_pct)
 
 
 ROLE_DUTY = "duty"
 ROLE_ASSIST = "assist"
 ROLE_STANDBY = "standby"
+
+# E_StationMode, E_ControlMethod, E_ControlAct флагмана (DESIGN 3.1)
+MODE_AUTO = 1
+MODE_MANUAL = 2
+METHOD_STEPPED = 1
+METHOD_LEVEL_PID = 2
+ACT_MANUAL = 0
+ACT_STEPPED = 1
+ACT_LEVEL_PID = 2
+ACT_FLOAT = 3
+ACT_EMERGENCY = 4
+ACT_DRY_RUN_STOP = 5
+ACT_POWER_LOST = 6
+ACT_RESTART = 7
+
+# Биты stStationSts.wState (STN_ST_* флагмана)
+ST_DRY_RUN = 0x0001
+ST_EMERGENCY = 0x0002
+ST_FLOAT = 0x0004
+ST_STEP_FALLBACK = 0x0008
+ST_POWER_LOST = 0x0010
+ST_RESTART = 0x0020
+ST_ATS = 0x0040
+ST_NO_RESERVE = 0x0080
+ST_LACK = 0x0100
+ST_HORN = 0x1000
+ST_COMMON_ALARM = 0x2000
+ST_UNACK = 0x4000
 
 
 @dataclass
@@ -84,8 +124,24 @@ class Station:
         self.horn = False
         self.lamp = False
         self.general_alarm = False
+        self.any_unack = False
         self._prev_unack_ids: set[int] = set()
         self._fan_hold_until = -1.0
+        # режим, способ и действующее управление (GVL_Station.stStationSts флагмана)
+        self.mode = MODE_AUTO  # эмулятор стартует в «Автомате»: иначе демонстрация без насосов
+        self.method = METHOD_LEVEL_PID
+        self.control_act = ACT_LEVEL_PID
+        self.speed_sp = 0.0
+        self.level_m = 0.0
+        self.step_fallback = False
+        self.restart = False
+        self.seq_remain_s = 0
+        self.lack = False
+        self.no_reserve = False
+        self.ats_pumps: set[str] = set()  # отказавшие насосы, чьи запросы перешли к резервным (АВР)
+        self.underload: dict[str, bool] = {}
+        self.silence_req = False  # команда «Отключить звук» станции (как HS502)
+        self.lic_manual_out: float | None = None  # выход LIC101 в его ручном режиме, иначе None
 
     def _ai(self, tag: str) -> AnalogInput:
         dev = self.devs[tag]
@@ -173,8 +229,8 @@ class Station:
                     self._assist_t = 0.0
                 if n >= 2 and level <= p.assist_stop_m:
                     n = 1
-        if st.dry_run:
-            n = 0
+        if st.dry_run or self.mode == MODE_MANUAL:
+            n = 0  # «Ручной»: запросов станции нет, действуют только блокировки
         st.n_required = n
 
         # --- выбор насосов: АВР, чередование по моточасам, ограничение непрерывной работы -----------
@@ -182,6 +238,8 @@ class Station:
         self._requested = [q for q in self._requested if self._usable(q)]
         if failed and n > 0:
             st.transfers += len(failed)  # АВР: запрос отказавшего насоса переходит к следующему
+            self.ats_pumps.update(q.tag for q in failed)
+        self.ats_pumps = {name for name in self.ats_pumps if self.devs[name].fault}
         if self._rotating is not None and self._rotating not in self._requested:
             self._rotating = None
         keep = n + (1 if self._rotating is not None else 0)
@@ -224,14 +282,48 @@ class Station:
                     self._released += 1
                     self._release_t = None
 
+        # --- действующее управление (старшинство E_ControlAct флагмана) ----------------------------
+        self.restart = power and self._released < len(self.pumps)
+        self.seq_remain_s = (
+            max(0, math.ceil(p.restart_delay_s - (t - self._release_t)))
+            if self.restart and self._release_t is not None
+            else 0
+        )
+        self.step_fallback = self.method == METHOD_LEVEL_PID and any(q.comm_loss for q in self._requested)
+        if self.mode == MODE_MANUAL:
+            self.control_act = ACT_MANUAL
+        elif not power:
+            self.control_act = ACT_POWER_LOST
+        elif self.restart:
+            self.control_act = ACT_RESTART
+        elif st.dry_run:
+            self.control_act = ACT_DRY_RUN_STOP
+        elif st.degraded:
+            self.control_act = ACT_FLOAT
+        elif st.emergency:
+            self.control_act = ACT_EMERGENCY
+        elif self.method == METHOD_LEVEL_PID and not self.step_fallback:
+            self.control_act = ACT_LEVEL_PID
+        else:
+            self.control_act = ACT_STEPPED
+        in_auto = [q for q in self.pumps if self._usable(q) and q.mode == DeviceMode.AUTO]
+        self.no_reserve = len(in_auto) < len(self.pumps)
+        self.lack = len(in_auto) < n
+        self.level_m = level
+
         # --- задание скорости и запросы ----------------------------------------------------------
         if st.degraded or st.emergency:
             speed = 100.0
+        elif self.method == METHOD_STEPPED or self.step_fallback:
+            speed = p.step_speed_pct
+        elif self.lic_manual_out is not None:
+            speed = self.lic_manual_out  # LIC101 в «Ручном»: выход задаёт оператор
         else:
             span = max(1e-6, p.speed_hi_level_m - p.speed_lo_level_m)
             frac = min(1.0, max(0.0, (level - p.speed_lo_level_m) / span))
             lo = self.pumps[0].cfg.speed_min if self.pumps else 0.0
             speed = lo + (100.0 - lo) * frac
+        self.speed_sp = speed
         allowed = set(self._requested[: self._released])
         for pump in self.pumps:
             pump.auto_run = pump in allowed
@@ -248,6 +340,12 @@ class Station:
             roles.setdefault(q.tag, "unavailable")
         st.roles = roles
         st.requested = [q.tag for q in self._requested]
+
+        # --- недогрузка по току (тревоги KNS1.UL1…UL3): работа на высокой скорости с малым током ------
+        for idx, pump in enumerate(self.pumps):
+            cur = self.devs.get(f"IT1{idx + 1}1")
+            low = isinstance(cur, AnalogInput) and cur.valid and cur.value < p.underload_a
+            self.underload[pump.tag] = bool(pump.running and pump.speed_act >= p.underload_speed_pct and low)
 
         # --- давление: тревоги уставок подавлены, пока насосы стоят (API 21.1) ---------------------
         pt = self.devs.get("PT201")
@@ -277,9 +375,11 @@ class Station:
         }
         if unack_ids - self._prev_unack_ids:
             self.horn = True  # новая неквитированная тревога
-        if silence or not unack_ids:
+        if silence or self.silence_req or not unack_ids:
             self.horn = False
+        self.silence_req = False
         self._prev_unack_ids = unack_ids
+        self.any_unack = any(s.unack for d in devs for s in d.alarms.slots.values())
         self.lamp = any(s.unack or s.active for d in devs for s in d.alarms.slots.values())
         self.general_alarm = any(d.alarms.any_active(AlarmPriority.HIGH) for d in devs) or any(
             d.mode != DeviceMode.OUT_OF_SERVICE and d.fault for d in self.pumps

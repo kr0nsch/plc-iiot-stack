@@ -100,6 +100,9 @@ def traffic() -> tuple[list[Published], FakeClient, EmulatorApp]:
         command("P101", "Ack", "cmd-ack-000002", ts=1_600_000_000_000),  # просрочена
         command("P101", "Ack", "cmd-reset-0001"),  # повтор cmd_id
         command("P101", "Ack", "cmd-ack-000003", value=1),  # значение у импульсной команды
+        command("KNS1", "SetStepped", "cmd-kns-stepped1"),  # станция: GVL_Station.stStationCmd
+        command("LIC101", "SetManual", "cmd-lic-manual01"),  # регулятор уровня: stLIC101Cmd.stCommon
+        command("KNS1", "ExportLog", "cmd-kns-export01"),  # поле stStationCmd, но не в белом списке
     ]
     for topic, payload in deliveries:
         client.deliver(topic, payload)
@@ -163,7 +166,7 @@ def test_alarm_events_cover_reasons(
     assert {"P101.EXT", "LT101.FAIL", "P102.COM", "ZS404.ALM"} <= codes, codes
     # после рождения — текущее состояние каждой тревоги, затем каждое событие модели
     n_slots = sum(len(d.alarms.slots) for d in app.emu.devs.values())
-    assert n_slots == 75
+    assert n_slots == 88  # 75 тревог устройств и 13 тревог станции KNS1.*
     assert len(alarms) == n_slots + len(app.emu.events)
     snapshot = alarms[:n_slots]
     assert len({m.json["code"] for m in snapshot}) == n_slots
@@ -205,6 +208,10 @@ def test_command_acks(traffic: tuple[list[Published], FakeClient, EmulatorApp]) 
     assert acks["cmd-ack-000003:Ack"]["reason"] == "invalid_payload"
     assert acks["cmd-retained-1:Stop"]["reason"] == "retained"
     assert acks["cmd-mismatch-1:Ack"]["reason"] == "topic_mismatch"
+    assert acks["cmd-kns-stepped1:SetStepped"]["reason"] == "ok"
+    assert acks["cmd-kns-stepped1:SetStepped"]["cmd_result"] == "Accepted"
+    assert acks["cmd-lic-manual01:SetManual"]["reason"] == "ok"
+    assert acks["cmd-kns-export01:ExportLog"]["reason"] == "invalid_payload"  # имени нет в command.schema.json
     for a in acks.values():
         assert a["reason"] in ACK_REASONS
 
@@ -222,8 +229,8 @@ def test_birth_lwt_shutdown(traffic: tuple[list[Published], FakeClient, Emulator
 
 def test_diag_metrics_count_commands(traffic: tuple[list[Published], FakeClient, EmulatorApp]) -> None:
     published, _, app = traffic
-    assert app.diag.cmd_accepted == 2  # Reset принят устройством, SpeedSp записано
-    assert app.diag.cmd_rejected == 9
+    assert app.diag.cmd_accepted == 4  # Reset, SpeedSp, команды станции и LIC101
+    assert app.diag.cmd_rejected == 10
     last = {m.topic: m.json for m in published if "/PLC1/" in m.topic and "/status/" not in m.topic}
     assert set(last) >= {TOPICS.telemetry("PLC1", k) for k in ("uptime", "cmd_accepted", "cmd_rejected")}
 

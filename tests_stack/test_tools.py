@@ -12,6 +12,7 @@ import pytest
 
 import gen_config
 import make_env
+import send_command
 import stack_catalog as sc
 import stack_wait
 
@@ -25,6 +26,18 @@ def test_generated_files_are_marked() -> None:
     assert gen_config.GENERATED_BY in (sc.REPO / "telegraf" / "telegraf.d" / "opcua.conf").read_text(encoding="utf-8")
     for path in (sc.REPO / "grafana" / "dashboards").glob("*.json"):
         assert gen_config.GENERATED_BY in path.read_text(encoding="utf-8")
+
+
+def test_send_command_builds_schema_valid_commands() -> None:
+    """send_command.py: каждая команда белого списка — по command.schema.json и текущей версии схемы."""
+    for e in sc.load_whitelist():
+        value = 50.0 if e.value_type == "number" else None
+        body = send_command.build_command(e.command, value, "pytest@tools")
+        assert body["schema_version"] == sc.load_topics()["schema_version"]
+        assert send_command.schema_errors(body) == [], e
+        assert send_command.whitelisted(e.device, e.command)
+    assert send_command.schema_errors(send_command.build_command("SpeedSp", 140.0, "pytest@tools"))
+    assert not send_command.whitelisted("P101", "SetOos")
 
 
 def test_make_env_creates_and_extends(tmp_path: Path) -> None:

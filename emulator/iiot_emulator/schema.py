@@ -19,7 +19,7 @@ from functools import cache
 from importlib import resources
 from typing import Any
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
 SCHEMA_MAJOR = 1
 
 # E_AlarmState, E_AlarmEventReason, E_AlarmPriority, E_CmdResult → строки схемы
@@ -83,6 +83,11 @@ COMMANDS = (
     "AckReq",
     "ShelveReq",
     "UnshelveReq",
+    "SetStepped",
+    "SetLevelPid",
+    "AckAll",
+    "ResetAll",
+    "Silence",
 )
 VALUE_COMMANDS = frozenset({"SpeedSp", "SubstValue"})
 MASK_COMMANDS = frozenset({"AckReq", "ShelveReq", "UnshelveReq"})
@@ -114,6 +119,7 @@ class Metric:
     deadband: float | None
     eng_min: float | None
     eng_max: float | None
+    invert: bool = False  # значение метрики обратно сигналу ПЛК (0/1): реле K1 в норме под напряжением
 
 
 @dataclass(frozen=True)
@@ -187,6 +193,7 @@ def telemetry_catalog() -> tuple[Metric, ...]:
             deadband=_opt_float(r["deadband"]),
             eng_min=_opt_float(r["eng_min"]),
             eng_max=_opt_float(r["eng_max"]),
+            invert=r["invert"].strip() == "1",
         )
         for r in _csv_rows("telemetry_catalog.csv")
     )

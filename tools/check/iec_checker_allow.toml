@@ -7,7 +7,12 @@
 #   file   — шаблон fnmatch пути исходника (src/POUs/...) или имени собранного файла (FB_X.st);
 #            '*' захватывает и '/';
 #   match  — необязательно: регулярное выражение по тексту сообщения;
-#   reason — обязательно: почему находка допустима.
+#   reason — обязательно: почему находка допустима;
+#   checker — необязательно: "v0.4" (обязательная проверка, бинарник) или "nightly" (необязательное
+#            задание CI, Docker-образ, закреплённый по дайджесту в ci.yml). Запись с этим ключом
+#            применяется и проверяется на использование только при прогоне своей версией. Записей
+#            "nightly" пока нет: находки образа берутся из отчёта задания CI (Docker на машине
+#            разработки недоступен), их разбор — docs/STATIC_ANALYSIS.md.
 # ParserError и LexingError обосновать нельзя: их исправляют в коде или в понижении iec-checker.
 #
 # UnusedVariable. Ложные срабатывания iec_checker 0.4 (к переменной обращаются, но он этого не видит)
@@ -34,11 +39,6 @@ reason = "Наборы и методы-тесты — последователь
 
 [[allow]]
 id = "PLCOPEN-CP9"
-file = "src/POUs/Generated/*"
-reason = "FB_IiotKnsMap сгенерирован gen_plc_iiot.py из схемы данных: по строке на метрику, команду и устройство, без собственной логики; число операторов и ветвлений растёт с перечнем тегов, а не со сложностью"
-
-[[allow]]
-id = "PLCOPEN-CP9"
 file = "src/POUs/Json/*"
 reason = "Посимвольный разбор и сборка JSON: CASE по символу и по типу значения, проверки грамматики чисел и escape-последовательностей; ветвления — сама грамматика (docs/plc_mqtt.md, «Построение JSON»), iec_checker 0.4 считает их завышенно"
 
@@ -46,11 +46,6 @@ reason = "Посимвольный разбор и сборка JSON: CASE по 
 id = "PLCOPEN-CP9"
 file = "src/POUs/Iiot/*"
 reason = "Шлюз команд проверяет условия в порядке контракта (docs/data_schema.md, 5.1), диагностика — конечный автомат состояния связи, тревоги — правила переходов ISA-18.2; функции текстов — CASE по значениям перечислений схемы. Логика уже разделена на методы; iec_checker 0.4 считает сложность завышенно"
-
-[[allow]]
-id = "PLCOPEN-CP9"
-file = "src/POUs/PRG_Iiot/*"
-reason = "PRG_Iiot — последовательная обвязка ФБ и тегов флагмана (инициализация таблиц, часы, связь, телеметрия, тревоги, команды); ветвления — включение и выключение частей настройками GVL_Iiot"
 
 [[allow]]
 id = "PLCOPEN-L17"
@@ -83,11 +78,6 @@ reason = "Помощник тестов: EXIT при первом совпаде
 id = "UnusedVariable"
 file = "src/POUs/Iiot/FB_MqttClientNone/*.method.decl.st"
 reason = "Клиент без транспорта (нулевой объект I_MqttClient): сигнатуры методов заданы интерфейсом, параметры намеренно не используются — методы возвращают отказ «нет соединения»"
-
-[[allow]]
-id = "UnusedVariable"
-file = "src/POUs/KnsShim/*.decl.st"
-reason = "Заглушки ФБ флагмана без логики: входы с именами выходов настоящих ФБ пишут тесты, а читает PRG_Iiot снаружи (GVL_Devices.fb<TAG>.<имя>); внутри ФБ они не нужны"
 
 # --- UnusedVariable: ложные срабатывания iec_checker 0.4 (обращение есть) ---
 # iec_checker 0.4 не считает использованием: обращения из методов ФБ (сборка выносит методы в отдельные
@@ -135,7 +125,7 @@ reason = "Ложное срабатывание iec_checker 0.4: перемен�
 id = "UnusedVariable"
 file = "src/POUs/Iiot/F_IiotAlarmStateOf/*"
 match = ': (STWORDS)$'
-reason = "Ложное срабатывание iec_checker 0.4: к входу-структуре обращаются только через поля (stWords.wActive, stWords.xOutOfService)"
+reason = "Ложное срабатывание iec_checker 0.4: к входу-структуре обращаются только через поля (stWords.wActive, stWords.wSuppressed, stWords.xOutOfService)"
 
 [[allow]]
 id = "UnusedVariable"
@@ -150,12 +140,6 @@ match = '''(?x) :\s (
     UICOUNT | EERROR | UIERRORPOS | AFIELDS | UIPOS | UILEN | STOK | LRTOK | XTOKINTEGER
 )$'''
 reason = "Ложное срабатывание iec_checker 0.4: состояние разборщика (позиция, текущая лексема, поля, ошибка) читают и пишут только методы (Parse, Fail, MatchLiteral, FieldIsInteger, ...)"
-
-[[allow]]
-id = "UnusedVariable"
-file = "src/POUs/PRG_Iiot/*"
-match = ': (FBMAP|FBDIAG|FBTELEMETRY|FBALARMS|FBCOMMANDS|NS_PER_S)$'
-reason = "Ложное срабатывание iec_checker 0.4: экземпляры ФБ вызываются (fbDiag(...)) и читаются через выходы и методы (fbMap.FillPoints(...), fbDiag.xReady); константу NS_PER_S читает только метод FillNodePoints"
 
 [[allow]]
 id = "UnusedVariable"
@@ -177,15 +161,9 @@ reason = "Ложное срабатывание iec_checker 0.4: проверя�
 
 [[allow]]
 id = "UnusedVariable"
-file = "tests/POUs/FB_KnsShim_Test/*"
-match = ': (FBMAP)$'
-reason = "Ложное срабатывание iec_checker 0.4: проверяемый экземпляр в тестах — только вызовы методов (fbMap.FillPoints(...))"
-
-[[allow]]
-id = "UnusedVariable"
 file = "tests/POUs/FB_MqttAlarms_Test/*"
 match = ': (FBALM|FBCLIENT|AALARMTABLE)$'
-reason = "Ложное срабатывание iec_checker 0.4: проверяемый экземпляр и подменный клиент — вызовы экземпляра и методов (fbAlm(...), fbClient.ForceConnected()), таблица тревог заполняется по полям (aAlarmTable[1].stCfg.uiId := ...)"
+reason = "Ложное срабатывание iec_checker 0.4: проверяемый экземпляр и подменный клиент — вызовы экземпляра и методов (fbAlm(...), fbClient.ForceConnected()), таблица тревог заполняется по полям (aAlarmTable[1].stCfg.udiId := ...)"
 
 [[allow]]
 id = "UnusedVariable"
@@ -221,6 +199,6 @@ id = "UnusedVariable"
 file = "tests/POUs/PRG_Tests/*"
 match = '''(?x) :\s (
     FBJSONBUILDERTEST | FBJSONFLATPARSERTEST | FBIIOTFUNCTIONSTEST | FBMQTTTELEMETRYTEST | FBMQTTALARMSTEST |
-    FBMQTTCOMMANDSTEST | FBMQTTDIAGTEST | FBKNSSHIMTEST
+    FBMQTTCOMMANDSTEST | FBMQTTDIAGTEST | FBIIOTMAPTEST
 )$'''
 reason = "Ложное срабатывание iec_checker 0.4: экземпляры наборов тестов опрашиваются только методом (fbX.AreAllTestsFinished()), выполняет наборы coUnit.RUN()"

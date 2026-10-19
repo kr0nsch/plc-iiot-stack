@@ -12,14 +12,15 @@ InfluxDB). С ``IIOT_STACK=1`` (``make test-stack``, CI) неподнятый с
 
 Проверки:
 - эмулятор: все метрики каталога (раздел 3.4 docs/data_schema.md) доходят до InfluxDB по MQTT с тегами
-  топика; тот же уровень LT101 — и по OPC UA (вход opcua Telegraf); узел PLC1 — online;
+  топика; тот же уровень LT101 и каждый узел OPC UA каталога (символы флагмана, станция KNS1 и LIC101) —
+  и по OPC UA (вход opcua Telegraf), K1/general_alarm по обоим путям одинаков; узел PLC1 — online;
 - пробная телеметрия по схеме доходит до measurement telemetry, другой мажорной версии — отбрасывается;
 - публикация телеметрии от пользователя-оператора отклоняется брокером (ACL);
 - обрыв связи узла: завещание (LWT) брокера — последнее состояние узла в базе offline;
 - команда попадает в журнал аудита (measurement command);
 - команда вне белого списка отклоняется (not_whitelisted) — ответ cmd_ack по MQTT, запись ответа в
   InfluxDB, счётчик PLC1/cmd_rejected вырос, режим устройства не изменился;
-- значение вне диапазона — out_of_range; разрешённая команда — accepted;
+- значение вне диапазона — out_of_range; разрешённая команда устройства и команда станции — accepted;
 - задача прореживания kns_downsample_1h (её текст как разовый запрос): mean — среднее, взвешенное по
   времени, min и max — по действовавшим значениям; сверка с расчётом по сырым точкам.
 """
@@ -275,6 +276,32 @@ def test_opcua_path_reaches_influxdb(db: Db, plc_online: str) -> None:
     assert wait_until(lambda: db.count(flux), timeout=30) > 0
 
 
+def test_opcua_path_covers_catalog_nodes(db: Db, plc_online: str) -> None:
+    """Каждый узел OPC UA каталога (символы флагмана, в том числе станция KNS1 и LIC101) доходит до базы;
+    K1/general_alarm по OPC UA (xK1 через инверсию Starlark) совпадает с путём MQTT."""
+    expected = {(m.device, m.metric) for m in sc.load_catalog() if m.plc_path}
+
+    def seen() -> set[tuple[str, str]]:
+        rows = db.rows(
+            f'from(bucket: "{db.bucket}") |> range(start: -2m)'
+            ' |> filter(fn: (r) => r._measurement == "telemetry" and r._field == "value" and r.source == "opcua")'
+            ' |> last() |> group() |> keep(columns: ["device", "metric", "_value"])'
+        )
+        return {(r["device"], r["metric"]) for r in rows}
+
+    wait_until(lambda: expected <= seen(), timeout=40)
+    missing = expected - seen()
+    assert not missing, f"нет по OPC UA: {sorted(missing)}"
+    rows = db.rows(
+        f'from(bucket: "{db.bucket}") |> range(start: -2m)'
+        ' |> filter(fn: (r) => r._measurement == "telemetry" and r._field == "value")'
+        ' |> filter(fn: (r) => r.device == "K1" and r.metric == "general_alarm") |> last()'
+        ' |> group() |> keep(columns: ["source", "_value"])'
+    )
+    by_source = {r["source"]: float(r["_value"]) for r in rows}
+    assert set(by_source) == {"mqtt", "opcua"} and by_source["mqtt"] == by_source["opcua"], by_source
+
+
 def test_node_birth_recorded(db: Db, plc_online: str) -> None:
     assert plc_online in ("emulator", "codesys")
 
@@ -418,6 +445,13 @@ def test_out_of_range_value_rejected(env: dict[str, str], db: Db, plc_online: st
 
 def test_whitelisted_command_accepted(env: dict[str, str], db: Db, plc_online: str) -> None:
     ack = send_command(env, "LT101", "Ack")
+    assert ack["result"] == "accepted" and ack["reason"] == "ok", ack
+    assert ack.get("cmd_result", "Accepted") == "Accepted"
+
+
+def test_station_command_accepted(env: dict[str, str], db: Db, plc_online: str) -> None:
+    """Команда станции (GVL_Station.stStationCmd флагмана): способ уже «ПИД уровня» — состояние не меняется."""
+    ack = send_command(env, "KNS1", "SetLevelPid")
     assert ack["result"] == "accepted" and ack["reason"] == "ok", ack
     assert ack.get("cmd_result", "Accepted") == "Accepted"
 

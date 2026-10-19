@@ -16,6 +16,15 @@ AssertTrue(Condition := F_IiotCmdFromString(sCommand := 'AckReq') = E_IiotComman
 AssertTrue(Condition := F_IiotCmdFromString(sCommand := 'ShelveReq') = E_IiotCommand.ShelveReq, Message := 'ShelveReq');
 AssertTrue(Condition := F_IiotCmdFromString(sCommand := 'UnshelveReq') = E_IiotCommand.UnshelveReq,
            Message := 'UnshelveReq');
+AssertTrue(Condition := F_IiotCmdFromString(sCommand := 'SetStepped') = E_IiotCommand.SetStepped,
+           Message := 'SetStepped');
+AssertTrue(Condition := F_IiotCmdFromString(sCommand := 'SetLevelPid') = E_IiotCommand.SetLevelPid,
+           Message := 'SetLevelPid');
+AssertTrue(Condition := F_IiotCmdFromString(sCommand := 'AckAll') = E_IiotCommand.AckAll, Message := 'AckAll');
+AssertTrue(Condition := F_IiotCmdFromString(sCommand := 'ResetAll') = E_IiotCommand.ResetAll, Message := 'ResetAll');
+AssertTrue(Condition := F_IiotCmdFromString(sCommand := 'Silence') = E_IiotCommand.Silence, Message := 'Silence');
+AssertTrue(Condition := F_IiotCmdKind(eCommand := E_IiotCommand.AckAll) = E_IiotCmdKind.Pulse,
+           Message := 'station command is a pulse');
 AssertTrue(Condition := F_IiotCmdFromString(sCommand := 'start') = E_IiotCommand.None, Message := 'case sensitive');
 AssertTrue(Condition := F_IiotCmdFromString(sCommand := 'Explode') = E_IiotCommand.None, Message := 'unknown');
 AssertTrue(Condition := F_IiotCmdKind(eCommand := E_IiotCommand.SpeedSp) = E_IiotCmdKind.Value,
