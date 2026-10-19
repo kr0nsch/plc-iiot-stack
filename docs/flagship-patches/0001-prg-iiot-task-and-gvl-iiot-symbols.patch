@@ -1,0 +1,36 @@
+diff --git a/tools/codesys/config.json b/tools/codesys/config.json
+index 6d3a814..17e202a 100644
+--- a/tools/codesys/config.json
++++ b/tools/codesys/config.json
+@@ -42,7 +42,7 @@
+     "normal": {
+       "tasks": [
+         {"name": "MainTask", "interval_ms": 20, "priority": 1, "watchdog": {"time_ms": 100, "sensitivity": 1},
+-         "pous": ["PRG_FieldIn", "PRG_DeviceList", "PRG_Station", "PRG_Devices", "PRG_FieldOut"]},
++         "pous": ["PRG_FieldIn", "PRG_DeviceList", "PRG_Station", "PRG_Devices", "PRG_Iiot", "PRG_FieldOut"]},
+         {"name": "PlantModelTask", "interval_ms": 20, "priority": 2, "pous": ["PRG_PlantModel"]},
+         {"name": "SlowTask", "interval_ms": 200, "priority": 20, "pous": ["PRG_Slow"]}
+       ],
+@@ -116,7 +116,7 @@
+     "author": "kr0nsch",
+     "description": "КНС-1: логика станции, полевой слой, журнал событий и тревог, модель объекта с ускорением времени (объекты приложения без программ задач)",
+     "released": false,
+-    "exclude": ["PRG_FieldIn", "PRG_DeviceList", "PRG_Station", "PRG_Devices", "PRG_FieldOut", "PRG_ApplyProjectCfg",
++    "exclude": ["PRG_FieldIn", "PRG_DeviceList", "PRG_Station", "PRG_Devices", "PRG_Iiot", "PRG_FieldOut", "PRG_ApplyProjectCfg",
+                 "PRG_PlantModel", "PRG_Slow"],
+     "libraries": ["standard", "plc-process-lib"],
+     "path": {"env": "CDS_LIBRARY", "default": "build/{name}.library"},
+diff --git a/tools_project/codesys/symbol_rules.json b/tools_project/codesys/symbol_rules.json
+index 96c9013..6e1673f 100644
+--- a/tools_project/codesys/symbol_rules.json
++++ b/tools_project/codesys/symbol_rules.json
+@@ -21,7 +21,8 @@
+     {"gvl": "GVL_Persist", "vars": ["st*Cfg", "st*Retain"], "access": {"sim": "ReadWrite", "site": "Read"}},
+     {"gvl": "GVL_Sim", "vars": ["stSimCmd", "stFaultInj", "stSimCfg"], "access": {"sim": "ReadWrite"}},
+     {"gvl": "GVL_Sim", "vars": ["xSimulation", "xSimulationReq", "stSimSts", "xIoReady"], "access": "Read"},
+-    {"gvl": "GVL_Time", "vars": ["lrMainNow_s"], "access": "Read"}
++    {"gvl": "GVL_Time", "vars": ["lrMainNow_s"], "access": "Read"},
++    {"gvl": "GVL_Iiot", "vars": ["stIiotCfg", "stIiotSts"], "access": "Read"}
+   ],
+   "types": [
+     {"type": "ST_EventView", "members": [["uiPage", "ReadWrite"], ["*", "Read"]]},

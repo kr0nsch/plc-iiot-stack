@@ -1,6 +1,6 @@
 # Статический анализ
 
-Находки `iec_checker` по `build/assembled/` (и `st_lint` по `src/`, `tests/`, `flagship/src/`,
+Находки `iec_checker` по `build/assembled/` (и `st_lint` по `src/`, `tests/`, `flagship/src/`, `flagship/tests/`,
 `adapters/sd_mqtt_1_0/src/`), которые не исправлены в коде, — с обоснованием. Исправленные находки сюда не пишутся (кроме списка «исправлено по
 итогам прогона»). Здесь же — итог проверки компиляции RuSTy.
 
@@ -8,7 +8,7 @@
 
 | Инструмент | Где | Вход | Отчёт |
 |---|---|---|---|
-| `tools/check/st_lint.py --strict` | локально и в CI | `src/`, `tests/`, привязка `flagship/src/`, адаптер `adapters/sd_mqtt_1_0/src/` (`st_lint.toml`, `paths`) | вывод в консоль, код выхода ≠ 0 при нарушениях |
+| `tools/check/st_lint.py --strict` | локально и в CI | `src/`, `tests/`, привязка `flagship/src/` и её тесты `flagship/tests/`, адаптер `adapters/sd_mqtt_1_0/src/` (`st_lint.toml`, `paths`) | вывод в консоль, код выхода ≠ 0 при нарушениях |
 | `tools/check/run_iec_checker.py --tests` | локально и в CI (обязательно): бинарник iec_checker v0.4 из релизов github.com/jubnzv/iec-checker | `build/assembled/iec-checker/` (вариант сборки `iec-checker`, `src/` и `tests/`) | `build/iec_checker.json`, `build/iec_checker.md` |
 | то же с `--docker` | CI, необязательное задание: образ `jubnzv1/iec-checker:nightly`, закреплённый по дайджесту в `ci.yml` | то же | то же, артефакт `iec-checker-nightly-reports` |
 | `tools/check/run_rusty.py` | локально и в CI (необязательное задание): RuSTy `plc --check` | `build/assembled/rusty/` (вариант сборки `rusty`, `src/` и `tests/`) | `build/rusty.log`, `build/rusty.json` |
@@ -17,9 +17,10 @@
 должно использоваться (интеграционный тест шаблона `test_integration_repository_sources`), кроме записей
 с ключом `checker = "nightly"` — они только для образа nightly (в этом проекте их пока нет).
 
-iec_checker и RuSTy проверяют только `src/` и `tests/`: привязка к флагману (`flagship/src/`) ссылается
-на типы `PL.*` и глобальные списки флагмана, которых здесь нет. Её пути и типы проверяет
-`tests_stack/test_flagship_binding.py` по снимку интерфейса флагмана, компиляцию — сборка во флагмане.
+iec_checker и RuSTy проверяют только `src/` и `tests/`: привязка к флагману (`flagship/src/`, тесты
+`flagship/tests/`) ссылается на типы `PL.*` и глобальные списки флагмана, которых здесь нет. Её пути и типы
+проверяет `tests_stack/test_flagship_binding.py` по снимку интерфейса флагмана, компиляцию — сборка во
+флагмане (19.10.2026: 0 ошибок, 0 предупреждений, [TEST_REPORT.md](TEST_REPORT.md#встраивание-во-флагман-и-стенд-против-его-рантайма)).
 
 ### Понижение для iec_checker
 
@@ -66,7 +67,10 @@ iec_checker и RuSTy проверяют только `src/` и `tests/`: при�
 | 2026-10-19 | `st_lint --strict` (после привязки к флагману) | `src/`, `tests/`, `flagship/src/`, `adapters/sd_mqtt_1_0/src/` (496 файлов) | 0 ошибок, 0 предупреждений |
 | 2026-10-19 | `run_iec_checker.py --tests` (iec_checker 0.4, Windows) | 70 объектов `src/` и `tests/` (заглушки `KnsShim`, `PRG_Iiot` и `FB_IiotKnsMap` здесь больше не анализируются) | пройдено: необоснованных 0, ошибок разбора 0, неиспользованных обоснований 0; обоснованных 1177: CP3 — 634, CP9 — 187, L17 — 182, UnusedVariable — 168 (159 — ложные, с обращением), L10 — 6; артефактов сборки 259 |
 | 2026-10-19 | `run_rusty.py` (RuSTy 1.0.6, Windows) | 71 файл `build/assembled/rusty/` | 293 ошибки в 13 файлах, 15 предупреждений — те же расширения CODESYS; ошибок от изменений привязки нет (раздел «RuSTy») |
-| — | CODESYS 3.5.17.30 после привязки к флагману | — | не запускался: рантайм занят прогоном ПМИ флагмана |
+| 2026-10-19 | CODESYS 3.5.17.30, `cds.py test` (после привязки к флагману) | `src/` и `tests/` | сборка тестового приложения: 0 ошибок, 0 предупреждений |
+| 2026-10-19 | CODESYS 3.5.17.30 во флагмане (`flagship_embed.py`, `cds.py build`, `cds.py test`) | ядро, `flagship/src/`, `flagship/tests/` вместе с флагманом `58fc169` | приложение и тестовое приложение: 0 ошибок, 0 предупреждений |
+| 2026-10-19 | `st_lint --strict` (с `flagship/tests/`) | `src/`, `tests/`, `flagship/src/`, `flagship/tests/`, `adapters/sd_mqtt_1_0/src/` (510 файлов) | 0 ошибок, 0 предупреждений |
+| 2026-10-19 | `run_iec_checker.py --tests` (iec_checker 0.4, Windows), повторно | 70 объектов `src/` и `tests/` | пройдено: необоснованных 0, ошибок разбора 0, обоснованных 1177 |
 | — | `run_iec_checker.py --tests` (CI, Linux) | 94 объекта `src/` и `tests/` | _перенести из отчёта CI_ |
 | — | iec_checker `nightly` (CI, необязательно) | то же | _перенести из отчёта CI_ |
 

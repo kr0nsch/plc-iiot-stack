@@ -9,7 +9,7 @@
 <p align="center">
   <a href="https://github.com/kr0nsch/plc-iiot-stack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/kr0nsch/plc-iiot-stack/actions/workflows/ci.yml/badge.svg"></a> <a href="LICENSE"><img alt="Лицензия MIT" src="https://img.shields.io/badge/license-MIT-56677D?style=flat-square&labelColor=1B2736"></a>
   <img alt="CODESYS 3.5.17.30" src="https://img.shields.io/badge/CODESYS-3.5.17.30-C2410C?style=flat-square&labelColor=1B2736"> <img alt="IEC 61131-3" src="https://img.shields.io/badge/IEC%2061131--3-56677D?style=flat-square"> <img alt="Язык: Structured Text" src="https://img.shields.io/badge/Structured%20Text-3A4B60?style=flat-square"> <img alt="Язык: Python" src="https://img.shields.io/badge/Python-3A4B60?style=flat-square&logo=python&logoColor=white">
-  <a href="#тесты-и-качество"><img alt="Тесты локального прогона 19.10.2026: pytest 849, эмулятор 101, интеграционные тесты стенда 14 из 14" src="https://img.shields.io/badge/tests-pytest%20849%20%C2%B7%20emulator%20101%20%C2%B7%20stack%2014%2F14-3A4B60?style=flat-square&labelColor=1B2736"></a>
+  <a href="#тесты-и-качество"><img alt="Тесты локального прогона 19.10.2026: pytest 864, coUnit во флагмане 423 из 423, интеграционные тесты стенда 15 из 15" src="https://img.shields.io/badge/tests-pytest%20864%20%C2%B7%20coUnit%20423%2F423%20%C2%B7%20stack%2015%2F15-3A4B60?style=flat-square&labelColor=1B2736"></a>
 </p>
 
 <p align="center"><a href="#что-это-и-зачем">Что это</a> · <a href="#как-это-выглядит">Как выглядит</a> · <a href="#быстрый-старт">Быстрый старт</a> · <a href="#как-использовать-в-своём-проекте">В своём проекте</a> · <a href="#как-устроено">Как устроено</a> · <a href="#документация">Документация</a> · <a href="#summary-en">Summary (EN)</a></p>
@@ -238,19 +238,22 @@ iec_checker и RuSTy в репозиторий не входят: iec_checker v0
 1. Один раз — рантайм в пользовательском процессе, без прав администратора:
    `python tools\codesys\cds.py runtime init`.
 2. `python tools\codesys\cds.py build --tests` — импорт `src/` и `tests/` в проект и сборка;
-   `python tools\codesys\cds.py test` — загрузка в Control Win и прогон coUnit. Прогон 16.10.2026, до
-   привязки к флагману: 0 ошибок, 0 предупреждений, 87 из 87; после привязки ядро в CODESYS не
-   собиралось (85 тестов, [TEST_REPORT.md](docs/TEST_REPORT.md)).
+   `python tools\codesys\cds.py test` — загрузка в Control Win и прогон coUnit. Прогон 19.10.2026:
+   0 ошибок, 0 предупреждений, 85 тестов из 85 ([TEST_REPORT.md](docs/TEST_REPORT.md)).
+3. Во флагмане: `python tools_project\flagship_embed.py --repo <рабочая копия kns-pump-station>` — ядро,
+   привязка, задача, символы и тесты; затем там `cds.py build` и `cds.py test` (19.10.2026 — 423 из 423,
+   [MANUAL_STEPS.md, раздел 11](docs/MANUAL_STEPS.md#11-встраивание-во-флагман)).
 
 ### С CODESYS: стенд против флагмана по OPC UA
 
 Флагман kns-pump-station в приложении имитации (`python tools_project/codesys/sim.py start` в его
-репозитории) отдаёт те же узлы OPC UA, что эмулятор. В `.env` стенда — `OPCUA_ENDPOINT` рантайма
+репозитории) отдаёт те же узлы OPC UA, что эмулятор. Стенду — `OPCUA_ENDPOINT` рантайма
 (`opc.tcp://host.docker.internal:4840` для docker compose, `opc.tcp://127.0.0.1:4840` без Docker),
-политика `Basic256Sha256` / `SignAndEncrypt` и вход по имени; стенд — без эмулятора (`make up` или
-`local_stack.ps1 start`); сертификат Telegraf — в доверенные рантайма; в Grafana — «Источник» = `opcua`.
+политика `Basic256Sha256` / `SignAndEncrypt` и вход по имени (в `.env` или в окружении запуска — оно важнее
+`.env`); стенд — без эмулятора (`make up` или `local_stack.ps1 start`); сертификат Telegraf — из карантина
+рантайма в доверенные; проверка — `python tools_project/opcua_live_check.py` и Grafana, «Источник» = `opcua`.
 Пошагово — [MANUAL_STEPS.md, раздел 12](docs/MANUAL_STEPS.md#12-стенд-против-флагмана-в-codesys-opc-ua).
-_С настоящим рантаймом флагмана стенд пока не соединялся._
+Проверено 19.10.2026 без Docker: 133 узла из 133 со статусом Good в InfluxDB.
 
 ## Как использовать в своём проекте
 
@@ -262,8 +265,9 @@ Telegraf, тексты тревог, дашборды и таблицы ПЛК. 
 
 **Сценарий 2 — публикация из ПЛК и команды по MQTT.** Ядро шлюза `src/` (ФБ MQTT, JSON, таблицы схемы)
 от объекта не зависит; привязку к своим переменным генерирует `tools_project/gen_plc_iiot.py` по колонке
-`plc_path` каталога и белого списка. Для флагмана это `flagship/src/` — шаги встраивания (константы,
-задача после `PRG_Devices`, клиент MQTT, символы) — [MANUAL_STEPS.md, раздел 11](docs/MANUAL_STEPS.md#11-встраивание-во-флагман).
+`plc_path` каталога и белого списка. Для флагмана это `flagship/src/`; встраивание (константы, задача после
+`PRG_Devices`, символы, тесты) — `tools_project/flagship_embed.py`, клиент MQTT — вручную
+([MANUAL_STEPS.md, раздел 11](docs/MANUAL_STEPS.md#11-встраивание-во-флагман)).
 
 **Пример: новая метрика — ошибка регулятора уровня LIC101.** Строка в `schema/telemetry_catalog.csv`
 после `LIC101;out;…`:
@@ -350,25 +354,31 @@ flowchart LR
 
 | Что проверяется | Сколько | Где |
 |---|---:|---|
-| контракт, генераторы, Telegraf, дашборды, compose, локальный стенд, точные JSON ПЛК против JSON Schema | 288 | pytest, `tests_stack/` (без поднятого стенда) |
-| привязка к флагману: пути, типы и права каталога, белого списка, тегов эмулятора, узлов Telegraf и ST по снимку символов | 27 | pytest, `tests_stack/test_flagship_binding.py` |
+| контракт, генераторы, Telegraf, дашборды, compose, локальный стенд, точные JSON ПЛК против JSON Schema | 295 | pytest, `tests_stack/` (без поднятого стенда) |
+| привязка к флагману: пути, типы и права каталога, белого списка, тегов эмулятора, узлов Telegraf и ST по снимку символов; встраивание во флагман | 27 + 8 | pytest, `tests_stack/test_flagship_binding.py`, `test_flagship_embed.py` |
 | инструменты из plc-repo-template | 534 | pytest, `tools/tests/` |
 | эмулятор: модель, шлюз команд, OPC UA и MQTT на 127.0.0.1, станция и LIC101, сообщения по схеме | 101 | pytest, `emulator/tests/` |
 | отчёт: агрегаты, CSV и XLSX, OPC UA, записанные данные эмулятора | 89 + 1 на стенде | pytest, `report/tests/` |
-| сквозной путь на поднятом стенде: 139 метрик по MQTT, 133 узла OPC UA, ACL, версия схемы, LWT, аудит и отказ команд, команда станции, агрегаты прореживания | 14 | pytest `-m stack`, `tests_stack/test_stack_integration.py` |
+| сквозной путь на поднятом стенде: 139 метрик по MQTT, 133 узла OPC UA со статусом Good, ACL, версия схемы, LWT, аудит и отказ команд, команда станции, агрегаты прореживания | 15 | pytest `-m stack`, `tests_stack/test_stack_integration.py` |
 | ядро ST: JSON, функции, телеметрия, тревоги, шлюз команд, диагностика, таблицы схемы | 85 тестов, 8 наборов | coUnit, `tests/` |
+| привязка во флагмане: метрики из настоящих переменных, инверсия K1, запись команд, счётчик команды станции, `PRG_Iiot` до ответа `accepted` | 5 тестов, 1 набор | coUnit, `flagship/tests/` (в тестовом приложении флагмана) |
 | линтер и статанализ ST | 0 необоснованных находок | `st_lint`, iec_checker 0.4 — [STATIC_ANALYSIS.md](docs/STATIC_ANALYSIS.md) |
 
 Что где выполнялось:
 
-- **Локально, Windows 11, 19.10.2026**: ruff, mypy, pytest (849 пройдено, 15 пропущено без стенда), эмулятор (101),
-  отчёт; локальный стенд без Docker с нуля — 14 интеграционных тестов из 14, 42 панели дашбордов без
+- **Локально, Windows 11, 19.10.2026**: ruff, mypy, pytest (864 пройдено, 16 пропущено без стенда), эмулятор (101),
+  отчёт; локальный стенд без Docker на эмуляторе — 15 интеграционных тестов из 15, 42 панели дашбордов без
   ошибок (38–39 с данными, остальные — пустые списки отклонений), тревога станции `KNS1.NOAUTO` дошла до InfluxDB с
   текстом; st_lint и iec_checker без необоснованных находок.
-- **CODESYS 3.5.17.30, CODESYS Control Win V3, 16.10.2026** — до привязки к флагману, с заглушкой:
-  сборка без ошибок и предупреждений, 87 тестов coUnit из 87. После привязки ядро в CODESYS не
-  собиралось, привязка `flagship/src/` здесь не компилируется — её проверит сборка во флагмане.
-- **Стенд против рантайма флагмана, ПЛК210** — не проверялись.
+- **CODESYS 3.5.17.30, CODESYS Control Win V3, 19.10.2026**: ядро здесь — сборка без ошибок и
+  предупреждений, 85 тестов coUnit из 85. Во флагмане kns-pump-station (`58fc169`) со встроенной ПЛК-частью —
+  сборка с `PRG_Iiot` в `MainTask` без ошибок и предупреждений, 423 теста coUnit из 423 (333 флагмана, 85 ядра,
+  5 привязки).
+- **Стенд против рантайма флагмана, 19.10.2026** (приложение имитации, без Docker): вход Basic256Sha256 по
+  имени, доверие сертификату Telegraf, пространство имён 4 и префикс `|var|CODESYS Control Win V3.`, 133
+  узла из 133 со статусом Good и типами по снимку (перечисления — Int16), инверсия K1, команды станции и
+  LIC101 по OPC UA (`uiCmdSeq` растёт, `eCmdResult` — Accepted) — [TEST_REPORT.md](docs/TEST_REPORT.md#встраивание-во-флагман-и-стенд-против-его-рантайма).
+- **Не проверялись**: обмен по MQTT из ПЛК, стенд в docker compose против рантайма, ПЛК210.
 - **CI GitHub Actions (Linux)**: проверки без CODESYS, эмулятор и отчёт, стенд docker compose с нуля
   (`make demo DEV=1`, `make test-stack`); необязательные — RuSTy и iec_checker nightly.
 
@@ -391,10 +401,11 @@ flowchart LR
 
 ## Ограничения и планы
 
-- Привязка к флагману сверена со снимком его символов, но в CODESYS не компилировалась, а стенд с
-  рантаймом флагмана не соединялся: это — первое, что делается при встраивании
-  ([MANUAL_STEPS.md, разделы 11–12](docs/MANUAL_STEPS.md#11-встраивание-во-флагман)). Изменения ядра
-  после прогона 16.10.2026 проверены RuSTy и iec_checker, но не в CODESYS.
+- Привязка к флагману собрана и проверена тестами coUnit в его рабочей копии, путь OPC UA — с его
+  рантаймом (19.10.2026); в сам репозиторий флагмана ПЛК-часть не встроена: нужны его правки
+  ([flagship-patches/](docs/flagship-patches/README.md)) и `flagship_embed.py`
+  ([MANUAL_STEPS.md, разделы 11–12](docs/MANUAL_STEPS.md#11-встраивание-во-флагман)). Сертификат клиента,
+  который создаёт Telegraf, действует год — доверие к нему на рантайме нужно обновлять.
 - Библиотека CODESYS-MQTT (1.0.0.0) на CODESYS 3.5.17.30 не собирается: нет её зависимостей. Логика MQTT
   проверена с подменным клиентом, адаптер с библиотекой не компилировался; без адаптера ПЛК-часть
   работает с клиентом без транспорта. Поэтому с флагманом сейчас работает только путь OPC UA.
@@ -409,8 +420,8 @@ flowchart LR
 - Стенд docker compose целиком проверяется в CI на Linux; локально тот же путь проверен на сборках для
   Windows (отличия — [ARCHITECTURE.md, раздел 10](docs/ARCHITECTURE.md#10-локальный-стенд-без-docker)).
 - Flux в InfluxDB 2 не развивается: переход на InfluxDB 3 потребует переписать запросы дашбордов и отчёта.
-- Дальше: встраивание во флагман и живой прогон OPC UA и MQTT, панели станции, клиент MQTT, который
-  собирается на 3.5.17.30.
+- Дальше: клиент MQTT, который собирается на 3.5.17.30, и живой обмен по MQTT с флагманом, встраивание в
+  репозиторий флагмана, панели станции.
 
 ## Связанные проекты
 
@@ -431,7 +442,9 @@ OPC UA and MQTT through Telegraf into InfluxDB 2 and three provisioned Grafana d
 operator commands travel back and are checked in the PLC against a whitelist with value ranges. Everything
 is generated from one data contract and bound to the real CODESYS 3.5.17.30 flagship project: a snapshot
 of its symbols verifies that each of the 133 OPC UA nodes, 86 whitelisted commands and 914 emulator tags
-is a real exported variable of the right type, and that writes go only to command structures. A Python
+is a real exported variable of the right type, and that writes go only to command structures. Embedded
+into the flagship, the PLC part builds cleanly and passes 423 of 423 coUnit tests there, and the Telegraf
+OPC UA path reads all 133 nodes from the flagship runtime with status Good. A Python
 PLC emulator serves the same nodes and topics, so `make demo` runs without a PLC. Includes a CODESYS ST
 gateway (telemetry, alarms, command gateway, link diagnostics), a daily CSV/XLSX report and a security
 guide. Docs are in Russian.
