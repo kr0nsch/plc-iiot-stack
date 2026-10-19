@@ -10,7 +10,7 @@
 //             Завещание (LWT) версия строит сама из ClientID (WillTopicBase, ClientWillTopic, ClientWillMessage
 //             до 30 символов): offline/lwt по data_schema 6 с ней не получить; флаг retain принятых сообщений
 //             не виден (проверка retained шлюза команд не срабатывает).
-// Автор:      <ИМЯ ФАМИЛИЯ>
+// Автор:      kr0nsch
 // Версия:     0.1.0
 // Документ:   docs/plc_mqtt.md, раздел «Адаптер I_MqttClient»
 FUNCTION_BLOCK FB_MqttClientSdMqtt IMPLEMENTS I_MqttClient

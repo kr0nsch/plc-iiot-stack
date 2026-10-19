@@ -1,6 +1,6 @@
 // Назначение: имя приоритета тревоги для поля priority (None — пусто: тревога не
 //             публикуется).
-// Автор:      <ИМЯ ФАМИЛИЯ>
+// Автор:      kr0nsch
 // Версия:     0.1.0
 // Документ:   docs/plc_mqtt.md, раздел «Тревоги»
 FUNCTION F_IiotAlarmPriorityText : STRING(GVL_Const.IIOT_TEXT_LEN)

@@ -1,6 +1,6 @@
 // Назначение: команда по имени поля command (с учётом регистра, enum command.schema.json);
 //             неизвестное имя — None.
-// Автор:      <ИМЯ ФАМИЛИЯ>
+// Автор:      kr0nsch
 // Версия:     0.1.0
 // Документ:   docs/plc_mqtt.md, раздел «Команды»
 FUNCTION F_IiotCmdFromString : E_IiotCommand

@@ -15,6 +15,10 @@
 # Скрипты PowerShell — CRLF и UTF-8 с BOM (для Windows PowerShell 5.1)
 *.ps1   text eol=crlf
 
+# GitHub Linguist не знает IEC 61131-3 Structured Text и относит .st к Smalltalk; в языковой
+# панели репозитория ST показывается как ближайший по синтаксису Pascal.
+*.st    linguist-language=Pascal
+
 # Двоичные файлы: без нормализации и текстового диффа.
 # Проекты и библиотеки CODESYS в git не хранятся (.gitignore), правила — на случай вложений к релизам.
 *.project         binary

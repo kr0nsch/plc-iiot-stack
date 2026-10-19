@@ -6,7 +6,7 @@
 //             GVL_Hmi и вызывает Arm(); дальше ФБ ждёт, пока устройство увеличит uiCmdSeq (ok или
 //             device_rejected по eCmdResult), иначе через tDeviceTimeout — timeout. Значения (SpeedSp) ФБ
 //             устройства не квитирует: ok — сразу после записи. Одна команда в обработке за раз.
-// Автор:      <ИМЯ ФАМИЛИЯ>
+// Автор:      kr0nsch
 // Версия:     0.1.0
 // Документ:   docs/plc_mqtt.md, раздел «Команды»
 FUNCTION_BLOCK FB_MqttCommands

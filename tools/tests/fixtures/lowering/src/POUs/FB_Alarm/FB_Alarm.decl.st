@@ -1,5 +1,5 @@
 // Назначение: пример для понижения iec-checker (tools/tests/test_assemble.py)
-// Автор:      <ИМЯ ФАМИЛИЯ>
+// Автор:      kr0nsch
 // Версия:     0.1.0
 // Документ:   docs/LAYOUT.md, раздел «Собранный текст build/assembled»; tools/README.md
 FUNCTION_BLOCK FB_Alarm IMPLEMENTS I_Alarm

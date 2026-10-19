@@ -1,6 +1,6 @@
 // Назначение: качество метрики по статусу NE 107 и достоверности устройства (data_schema 3.2):
 //             F — bad; S, C — uncertain; Good, M — good при достоверном значении, иначе bad.
-// Автор:      <ИМЯ ФАМИЛИЯ>
+// Автор:      kr0nsch
 // Версия:     0.1.0
 // Документ:   docs/plc_mqtt.md, раздел «Телеметрия»
 FUNCTION F_IiotQuality : E_IiotQuality

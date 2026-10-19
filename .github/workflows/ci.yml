@@ -151,9 +151,13 @@ jobs:
             echo "| iec_checker $IEC_CHECKER_VERSION | $(status "$R_IEC_CHECKER") |"
             echo ""
             echo "Отчёты — в артефакте \`build-reports\`. Находки iec_checker разбираются в \`docs/STATIC_ANALYSIS.md\`."
+            # Без раздела обоснованных находок: он может превысить предел сводки GitHub (1024k), и тогда
+            # GitHub отбрасывает сводку шага целиком; полный отчёт — в артефакте
             if [ -f build/iec_checker.md ]; then
               echo ""
-              cat build/iec_checker.md
+              awk '/^## /{skip = /^## Обоснованные находки/} !skip' build/iec_checker.md
+              echo ""
+              echo "Список обоснованных находок — в \`iec_checker.md\` артефакта \`build-reports\`."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -343,8 +347,12 @@ jobs:
             echo ""
             echo "Образ: \`$IEC_CHECKER_IMAGE\`. Итог: ${R_NIGHTLY:-нет данных}."
             echo ""
+            # Без раздела обоснованных находок: он может превысить предел сводки GitHub (1024k), и тогда
+            # GitHub отбрасывает сводку шага целиком; полный отчёт — в артефакте
             if [ -f build/iec_checker.md ]; then
-              cat build/iec_checker.md
+              awk '/^## /{skip = /^## Обоснованные находки/} !skip' build/iec_checker.md
+              echo ""
+              echo "Список обоснованных находок — в \`iec_checker.md\` артефакта \`iec-checker-nightly-reports\`."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 

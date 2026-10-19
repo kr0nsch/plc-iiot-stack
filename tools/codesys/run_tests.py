@@ -6,7 +6,7 @@
 глобальную блокировку рантайма и при необходимости запускает пользовательский процесс
 рантайма (cds.py runtime start).
 
-Шаг test (последовательность проверена на 3.5.17.30, _research/VERIFIED_codesys_env.md):
+Шаг test (последовательность проверена прогоном на CODESYS 3.5.17.30 и Control Win V3):
 1. шлюз: online.gateways, при отсутствии — add_new_gateway("Gateway-1", localhost:1217);
    адрес устройства: dev.set_gateway_and_ip_address(gateway, "127.0.0.1", 11740);
 2. учётные данные — из файла job["credentials"] (вне git, значения не пишутся в журнал);

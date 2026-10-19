@@ -4,7 +4,7 @@
 Запросы панелей выполняет сама Grafana (HTTP API ``POST /api/ds/query``) с источником
 ``influx-kns`` и диапазоном времени дашборда; переменные дашборда (``${source}``,
 ``${priority:regex}``, ``${tz}``) подставляются значениями по умолчанию — как при открытии.
-Автор: <ИМЯ ФАМИЛИЯ>. Версия: 1.0. Описание стенда — docs/ARCHITECTURE.md.
+Автор: kr0nsch. Версия: 1.0. Описание стенда — docs/ARCHITECTURE.md.
 
     python tools_project/check_dashboards.py                       # Grafana на 127.0.0.1:GRAFANA_PORT
     python tools_project/check_dashboards.py --json build/dashboards_check.json

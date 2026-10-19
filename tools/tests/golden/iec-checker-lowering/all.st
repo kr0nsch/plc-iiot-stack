@@ -31,7 +31,7 @@ END_METHOD
 END_INTERFACE
 
 // Назначение: пример для понижения iec-checker (tools/tests/test_assemble.py)
-// Автор:      <ИМЯ ФАМИЛИЯ>
+// Автор:      kr0nsch
 // Версия:     0.1.0
 // Документ:   docs/LAYOUT.md, раздел «Собранный текст build/assembled»; tools/README.md
 FUNCTION F_Noop : BOOL
@@ -43,7 +43,7 @@ END_VAR
 END_FUNCTION
 
 // Назначение: пример для понижения iec-checker (tools/tests/test_assemble.py)
-// Автор:      <ИМЯ ФАМИЛИЯ>
+// Автор:      kr0nsch
 // Версия:     0.1.0
 // Документ:   docs/LAYOUT.md, раздел «Собранный текст build/assembled»; tools/README.md
 FUNCTION_BLOCK FB_Alarm
@@ -81,7 +81,7 @@ FB_Alarm__Priority__get := Priority_;
 END_FUNCTION
 
 // Назначение: пример для понижения iec-checker (tools/tests/test_assemble.py)
-// Автор:      <ИМЯ ФАМИЛИЯ>
+// Автор:      kr0nsch
 // Версия:     0.1.0
 // Документ:   docs/LAYOUT.md, раздел «Собранный текст build/assembled»; tools/README.md
 FUNCTION_BLOCK FB_Slots
@@ -141,7 +141,7 @@ FB_Slots__Check := Check;
 END_FUNCTION
 
 // Назначение: пример для понижения iec-checker (tools/tests/test_assemble.py)
-// Автор:      <ИМЯ ФАМИЛИЯ>
+// Автор:      kr0nsch
 // Версия:     0.1.0
 // Документ:   docs/LAYOUT.md, раздел «Собранный текст build/assembled»; tools/README.md
 PROGRAM PRG_Idle

@@ -3,7 +3,7 @@
 //             REAL), true, false, null. Вложенные объекты и массивы, повторяющиеся ключи, лишние
 //             символы после объекта — отказ с причиной eError и позицией uiErrorPos.
 //             Порядок: Parse(sJson), затем GetString, GetNumber, FieldType по ключу.
-// Автор:      <ИМЯ ФАМИЛИЯ>
+// Автор:      kr0nsch
 // Версия:     0.1.0
 // Документ:   docs/plc_mqtt.md, раздел «Команды»
 FUNCTION_BLOCK FB_JsonFlatParser

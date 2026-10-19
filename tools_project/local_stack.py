@@ -3,7 +3,7 @@
 Назначение: шаги для ``tools_project/local_stack.ps1`` (install, start, stop, status) — запуск стенда
 на компьютере без Docker и без прав администратора: InfluxDB 2, Telegraf и Grafana — официальные
 сборки для Windows (zip), брокер MQTT — amqtt (Python, свой venv), эмулятор — ``emulator/``.
-Автор: <ИМЯ ФАМИЛИЯ>. Версия: 1.0. Отличия от docker compose — docs/ARCHITECTURE.md, раздел
+Автор: kr0nsch. Версия: 1.0. Отличия от docker compose — docs/ARCHITECTURE.md, раздел
 «Локальный стенд без Docker».
 
 Принцип: стенд не настраивается заново. Окружение сервиса берётся из ``docker-compose.yml`` с

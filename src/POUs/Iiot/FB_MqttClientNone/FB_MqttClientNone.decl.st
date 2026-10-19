@@ -2,7 +2,7 @@
 //             публикации и подписки не принимаются. Используется, пока в проект не добавлен адаптер
 //             библиотеки CODESYS-MQTT (docs/MANUAL_STEPS.md): логика и диагностика работают, FB_MqttDiag
 //             честно показывает отсутствие связи.
-// Автор:      <ИМЯ ФАМИЛИЯ>
+// Автор:      kr0nsch
 // Версия:     0.1.0
 // Документ:   docs/plc_mqtt.md, раздел «Адаптер I_MqttClient»
 FUNCTION_BLOCK FB_MqttClientNone IMPLEMENTS I_MqttClient

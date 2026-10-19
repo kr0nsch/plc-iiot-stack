@@ -86,7 +86,7 @@
     "version": {"env": "CDS_LIBRARY_VERSION", "default": "0.1.0.0"},
     "default_namespace": "TPL",
     "placeholder": null,
-    "author": "<ИМЯ ФАМИЛИЯ>",
+    "author": "kr0nsch",
     "description": "Шаблон ПЛК-репозитория портфолио: пример ФБ с режимами и диагностикой, функция F_Clamp",
     "released": false,
     "exclude": ["PRG_Main"],

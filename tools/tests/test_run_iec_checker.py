@@ -111,11 +111,16 @@ def test_load_allow(tmp_path: Path) -> None:
     path.write_text(ALLOW_SAMPLE, encoding="utf-8")
     rules = R.load_allow(str(path))
     assert [(r.id, r.file) for r in rules][:2] == [("PLCOPEN-CP3", "src/*"), ("PLCOPEN-CP3", "tests/*")]
+    assert all(r.checker == "" and r.applies_to("v0.4") and r.applies_to("nightly") for r in rules)
     assert R.load_allow(str(tmp_path / "none.toml")) == []
+    path.write_text('[[allow]]\nid = "PLCOPEN-CP17"\nfile = "*"\nreason = "r"\nchecker = "nightly"\n', encoding="utf-8")
+    [nightly] = R.load_allow(str(path))
+    assert nightly.checker == "nightly" and nightly.applies_to("nightly") and not nightly.applies_to("v0.4")
     for bad in (
         '[[allow]]\nid = "X"\nfile = "*"\n',
         '[[allow]]\nid = "X"\nfile = "*"\nreason = "  "\n',
         '[[allow]]\nid = "X"\nfile = "*"\nreason = "r"\nmatch = "("\n',
+        '[[allow]]\nid = "X"\nfile = "*"\nreason = "r"\nchecker = "v0.5"\n',
         "[[allow]\n",
     ):
         path.write_text(bad, encoding="utf-8")
@@ -202,6 +207,73 @@ def test_main_with_tests_and_docker(sample_copy: Path, monkeypatch: pytest.Monke
     monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/docker" if name == "docker" else None)
     assert R.main(["--root", str(sample_copy), "--tests", "--docker", "img:tag"]) == 0
     assert len(calls) == 17 and all(c[0] == "docker" and "img:tag" in c for c in calls)
+    report = json.loads((sample_copy / "build" / "iec_checker.json").read_text(encoding="utf-8"))
+    assert report["checker"] == "nightly"
+
+
+ALLOW_BY_CHECKER = """
+[[allow]]
+id = "UnusedVariable"
+file = "src/*"
+reason = "только v0.4"
+checker = "v0.4"
+
+[[allow]]
+id = "PLCOPEN-CP17"
+file = "src/*"
+reason = "только nightly"
+checker = "nightly"
+"""
+
+
+@pytest.mark.parametrize(
+    ("args", "checker", "allowed", "error"),
+    [
+        ([], "v0.4", "UnusedVariable", "PLCOPEN-CP17"),
+        (["--docker", "img:tag"], "nightly", "PLCOPEN-CP17", "UnusedVariable"),
+        (["--checker", "nightly"], "nightly", "PLCOPEN-CP17", "UnusedVariable"),
+        (["--docker", "img:tag", "--checker", "v0.4"], "v0.4", "UnusedVariable", "PLCOPEN-CP17"),
+    ],
+    ids=["binary", "docker", "explicit", "docker-v0.4"],
+)
+def test_main_checker_scopes_allow_rules(
+    sample_copy: Path, monkeypatch: pytest.MonkeyPatch, args: list[str], checker: str, allowed: str, error: str
+) -> None:
+    """Запись с ключом checker обосновывает находки и проверяется на использование только для своей версии."""
+    found = (
+        '[{"linenr":9,"column":10,"file":"","id":"UnusedVariable","msg":"variable: RVALUE"},'
+        '{"linenr":9,"column":10,"file":"","id":"PLCOPEN-CP17","msg":"Input parameter \'RVALUE\'"}]'
+    )
+    fake_checker(monkeypatch, {"F_Clamp.st": found})
+    monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/docker" if name == "docker" else None)
+    allow = sample_copy / "allow.toml"
+    allow.write_text(ALLOW_BY_CHECKER, encoding="utf-8")
+    assert R.main(["--root", str(sample_copy), "--allow", str(allow), *args]) == 1
+    report = json.loads((sample_copy / "build" / "iec_checker.json").read_text(encoding="utf-8"))
+    assert report["checker"] == checker
+    assert {f["id"]: f["status"] for f in report["findings"]} == {allowed: "allowed", error: "error"}
+    # запись другой версии не считается неиспользованной
+    assert report["unused_allow"] == []
+    assert f"для версии {checker}" in (sample_copy / "build" / "iec_checker.md").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    ("args", "found_id", "unused_id"),
+    [([], "PLCOPEN-CP17", "UnusedVariable"), (["--checker", "nightly"], "UnusedVariable", "PLCOPEN-CP17")],
+    ids=["v0.4", "nightly"],
+)
+def test_main_checker_scoped_rule_unused_for_own_version(
+    sample_copy: Path, monkeypatch: pytest.MonkeyPatch, args: list[str], found_id: str, unused_id: str
+) -> None:
+    """Запись своей версии, под которую не попала ни одна находка, отчёт показывает неиспользованной."""
+    found = f'[{{"linenr":9,"column":10,"file":"","id":"{found_id}","msg":"RVALUE"}}]'
+    fake_checker(monkeypatch, {"F_Clamp.st": found})
+    allow = sample_copy / "allow.toml"
+    allow.write_text(ALLOW_BY_CHECKER, encoding="utf-8")
+    assert R.main(["--root", str(sample_copy), "--allow", str(allow), *args]) == 1
+    report = json.loads((sample_copy / "build" / "iec_checker.json").read_text(encoding="utf-8"))
+    assert [f["status"] for f in report["findings"]] == ["error"]
+    assert [r["id"] for r in report["unused_allow"]] == [unused_id]
 
 
 def test_main_optional_and_errors(

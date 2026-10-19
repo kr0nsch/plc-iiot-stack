@@ -14,6 +14,8 @@
 
 Запуск: локальный бинарник (--binary, переменная IEC_CHECKER, PATH,
 ~/.local/plc-tools/iec-checker/) или Docker-образ (--docker jubnzv1/iec-checker:nightly).
+Версия разборщика (--checker): v0.4 для бинарника, nightly для Docker-образа. Запись обоснований
+с ключом checker применяется и проверяется на использование только для своей версии.
 Коды выхода: 0 — нет необоснованных находок, 1 — есть (или нет инструмента/ошибка
 сборки), 2 — неверные аргументы или файл обоснований.
 """
@@ -44,6 +46,8 @@ BINARY_NAMES = ("iec_checker", "iec_checker_Linux_x86_64", "iec_checker_Windows_
 KNOWN_DIR = os.path.join("~", ".local", "plc-tools", "iec-checker")
 PARSER_IDS = ("ParserError", "LexingError")
 DOCKER_WORKDIR = "/work"
+# версии разборщика: v0.4 — обязательная проверка (бинарник), nightly — необязательная (Docker-образ)
+CHECKERS = ("v0.4", "nightly")
 
 
 class ToolMissing(Exception):
@@ -60,7 +64,12 @@ class AllowRule:
     file: str
     reason: str
     match: str = ""
+    checker: str = ""
     used: int = 0
+
+    def applies_to(self, checker: str) -> bool:
+        """Запись без ключа checker — для любой версии разборщика."""
+        return not self.checker or self.checker == checker
 
     def matches(self, finding: Finding) -> bool:
         if not fnmatch.fnmatchcase(finding.id, self.id):
@@ -92,7 +101,7 @@ class Finding:
 
 
 def load_allow(path: str) -> list[AllowRule]:
-    """Файл обоснований: таблицы [[allow]] с ключами id, file, reason и необязательным match."""
+    """Файл обоснований: таблицы [[allow]] с ключами id, file, reason и необязательными match, checker."""
     if not os.path.isfile(path):
         return []
     try:
@@ -110,7 +119,10 @@ def load_allow(path: str) -> list[AllowRule]:
             re.compile(match)
         except re.error as exc:
             raise AllowError(f"{path}: запись №{number}: неверное регулярное выражение match: {exc}") from exc
-        rules.append(AllowRule(str(entry["id"]), str(entry["file"]), str(entry["reason"]).strip(), match))
+        checker = str(entry.get("checker", ""))
+        if checker and checker not in CHECKERS:
+            raise AllowError(f"{path}: запись №{number}: checker = {checker!r}, ожидается {' или '.join(CHECKERS)}")
+        rules.append(AllowRule(str(entry["id"]), str(entry["file"]), str(entry["reason"]).strip(), match, checker))
     return rules
 
 
@@ -219,12 +231,13 @@ def classify(findings: list[Finding], sourcemap: assemble.SourceMap, rules: list
             finding.status = "error"
 
 
-def markdown_report(findings: Sequence[Finding], rules: Sequence[AllowRule], tool: str) -> str:
+def markdown_report(findings: Sequence[Finding], rules: Sequence[AllowRule], tool: str, checker: str = "") -> str:
     counts = {s: sum(1 for f in findings if f.status == s) for s in ("error", "allowed", "artifact")}
+    version = f" (обоснования для версии {checker})" if checker else ""
     lines = [
         "# Отчёт iec_checker",
         "",
-        f"Инструмент: `{tool}`. Обоснования: `tools/check/iec_checker_allow.toml`, "
+        f"Инструмент: `{tool}`{version}. Обоснования: `tools/check/iec_checker_allow.toml`, "
         "разбор находок — `docs/STATIC_ANALYSIS.md`.",
         "",
         "| Статус | Число |",
@@ -261,6 +274,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--binary", help="путь к iec_checker")
     parser.add_argument("--docker", metavar="IMAGE", help="Docker-образ, например jubnzv1/iec-checker:nightly")
     parser.add_argument("--allow", default=DEFAULT_ALLOW, help="файл обоснований TOML")
+    parser.add_argument(
+        "--checker",
+        choices=CHECKERS,
+        help="версия разборщика для записей обоснований с ключом checker (по умолчанию nightly с --docker, иначе v0.4)",
+    )
     parser.add_argument("--strip-namespace", action="append", default=[], metavar="NS")
     parser.add_argument("--json", dest="json_out", help="отчёт JSON (по умолчанию build/iec_checker.json)")
     parser.add_argument("--md", dest="md_out", help="отчёт Markdown (по умолчанию build/iec_checker.md)")
@@ -285,8 +303,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         print(f"run_iec_checker: {exc}", file=sys.stderr)
         return 1
+    checker = args.checker or ("nightly" if args.docker else "v0.4")
     try:
-        rules = load_allow(args.allow)
+        rules = [rule for rule in load_allow(args.allow) if rule.applies_to(checker)]
     except AllowError as exc:
         print(f"run_iec_checker: {exc}", file=sys.stderr)
         return 2
@@ -319,6 +338,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     payload = {
         "version": 1,
         "tool": tool,
+        "checker": checker,
         "files": sorted(u.file_name for u in result.units),
         "findings": [asdict(f) for f in findings],
         "summary": summary,
@@ -328,7 +348,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         json.dump(payload, fh, ensure_ascii=False, indent=2)
         fh.write("\n")
     with open(md_path, "w", encoding="utf-8", newline="\n") as fh:
-        fh.write(markdown_report(findings, rules, tool))
+        fh.write(markdown_report(findings, rules, tool, checker))
     for finding in findings:
         if finding.status == "error":
             print(f"{finding.location()}: {finding.id}: {finding.msg} (собрано: {finding.file}:{finding.line})")
@@ -337,7 +357,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         if not rule.used and not rule.file.startswith(tuple(skipped)):
             print(f"run_iec_checker: предупреждение: обоснование {rule.id} / {rule.file} не использовано")
     print(
-        f"run_iec_checker: файлов {len(result.units)}; необоснованных {summary['error']}, "
+        f"run_iec_checker ({checker}): файлов {len(result.units)}; необоснованных {summary['error']}, "
         f"обоснованных {summary['allowed']}, артефактов сборки {summary['artifact']}; отчёт {md_path}"
     )
     return 1 if summary["error"] else 0

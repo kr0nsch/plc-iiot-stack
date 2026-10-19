@@ -40,6 +40,9 @@ files = ["tools", "tools_project", "tests_stack"]
 mypy_path = ["tools", "tools/codesys", "tools/check", "tools_project", "tests_stack"]
 strict = true
 warn_unreachable = true
+# cdshost управляет CODESYS и рантаймом только в Windows: mypy и в Linux-CI проверяет код как для
+# win32, иначе код после проверок `sys.platform != "win32"` считается недостижимым.
+platform = "win32"
 # Скрипты CODESYS (IronPython 2.7) используют глобальные объекты среды CODESYS (projects,
 # system, ...), mypy их не знает. stlayout.py проверяется: он типизирован комментариями.
 exclude = [
