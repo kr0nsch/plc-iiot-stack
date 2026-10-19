@@ -88,20 +88,17 @@ DI_NORMALLY_TRUE = frozenset({"ES301"})
 # =============================================================================================
 
 
-def render_opcua_conf(root: Path) -> str:
-    st = sc.station(root)
-    lines = [
-        f"# {GENERATED_BY} — не редактировать: правки в schema/telemetry_catalog.csv",
-        "#",
-        "# Вход OPC UA: Telegraf опрашивает OPC UA-сервер рантайма CODESYS (символьная конфигурация) или",
-        "# эмулятора и пишет те же метрики, что и путь MQTT: measurement telemetry, поле value, тег",
-        "# source=opcua. Узел: ns=${OPCUA_NAMESPACE};s=${OPCUA_ID_PREFIX}<plc_path из каталога>.",
-        "# Номер пространства имён и префикс (имя устройства рантайма) сверить по обзору сервера:",
-        "# у CODESYS Control Win V3 это 4 и «|var|CODESYS Control Win V3.», у ПЛК210 имя другое.",
-        "# Поле Quality (код статуса OPC UA) переименовывается в opcua_status (telegraf.conf).",
-        "",
+# Узлов в одном входе OPC UA. Telegraf регистрирует (RegisterNodes) и читает все узлы входа одним
+# запросом, а OPC UA-сервер CODESYS 3.5.17 принимает не больше 100 узлов в запросе (OperationLimits:
+# MaxNodesPerRead и MaxNodesPerRegisterNodes = 100; больше — StatusBadTooManyOperations, проверено на
+# рантайме флагмана 19.10.2026). Узлы каталога делятся на входы поровну, каждый не больше этого числа.
+OPCUA_MAX_NODES_PER_INPUT = 100
+
+
+def opcua_input_header(alias: str) -> list[str]:
+    return [
         "[[inputs.opcua]]",
-        '  alias = "opcua_plc"',
+        f'  alias = "{alias}"',
         '  name = "telemetry"',
         '  endpoint = "${OPCUA_ENDPOINT}"',
         '  connect_timeout = "10s"',
@@ -122,29 +119,58 @@ def render_opcua_conf(root: Path) -> str:
         '  startup_error_behavior = "retry"',
         "  ## Идентификатор узла дублирует теги device и metric",
         '  tagexclude = ["id"]',
-        "",
-        "  [inputs.opcua.tags]",
-        '    source = "opcua"',
-        "",
-        "  [[inputs.opcua.group]]",
-        '    name = "telemetry"',
-        '    namespace = "${OPCUA_NAMESPACE}"',
-        '    identifier_type = "s"',
-        f'    default_tags = {{ site = "{st["site"]}", area = "{st["area"]}", unit = "{st["unit"]}" }}',
     ]
-    inverted: list[tuple[str, str]] = []
-    for m in sc.load_catalog(root):
-        if not m.plc_path:
-            continue
-        if m.invert:
-            inverted.append((m.device, m.metric))
+
+
+def split_even(count: int, limit: int) -> list[int]:
+    """Размеры частей: ``count`` элементов поровну, каждая часть не больше ``limit``."""
+    parts = max(1, -(-count // limit))
+    base, extra = divmod(count, parts)
+    return [base + (1 if i < extra else 0) for i in range(parts)]
+
+
+def render_opcua_conf(root: Path) -> str:
+    st = sc.station(root)
+    metrics = [m for m in sc.load_catalog(root) if m.plc_path]
+    sizes = split_even(len(metrics), OPCUA_MAX_NODES_PER_INPUT)
+    lines = [
+        f"# {GENERATED_BY} — не редактировать: правки в schema/telemetry_catalog.csv",
+        "#",
+        "# Вход OPC UA: Telegraf опрашивает OPC UA-сервер рантайма CODESYS (символьная конфигурация) или",
+        "# эмулятора и пишет те же метрики, что и путь MQTT: measurement telemetry, поле value, тег",
+        "# source=opcua. Узел: ns=${OPCUA_NAMESPACE};s=${OPCUA_ID_PREFIX}<plc_path из каталога>.",
+        "# Номер пространства имён и префикс (имя устройства рантайма) сверить по обзору сервера:",
+        "# у CODESYS Control Win V3 это 4 и «|var|CODESYS Control Win V3.», у ПЛК210 имя другое.",
+        "# Поле Quality (код статуса OPC UA) переименовывается в opcua_status (telegraf.conf).",
+        f"# Узлов {len(metrics)}, входов {len(sizes)} ({' + '.join(map(str, sizes))}): Telegraf регистрирует и читает",
+        f"# все узлы входа одним запросом, а сервер CODESYS принимает не больше {OPCUA_MAX_NODES_PER_INPUT} узлов в",
+        "# запросе (MaxNodesPerRead, MaxNodesPerRegisterNodes). У каждого входа — свой сеанс OPC UA.",
+    ]
+    inverted = [(m.device, m.metric) for m in metrics if m.invert]
+    pos = 0
+    for part, size in enumerate(sizes, start=1):
         lines += [
             "",
-            "    [[inputs.opcua.group.nodes]]",
-            '      name = "value"',
-            f'      identifier = "${{OPCUA_ID_PREFIX}}{m.plc_path}"',
-            f'      default_tags = {{ device = "{m.device}", metric = "{m.metric}" }}',
+            *opcua_input_header(f"opcua_plc_{part}"),
+            "",
+            "  [inputs.opcua.tags]",
+            '    source = "opcua"',
+            "",
+            "  [[inputs.opcua.group]]",
+            '    name = "telemetry"',
+            '    namespace = "${OPCUA_NAMESPACE}"',
+            '    identifier_type = "s"',
+            f'    default_tags = {{ site = "{st["site"]}", area = "{st["area"]}", unit = "{st["unit"]}" }}',
         ]
+        for m in metrics[pos : pos + size]:
+            lines += [
+                "",
+                "    [[inputs.opcua.group.nodes]]",
+                '      name = "value"',
+                f'      identifier = "${{OPCUA_ID_PREFIX}}{m.plc_path}"',
+                f'      default_tags = {{ device = "{m.device}", metric = "{m.metric}" }}',
+            ]
+        pos += size
     if inverted:
         pairs = ", ".join(f'("{d}", "{n}")' for d, n in inverted)
         lines += [

@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 import yaml
 
+import gen_config
 import stack_catalog as sc
 from stack_model import TYPE_ALIASES, MeasurementModel, env_refs, load_influx_model
 
@@ -30,11 +31,11 @@ def conf() -> dict[str, Any]:
 
 
 @pytest.fixture(scope="module")
-def opcua() -> dict[str, Any]:
+def opcua_inputs() -> list[dict[str, Any]]:
     data: dict[str, Any] = tomllib.loads((TELEGRAF / "telegraf.d" / "opcua.conf").read_text(encoding="utf-8"))
     plugins: list[dict[str, Any]] = data["inputs"]["opcua"]
-    assert len(plugins) == 1
-    return plugins[0]
+    assert plugins
+    return plugins
 
 
 @pytest.fixture(scope="module")
@@ -107,33 +108,60 @@ def test_mqtt_inputs_accept_only_schema_major_1(conf: dict[str, Any]) -> None:
         assert inp["data_format"] == "json_v2"
 
 
-def test_opcua_input_matches_catalog(opcua: dict[str, Any], model: dict[str, MeasurementModel]) -> None:
+def test_opcua_input_matches_catalog(opcua_inputs: list[dict[str, Any]], model: dict[str, MeasurementModel]) -> None:
     meas = model["telemetry"]
-    assert opcua["name"] == "telemetry" and opcua["tags"] == {"source": "opcua"}
-    assert opcua["tagexclude"] == ["id"]
-    group = opcua["group"][0]
-    assert group["name"] == "telemetry"
-    assert set(group["default_tags"]) <= meas.tags
     st = sc.station()
-    assert group["default_tags"] == {"site": st["site"], "area": st["area"], "unit": st["unit"]}
     expected = {(m.device, m.metric): m.plc_path for m in sc.load_catalog() if m.plc_path}
     seen = {}
-    for node in group["nodes"]:
-        assert node["name"] in meas.fields
-        assert set(node["default_tags"]) == {"device", "metric"}
-        key = (node["default_tags"]["device"], node["default_tags"]["metric"])
-        seen[key] = node["identifier"].removeprefix("${OPCUA_ID_PREFIX}")
+    for opcua in opcua_inputs:
+        assert opcua["name"] == "telemetry" and opcua["tags"] == {"source": "opcua"}
+        assert opcua["tagexclude"] == ["id"]
+        (group,) = opcua["group"]
+        assert group["name"] == "telemetry"
+        assert set(group["default_tags"]) <= meas.tags
+        assert group["default_tags"] == {"site": st["site"], "area": st["area"], "unit": st["unit"]}
+        for node in group["nodes"]:
+            assert node["name"] in meas.fields
+            assert set(node["default_tags"]) == {"device", "metric"}
+            key = (node["default_tags"]["device"], node["default_tags"]["metric"])
+            assert key not in seen, key
+            seen[key] = node["identifier"].removeprefix("${OPCUA_ID_PREFIX}")
     assert seen == expected
 
 
-def test_opcua_client_certificate_is_persistent(opcua: dict[str, Any]) -> None:
+def test_opcua_inputs_fit_server_operation_limits(opcua_inputs: list[dict[str, Any]]) -> None:
+    """Telegraf регистрирует и читает узлы входа одним запросом; сервер CODESYS принимает до 100 узлов.
+
+    Один вход на все 133 узла каталога на рантайме флагмана получал StatusBadTooManyOperations на
+    RegisterNodes (MaxNodesPerRegisterNodes = 100). Входы — поровну, у каждого своё имя (alias).
+    """
+    sizes = [len(opcua["group"][0]["nodes"]) for opcua in opcua_inputs]
+    assert max(sizes) <= gen_config.OPCUA_MAX_NODES_PER_INPUT
+    assert max(sizes) - min(sizes) <= 1
+    assert len(opcua_inputs) == -(-sum(sizes) // gen_config.OPCUA_MAX_NODES_PER_INPUT)
+    aliases = [opcua["alias"] for opcua in opcua_inputs]
+    assert len(set(aliases)) == len(aliases)
+    keys = {k for opcua in opcua_inputs for k in opcua if k not in ("alias", "group")}
+    for key in keys:
+        assert len({json.dumps(opcua.get(key), sort_keys=True) for opcua in opcua_inputs}) == 1, key
+
+
+@pytest.mark.parametrize(
+    ("count", "sizes"), [(1, [1]), (100, [100]), (101, [51, 50]), (133, [67, 66]), (201, [67] * 3)]
+)
+def test_split_even(count: int, sizes: list[int]) -> None:
+    assert gen_config.split_even(count, 100) == sizes
+
+
+def test_opcua_client_certificate_is_persistent(opcua_inputs: list[dict[str, Any]]) -> None:
     """Сертификат клиента OPC UA: пути из окружения, по умолчанию — именованный том (не слой контейнера).
 
     Без путей Telegraf при защищённой политике создаёт новый самоподписанный сертификат при каждом старте,
     и сервер CODESYS пришлось бы заново доверять ему после каждого пересоздания контейнера.
     """
-    assert opcua["certificate"] == "${OPCUA_CERTIFICATE}"
-    assert opcua["private_key"] == "${OPCUA_PRIVATE_KEY}"
+    for opcua in opcua_inputs:
+        assert opcua["certificate"] == "${OPCUA_CERTIFICATE}"
+        assert opcua["private_key"] == "${OPCUA_PRIVATE_KEY}"
     compose = yaml.safe_load((sc.REPO / "docker-compose.yml").read_text(encoding="utf-8"))
     telegraf = compose["services"]["telegraf"]
     assert "telegraf-pki:/var/lib/telegraf/pki" in telegraf["volumes"]
