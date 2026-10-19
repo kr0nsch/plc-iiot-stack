@@ -51,6 +51,10 @@ RuSTy, `cds.py` для CODESYS 3.5.17.30) — из шаблона, пример 
 - CI `.github/workflows/ci.yml`: задания шаблона (ruff, mypy, pytest, сборка ST, st_lint, iec_checker,
   RuSTy), `packages` — mypy и pytest эмулятора и отчёта, `stack` — `make demo DEV=1` с нуля на Linux,
   `make test-stack` и отчёт по данным стенда (заменяет отдельный `stack.yml`).
+- Медиа README в `docs/media/`: баннеры для тёмной и светлой темы, social preview, GIF дашборда обзора
+  и снимки трёх дашбордов Grafana с локального стенда, GIF запуска стенда с интеграционными тестами и
+  прогона `cds.py test` в CODESYS 3.5.17.30 — всё с реальных прогонов; шапка README, раздел
+  «Демонстрация» и подвал со ссылками на репозитории портфолио.
 
 ### Changed
 
