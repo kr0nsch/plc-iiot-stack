@@ -48,7 +48,14 @@ case "${OPCUA_ENABLED:-true}" in
         ;;
 esac
 
+# Сброс прав до пользователя telegraf: в образах telegraf до 1.2x — su-exec, в новых (1.39) — setpriv
 if [ "$(id -u)" = 0 ]; then
-    exec su-exec telegraf "$@"
+    if command -v setpriv >/dev/null 2>&1; then
+        exec setpriv --reuid telegraf --regid telegraf --init-groups "$@"
+    fi
+    if command -v su-exec >/dev/null 2>&1; then
+        exec su-exec telegraf "$@"
+    fi
+    echo "telegraf: нет setpriv и su-exec — запуск от root" >&2
 fi
 exec "$@"

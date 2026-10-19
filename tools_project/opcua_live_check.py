@@ -216,6 +216,7 @@ def operation_limits(client: Any) -> dict[str, int]:
 def read_many(client: Any, node_ids: Sequence[str], max_nodes: int) -> list[Any]:
     """DataValue узлов пакетами не больше ``max_nodes`` (иначе сервер отвечает BadTooManyOperations)."""
     from asyncua import ua
+    from asyncua.ua.attribute_ids import AttributeIds
 
     out: list[Any] = []
     for part in chunks(node_ids, max_nodes):
@@ -223,7 +224,7 @@ def read_many(client: Any, node_ids: Sequence[str], max_nodes: int) -> list[Any]
         for nid in part:
             rv = ua.ReadValueId()
             rv.NodeId = ua.NodeId.from_string(nid)
-            rv.AttributeId = ua.AttributeIds.Value  # type: ignore[attr-defined]
+            rv.AttributeId = AttributeIds.Value
             params.NodesToRead.append(rv)
         out += client.tloop.post(client.aio_obj.uaclient.read(params))
     return out
