@@ -8,7 +8,7 @@
 # Штатный /entrypoint.sh образа не используется: он выдаёт бинарнику telegraf возможности
 # cap_net_raw и cap_net_bind_service (setcap) для входов ping и привилегированных портов. Стенду они
 # не нужны, а с no-new-privileges (docker-compose.yml) запуск бинарника с файловыми возможностями
-# ядро может запретить. Права понижаются до пользователя telegraf тем же su-exec, что и в образе.
+# ядро может запретить. Права понижаются до пользователя telegraf тем же средством, что и в образе (setpriv или su-exec).
 set -eu
 
 PKI_DIR=/var/lib/telegraf/pki
