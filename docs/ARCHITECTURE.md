@@ -16,7 +16,7 @@ flowchart LR
         kip["КИП и ПЧ<br/>LT101, PT201, FT202, P101–P103"]
     end
     subgraph plc["ПЛК или эмулятор"]
-        cds["CODESYS: plc-process-lib<br/>GVL_Devices, GVL_Hmi"]
+        cds["CODESYS: флагман kns-pump-station<br/>GVL_Devices, GVL_Hmi, GVL_Station"]
         emu["эмулятор (профиль demo)<br/>emulator/"]
         gw["шлюз MQTT<br/>белый список команд"]
         ua["OPC UA-сервер<br/>символьная конфигурация"]
@@ -209,9 +209,11 @@ CI (`.github/workflows/ci.yml`): задание `checks` — проверки б
 
 ## 9. Контур ST (CODESYS)
 
-Сторона ПЛК (публикация MQTT, белый список команд, диагностика связи) — тексты ST в `src/` и `tests/`
-по раскладке [LAYOUT.md](LAYOUT.md). Проверки без CODESYS (линтер, iec_checker, RuSTy) идут в CI,
-сборка и тесты CfUnit — в CODESYS 3.5.17.30 и Control Win V3 (`tools/codesys/cds.py`, подробно —
+Сторона ПЛК (публикация MQTT, белый список команд, диагностика связи) — тексты ST по раскладке
+[LAYOUT.md](LAYOUT.md): ядро шлюза в `src/` и `tests/` (от флагмана не зависит), привязка к переменным
+флагмана в `flagship/src/` (`PRG_Iiot`, сгенерированный `FB_IiotKnsMap`; собирается во флагмане,
+раздел 11). Проверки без CODESYS (линтер, iec_checker, RuSTy) идут в CI, сборка и тесты CfUnit ядра —
+в CODESYS 3.5.17.30 и Control Win V3 (`tools/codesys/cds.py`, подробно —
 [tools/README.md](../tools/README.md)).
 
 ## 10. Локальный стенд без Docker
@@ -257,3 +259,61 @@ powershell -ExecutionPolicy Bypass -File tools_project\local_stack.ps1 stop     
 На локальном стенде найдены и исправлены две ошибки, которые проявились бы и в compose: время точек
 `node_status` (завещание ложилось раньше рождения) и панели состояния насосов (полоса «-∞+» вместо
 состояний) — CHANGELOG.md, раздел Fixed.
+
+Повторная проверка 19.10.2026 после привязки к флагману (раздел 11), стенд с нуля
+(`stop -Clean`, `start -Emulator`): данные на дашбордах через 5 с; 14 интеграционных тестов пройдены,
+в том числе все 133 узла OPC UA каталога (станция KNS1 и регулятор LIC101 — тоже) и одинаковое
+значение `K1/general_alarm` по MQTT и OPC UA (инверсия `xK1` в Telegraf); команда станции
+`KNS1/SetLevelPid` — `accepted`; тревога станции `KNS1.NOAUTO` (номер 100009, суффикс из шести букв)
+дошла до InfluxDB с русским текстом; `check_dashboards.py` — 38–39 панелей с данными, остальные —
+пустые списки отклонений, ошибок нет; суточный отчёт по данным стенда построен.
+
+## 11. Привязка к флагману КНС-1
+
+Стенд читает и пишет переменные настоящего флагмана kns-pump-station — его сгенерированных списков
+(iolistgen 0.2.0), станции и регулятора уровня; типы — plc-process-lib 1.0.0. Раньше вместо флагмана
+была заглушка `KnsShim` (`src/*/KnsShim/`: копии типов библиотеки без пространства имён `PL`, ФБ-пустышки
+`FB_Shim*`, копии `GVL_Devices`, `GVL_Hmi`, `GVL_IO` по выводу iolistgen 0.1.0) — её нет.
+
+**Источник.** Снимок интерфейса флагмана — `python tools_project/flagship_snapshot.py` (читает
+`git show <rev>:<путь>`, рабочую копию флагмана не трогает) в `schema/source/`: теги и тревоги
+устройств iolistgen (`scada_tags.csv`, `scada_alarms.csv`), теги станции и LIC101 в том же формате
+(`station_tags.csv`), тревоги станции из `docs/05_alarm_list.csv` (`station_alarms.csv`), объявления
+глобальных списков, типы и правила символьной конфигурации OPC UA (`flagship_symbols.json`). Снимок снят
+с `main` флагмана, коммит `0fedf61` (2026-10-19; `0fedf619ee4b11e80f120d5fc486b0d619366824`); интерфейс тот же, что у `505ce14`
+(`flagship_snapshot.py --rev 505ce14 --check` — «снимок актуален»).
+
+| Что | Было (`KnsShim`) | Стало (флагман) | OPC UA |
+|---|---|---|---|
+| устройства | `GVL_Devices.fb<TAG>`: `FB_ShimMotorVfd`, `FB_ShimMotor`, `FB_ShimAnalogInput`, `FB_ShimDigitalInput` | `GVL_Devices.fb<TAG>`: `PL.FB_MotorVfd`, `PL.FB_Motor`, `PL.FB_AnalogInput`, `PL.FB_DigitalInput` | чтение |
+| слова тревог устройства | `wAlmShelved` — отложены, подавлены и выведены вместе | `wAlmShelved` — отложены оператором, `wAlmSuppressed` — подавлены логикой (plc-process-lib 1.0), вывод из работы — по `eMode` | чтение |
+| команды устройствам | `GVL_Hmi.st<TAG>Cmd`: копии `ST_*Cmd` | `GVL_Hmi.st<TAG>Cmd`: `PL.ST_*Cmd` (те же поля) | запись |
+| сигналы без ФБ | `GVL_IO` iolistgen 0.1.0 | `GVL_IO` iolistgen 0.2.0 (пути те же); `xK1` в норме `TRUE` | чтение |
+| станция | — | `GVL_Station.stStationSts` (13 метрик `KNS1/*`), команды `GVL_Station.stStationCmd` (7 команд) | чтение / запись |
+| регулятор уровня | — | `GVL_Station.fbLIC101.stSts` (5 метрик `LIC101/*`), команды `stLIC101Cmd.stCommon` (Auto/Manual) | чтение / запись |
+| тревоги станции | — | 13 тревог `KNS1.*` (100001…100013) по словам `stStationSts.wAlm*`, бит `slot − 1` | чтение |
+| коды библиотеки | свои копии в `GVL_Const`: `MOT_FLT_COMM`, `MOT_WRN_COMM`, `DEV_MODE_OOS` | `PL.GVL_Const.MOT_FLT_COMM_LOSS`, `MOT_WRN_COMM_LOSS`, `PL.E_DeviceMode.OutOfService` | — |
+| ST привязки | `src/POUs/PRG_Iiot`, `src/POUs/Generated/FB_IiotKnsMap` (собирались с заглушкой) | `flagship/src/POUs/Iiot/PRG_Iiot`, `.../FB_IiotKnsMap` (собираются во флагмане) | — |
+
+Счёт: метрик каталога 121 → 139 (узлов OPC UA Telegraf 115 → 133), строк белого списка 77 → 86, тревог
+75 → 88, узлов OPC UA эмулятора 814 → 914. Схема данных — 1.1 ([data_schema.md, раздел 8](data_schema.md#8-версионирование)).
+
+**Права.** SCADA и шлюз MQTT пишут только команды и задания: `GVL_Hmi.st<TAG>Cmd`,
+`GVL_Station.stStationCmd`, `stLIC101Cmd` — `ReadWrite` в обеих сборках флагмана (`sim`, `site`); всё
+остальное, что читает стенд, — `Read`. Уставки станции (`GVL_Persist`) в сборке `site` закрыты от записи,
+и белый список их не содержит.
+
+**Эмулятор** повторяет те же узлы и права (`station_tags.csv` → `GVL_Station`) поверх своей модели
+станции: режим «Автомат»/«Ручной», способ «ступенчатое»/«ПИД уровня», действующее управление по
+старшинству флагмана, число насосов, ведущий, тревоги станции; реле K1 — под напряжением в норме. Модель
+упрощённая (ПИД изображается пропорциональным заданием частоты, нет тревог LDEV и SIM) —
+[ASSUMPTIONS.md](ASSUMPTIONS.md#привязка-к-флагману).
+
+**Проверки.** Без флагмана — `tests_stack/test_flagship_binding.py` по снимку: каждый путь каталога,
+белого списка, тегов эмулятора, узлов Telegraf и сгенерированного ST — переменная флагмана, которая
+выгружается в символы, с тем же типом; запись — только в структуры команд; ядро ST (`src/`, `tests/`) не
+ссылается на флагман. Живой стенд на эмуляторе — раздел 10. **С флагманом не проверялось** (рантайм
+занят прогоном ПМИ): компиляция привязки во флагмане, узлы OPC UA настоящего рантайма (пространство имён,
+префикс, политика и вход, доверие сертификату Telegraf), счётчик команд станции и регулятора, задание
+`SpeedSp` без квитирования ([MANUAL_STEPS.md, разделы 11 и 12](MANUAL_STEPS.md#11-встраивание-во-флагман)).
+

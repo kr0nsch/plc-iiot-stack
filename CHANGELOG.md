@@ -30,8 +30,9 @@ RuSTy, `cds.py` для CODESYS 3.5.17.30) — из шаблона, пример 
 - Сторона ПЛК (ST, CODESYS 3.5.17.30): `PRG_Iiot`, `FB_MqttTelemetry`, `FB_MqttAlarms`,
   `FB_MqttCommands`, `FB_MqttDiag`, `FB_JsonBuilder`, `FB_JsonFlatParser`, функции `F_Iiot*`,
   интерфейс `I_MqttClient`; таблицы метрик, команд и тревог генерируются из `schema/`
-  (`tools_project/gen_plc_iiot.py`); заглушка имён флагмана `KnsShim`; адаптер на CODESYS-MQTT 1.0.0.0
-  вне `src/` (`adapters/sd_mqtt_1_0/`). 87 тестов coUnit — зелёные в CODESYS Control Win V3.
+  (`tools_project/gen_plc_iiot.py`); адаптер на CODESYS-MQTT 1.0.0.0 вне `src/`
+  (`adapters/sd_mqtt_1_0/`). 87 тестов coUnit — зелёные в CODESYS Control Win V3 (16.10.2026, тогда
+  ещё с заглушкой флагмана).
 - Суточный отчёт `report/` (`kns-report`): InfluxDB (Flux) или OPC UA → CSV и XLSX.
 - [docs/security.md](docs/security.md): пользователи и права рантайма CODESYS, политики OPC UA и
   сертификаты, TLS и ACL MQTT, зоны и каналы в духе МЭК 62443, ссылка на требования ФСТЭК России
@@ -56,8 +57,31 @@ RuSTy, `cds.py` для CODESYS 3.5.17.30) — из шаблона, пример 
   читателя), GIF запуска стенда с интеграционными тестами и прогона `cds.py test` в CODESYS 3.5.17.30 —
   всё с реальных прогонов; шапка README, раздел «Демонстрация» и подвал со ссылками на репозитории
   портфолио.
+- Привязка к флагману kns-pump-station вместо заглушки: снимок его интерфейса
+  (`tools_project/flagship_snapshot.py` → `schema/source/`: теги и тревоги iolistgen 0.2.0, теги
+  станции и LIC101, тревоги станции, объявления списков, типы, правила символов OPC UA, коммит) и
+  проверка путей по нему (`tools_project/flagship_symbols.py`, `tests_stack/test_flagship_binding.py`).
+- Станция `KNS1` (13 метрик `GVL_Station.stStationSts`, 7 команд `stStationCmd`, 13 тревог `KNS1.*`) и
+  регулятор уровня `LIC101` (5 метрик, команды режима) — в каталоге, белом списке, узлах OPC UA Telegraf,
+  эмуляторе (`station_devices.py`: режим, способ, действующее управление, тревоги станции) и привязке ST.
+- `tools_project/send_command.py` — команда оператора по MQTT и ответ `cmd_ack` из командной строки.
+- [docs/USAGE.md](docs/USAGE.md): стенд на эмуляторе, Grafana, команды, подключение к флагману по OPC UA.
 
 ### Changed
+
+- **Схема данных 1.1** (MINOR): метрики и команды станции и LIC101, номер тревоги до 4294967295, суффикс
+  тревоги `[A-Z][A-Z0-9]{0,7}` (было `[A-Z]{1,4}`), колонка `invert` каталога; `K1/general_alarm` —
+  отрицание `GVL_IO.xK1` (во флагмане реле K1 в норме под напряжением): в ПЛК, эмуляторе и Telegraf
+  (`processors.starlark` для пути OPC UA).
+- ПЛК-часть разделена: ядро шлюза в `src/` собирается без флагмана, привязка `PRG_Iiot` и
+  `FB_IiotKnsMap` — в `flagship/src/` (собирается во флагмане); коды библиотеки — из
+  `PL.GVL_Const`; `ST_IiotAlarmCfg.udiId` (`UDINT`), `IIOT_SUFFIX_LEN` = 8, слово `wSuppressed` и
+  состояние `SuppressedByDesign` по старшинству plc-process-lib 1.0, команды станции в `E_IiotCommand`;
+  `PRG_Main` — служебная программа рабочей сборки. Изменения ядра в CODESYS ещё не прогонялись.
+- Теги и тревоги флагмана — вывод iolistgen 0.2.0 (`wAlmSuppressed`, `wAlmShelved` — только отложенные).
+- Публикация по образцу опубликованных репозиториев: `platform = "win32"` для mypy, Linguist для `*.st`,
+  ключ `checker` обоснований iec_checker (файлы инструментов — из шаблона), сводка CI без раздела
+  обоснованных находок, автор в лицензии и заголовках — kr0nsch.
 
 - Статанализ ST — `tools/check/run_iec_checker.py --tests` шаблона (локально, обязательное задание CI и
   необязательное `nightly`): после обновления `tools/` из plc-repo-template понижение варианта сборки
@@ -85,6 +109,11 @@ RuSTy, `cds.py` для CODESYS 3.5.17.30) — из шаблона, пример 
 - RuSTy (`run_rusty.py`, необязательно): 314 ошибок вместо 414 — `VAR_IN_OUT CONSTANT` (100 ошибок E034
   и E036) теперь заменяет вариант сборки `rusty` шаблона; оставшиеся — расширения CODESYS, которых нет в
   RuSTy и в прокладках шаблона.
+
+### Removed
+
+- Заглушка флагмана `KnsShim` (`src/DUTs/KnsShim`, `src/GVLs/KnsShim`, `src/POUs/KnsShim`) и набор
+  `FB_KnsShim_Test`; константы `DEV_MODE_OOS`, `MOT_FLT_COMM`, `MOT_WRN_COMM`.
 
 ### Fixed
 

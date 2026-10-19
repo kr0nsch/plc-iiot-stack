@@ -1,20 +1,25 @@
 # Статический анализ
 
-Находки `iec_checker` по `build/assembled/` (и `st_lint` по `src/`, `tests/`), которые не
-исправлены в коде, — с обоснованием. Исправленные находки сюда не пишутся (кроме списка «исправлено по
+Находки `iec_checker` по `build/assembled/` (и `st_lint` по `src/`, `tests/`, `flagship/src/`,
+`adapters/sd_mqtt_1_0/src/`), которые не исправлены в коде, — с обоснованием. Исправленные находки сюда не пишутся (кроме списка «исправлено по
 итогам прогона»). Здесь же — итог проверки компиляции RuSTy.
 
 ## Как запускается
 
 | Инструмент | Где | Вход | Отчёт |
 |---|---|---|---|
-| `tools/check/st_lint.py --strict` | локально и в CI | `src/`, `tests/` | вывод в консоль, код выхода ≠ 0 при нарушениях |
+| `tools/check/st_lint.py --strict` | локально и в CI | `src/`, `tests/`, привязка `flagship/src/`, адаптер `adapters/sd_mqtt_1_0/src/` (`st_lint.toml`, `paths`) | вывод в консоль, код выхода ≠ 0 при нарушениях |
 | `tools/check/run_iec_checker.py --tests` | локально и в CI (обязательно): бинарник iec_checker v0.4 из релизов github.com/jubnzv/iec-checker | `build/assembled/iec-checker/` (вариант сборки `iec-checker`, `src/` и `tests/`) | `build/iec_checker.json`, `build/iec_checker.md` |
 | то же с `--docker` | CI, необязательное задание: образ `jubnzv1/iec-checker:nightly`, закреплённый по дайджесту в `ci.yml` | то же | то же, артефакт `iec-checker-nightly-reports` |
 | `tools/check/run_rusty.py` | локально и в CI (необязательное задание): RuSTy `plc --check` | `build/assembled/rusty/` (вариант сборки `rusty`, `src/` и `tests/`) | `build/rusty.log`, `build/rusty.json` |
 
 Обоснования находок iec_checker — `tools/check/iec_checker_allow.toml`; с `--tests` каждое обоснование
-должно использоваться (интеграционный тест шаблона `test_integration_repository_sources`).
+должно использоваться (интеграционный тест шаблона `test_integration_repository_sources`), кроме записей
+с ключом `checker = "nightly"` — они только для образа nightly (в этом проекте их пока нет).
+
+iec_checker и RuSTy проверяют только `src/` и `tests/`: привязка к флагману (`flagship/src/`) ссылается
+на типы `PL.*` и глобальные списки флагмана, которых здесь нет. Её пути и типы проверяет
+`tests_stack/test_flagship_binding.py` по снимку интерфейса флагмана, компиляцию — сборка во флагмане.
 
 ### Понижение для iec_checker
 
@@ -35,9 +40,9 @@
 - **OutOfBounds при обращении `a[i].x` не выдаётся**: понижение делает его `a.x[i]`, обращение уже не к
   элементу. Обёртка давала здесь 350 находок «index N is out of range [0 .. 0]» в `FB_IiotKnsMap`
   (артефакт замены `ARRAY[*]` на `ARRAY[0..0]`), теперь их нет и обоснование убрано. Выход за границы
-  таблиц `ARRAY[*]` исключают проверки `LOWER_BOUND`/`UPPER_BOUND` в методах `Fill*` и тест
-  `MapIgnoresTooSmallTable`.
-- **Ложные UnusedVariable** (165 находок: 78 в `src/`, 87 в `tests/`). iec_checker 0.4 не считает
+  таблиц `ARRAY[*]` исключают проверки `LOWER_BOUND`/`UPPER_BOUND` в методах `Fill*` (`FB_IiotKnsMap`
+  теперь в `flagship/src/`).
+- **Ложные UnusedVariable** (159 находок: 72 в `src/`, 87 в `tests/`). iec_checker 0.4 не считает
   использованием обращения из методов ФБ (сборка выносит методы в отдельные функции), вызов экземпляра
   ФБ и его методов (`fbDiag(...)`, `fbMap.FillPoints(...)`), обращения к полям (`stWords.wActive`,
   `aAlarmTable[i].xSent`) и переменные в границах `FOR` (`FOR i := 1 TO MAX(uiN, 1)` — проверено
@@ -58,6 +63,10 @@
 | 2026-10-16 | `run_iec_checker.py` (iec_checker 0.4, Windows) | 81 объект `src/` | пройдено: необоснованных 0, ошибок разбора 0; обоснованных 870: CP3 — 531, L17 — 179, UnusedVariable — 102 (78 — ложные, с обращением), CP9 — 53, L10 — 5; артефактов сборки 220 |
 | 2026-10-16 | `run_iec_checker.py --tests` (iec_checker 0.4, Windows) | 94 объекта `src/` и `tests/` | пройдено: необоснованных 0, ошибок разбора 0, неиспользованных обоснований 0; обоснованных 1418: CP3 — 827, CP9 — 199, L17 — 197, UnusedVariable — 189 (165 — ложные, с обращением), L10 — 6; артефактов сборки 275 |
 | 2026-10-16 | `run_rusty.py` (RuSTy 1.0.6, `plc --check`, Windows) | 95 файлов `build/assembled/rusty/` | 314 ошибок в 15 файлах, 19 предупреждений — расширения CODESYS, которых нет в RuSTy (раздел «RuSTy») |
+| 2026-10-19 | `st_lint --strict` (после привязки к флагману) | `src/`, `tests/`, `flagship/src/`, `adapters/sd_mqtt_1_0/src/` (496 файлов) | 0 ошибок, 0 предупреждений |
+| 2026-10-19 | `run_iec_checker.py --tests` (iec_checker 0.4, Windows) | 70 объектов `src/` и `tests/` (заглушки `KnsShim`, `PRG_Iiot` и `FB_IiotKnsMap` здесь больше не анализируются) | пройдено: необоснованных 0, ошибок разбора 0, неиспользованных обоснований 0; обоснованных 1177: CP3 — 634, CP9 — 187, L17 — 182, UnusedVariable — 168 (159 — ложные, с обращением), L10 — 6; артефактов сборки 259 |
+| 2026-10-19 | `run_rusty.py` (RuSTy 1.0.6, Windows) | 71 файл `build/assembled/rusty/` | 293 ошибки в 13 файлах, 15 предупреждений — те же расширения CODESYS; ошибок от изменений привязки нет (раздел «RuSTy») |
+| — | CODESYS 3.5.17.30 после привязки к флагману | — | не запускался: рантайм занят прогоном ПМИ флагмана |
 | — | `run_iec_checker.py --tests` (CI, Linux) | 94 объекта `src/` и `tests/` | _перенести из отчёта CI_ |
 | — | iec_checker `nightly` (CI, необязательно) | то же | _перенести из отчёта CI_ |
 
@@ -76,32 +85,32 @@
 |---|---|---|---|
 | PLCOPEN-CP3 | `src/`, `tests/` | «Variable … shall be initialized before being used» | Обосновано. Переменная без явного начального значения получает значение по умолчанию своего типа (МЭК 61131-3, как в CODESYS). Вариант сборки `iec-checker` убирает неконстантные начальные значения (`:= E_Mode.Auto`, `:= GVL_Const.T_X`), отсюда часть находок; часть — на копиях переменных в методах, которые сборка понижает до функций |
 | PLCOPEN-L17 | `src/`, `tests/` | «Each IF instruction should have an ELSE clause» | Решение проекта: IF без ELSE там, где действия «иначе» нет — охранные проверки с `RETURN`, счётчики, однократные события. Правило PLCopen — рекомендация оформления; пустые ветки `ELSE` в 197 местах только добавили бы шум |
-| PLCOPEN-CP9 | `FB_IiotKnsMap` | «Code is too complex (309 McCabe / 483 statements)» | Сгенерированный код: по строке на метрику, команду и устройство (121, 77, 29), без собственной логики — размер растёт с перечнем тегов |
 | PLCOPEN-CP9 | `FB_JsonBuilder`, `FB_JsonFlatParser` | «too complex (22…131 McCabe)» | Посимвольная грамматика JSON (CASE по символу, числа, escape-последовательности); логика разделена на методы. iec_checker 0.4 считает сложность завышенно: по проверке в шаблоне plc-repo-template на синтетическом примере одна конструкция `IF … ELSE … END_IF` прибавляет 5 |
 | PLCOPEN-CP9 | `FB_MqttCommands`, `FB_MqttDiag`, `FB_MqttAlarms`, `FB_MqttTelemetry`, функции `F_Iiot*` | «too complex (17…114 McCabe)» | Порядок проверок шлюза команд задан контрактом (data_schema.md, 5.1), диагностика — автомат состояний связи, тревоги — правила переходов; функции текстов — CASE по значениям перечислений схемы. Каждая проверка покрыта тестом coUnit |
-| PLCOPEN-CP9 | `PRG_Iiot` | «68 McCabe / 97 statements» | Последовательная обвязка: инициализация таблиц, клиент, время, ФБ и теги; ветвления — включение частей настройками |
 | PLCOPEN-CP9 | `tests/` | «too complex» | Наборы и тесты — последовательности вызовов и проверок; метрика для тестов не показательна |
 | PLCOPEN-L10 | `FB_MqttCommands` (тело), `FB_JsonFlatParser` (`Parse`, `ParseText`, `SkipSpace`), `F_TestContains` | «Usage of CONTINUE and EXIT instruction should be avoided» | `EXIT` завершает ограниченный цикл, когда результат известен: очередь приёма пуста или команда ждёт исполнения; конец лексемы или ошибка разбора; найдено совпадение. Флаг в условии цикла читался бы хуже |
-| UnusedVariable | 165 мест: `FB_Mqtt*`, `FB_Json*`, `F_IiotAlarmStateOf`, `PRG_Iiot` (78), наборы тестов, `FB_MqttClientFake`, `PRG_Tests` (87) | «Found unused local variable» | Ложное срабатывание (раздел «Понижение для iec_checker»): к каждой переменной есть обращение из метода, через вызов, метод или поле, в границе `FOR`. Записи с перечнем имён по объектам; обращения проверяет `tests_stack/test_iec_checker_allow.py` |
+| UnusedVariable | 159 мест: `FB_Mqtt*`, `FB_Json*`, `F_IiotAlarmStateOf` (72), наборы тестов, `FB_MqttClientFake`, `PRG_Tests` (87) | «Found unused local variable» | Ложное срабатывание (раздел «Понижение для iec_checker»): к каждой переменной есть обращение из метода, через вызов, метод или поле, в границе `FOR`. Записи с перечнем имён по объектам; обращения проверяет `tests_stack/test_iec_checker_allow.py` |
 | UnusedVariable | `FB_MqttClientNone` (параметры методов) | то же (9) | Нулевой объект `I_MqttClient`: сигнатуры заданы интерфейсом, параметры намеренно не используются |
-| UnusedVariable | `src/POUs/KnsShim/*` (входы ФБ-заглушек) | то же (15) | Заглушки флагмана без логики: значения пишут тесты, читает `PRG_Iiot` снаружи (`GVL_Devices.fb<TAG>.<имя>`) |
 
 ## RuSTy (`plc --check`)
 
 Необязательная проверка: RuSTy 1.0.6 проверяет синтаксис и типы варианта сборки `rusty`; компоновки нет,
 объявления coUnit, блоков Standard и преобразований TIME — из прокладок шаблона `tools/check/rusty_shims/`.
-Последний прогон — 314 ошибок в 15 файлах из 95 (было 414 в 21 файле: `VAR_IN_OUT CONSTANT`, ошибки
-E034 и E036, теперь заменяет вариант сборки `rusty`); все — конструкции CODESYS, которых нет в RuSTy или в
-прокладках, а не ошибки кода (компилятор CODESYS — 0 ошибок, 0 предупреждений):
+Последний прогон (19.10.2026) — 293 ошибки в 13 файлах из 71 (16.10.2026 — 314 в 15 из 95; ещё раньше —
+414 в 21 файле: `VAR_IN_OUT CONSTANT`, ошибки E034 и E036, теперь заменяет вариант сборки `rusty`); все —
+конструкции CODESYS, которых нет в RuSTy или в прокладках, а не ошибки кода (компилятор CODESYS — 0
+ошибок, 0 предупреждений в прогоне 16.10.2026; после привязки к флагману CODESYS не запускался). Новые
+и изменённые объекты (`FB_IiotMap_Test`, тесты станции и подавленной тревоги, `udiId`, `wSuppressed`,
+команды станции) RuSTy проходят без ошибок:
 
 | Ошибки | Число | Причина |
 |---|---|---|
 | E032, E089, E048 | 84 + 84 + 84 | вызовы метода-помощника `Run` наборов `FB_MqttCommands_Test` и `FB_MqttTelemetry_Test` (параметры — `VAR_IN_OUT` экземпляров ФБ и `ARRAY[*]`, входы с начальными значениями): RuSTy считает, что метод без параметров |
 | E059, E073 | 21 + 2 | обращение к символу строки `s[i]` (расширение CODESYS) |
-| E048 | 21 | `BOOL_TO_LREAL` (19, сгенерированный `FB_IiotKnsMap`), `BYTE_TO_LREAL` (2, `FB_JsonFlatParser`) нет в stdlib RuSTy и в прокладках шаблона |
+| E048 | 2 | `BYTE_TO_LREAL` (`FB_JsonFlatParser`) нет в stdlib RuSTy и в прокладках шаблона; 19 находок `BOOL_TO_LREAL` ушли вместе с `FB_IiotKnsMap` в `flagship/src/` |
 | E037 | 14 | передача параметра `ARRAY[*]` в другой параметр `ARRAY[*]` |
-| E048 | 4 | `SysTimeRtcHighResGet` (библиотека SysTimeRtc) и его параметр `pTimestamp`: нет в прокладках шаблона |
-| E067 (предупреждения) | 19 | неявное сужение типов: `LEN()` (в RuSTy — DINT) в INT/UINT, `MAX()`, `SIZEOF()` в проверках тестов |
+| E048 | 2 | `SysTimeRtcHighResGet` (библиотека SysTimeRtc) и его параметр `pTimestamp` в `PRG_Main`: нет в прокладках шаблона |
+| E067 (предупреждения) | 15 | неявное сужение типов: `LEN()` (в RuSTy — DINT) в INT/UINT, `MAX()`, `SIZEOF()` в проверках тестов |
 
 Файл исключений `tools/check/rusty_exclude.txt` пуст: исключать эти файлы бессмысленно — на них ссылаются
 остальные объекты, и исключение одного файла даёт ошибки «не найдено» в зависимых. Задание RuSTy в CI

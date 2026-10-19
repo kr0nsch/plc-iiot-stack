@@ -5,6 +5,15 @@
 в CODESYS» обновляет `python tools/codesys/cds.py report` по итогам `cds.py test`
 (`build/test-results.json`); правки внутри него вручную перезаписываются.
 
+> **После прогона 16.10.2026 ПЛК-часть привязана к флагману (19.10.2026), и в CODESYS она ещё не
+> запускалась** (рантайм занят прогоном ПМИ флагмана). Изменилось: набор `FB_KnsShim_Test` (6 тестов)
+> удалён вместе с заглушкой; добавлены набор `FB_IiotMap_Test` (2 теста) и тесты
+> `StationAlarmIdAndLongSuffix`, `SuppressedByDesignFromWords` в `FB_MqttAlarms_Test`; в
+> `AlarmStateFromWords` и `CommandNamesKindsAndTexts` — проверки подавленной тревоги и команд станции;
+> ожидаемые сообщения — с `schema_version` 1.1. Всего теперь 85 тестов в 8 наборах. Новые и изменённые
+> тесты проверены RuSTy и iec_checker ([STATIC_ANALYSIS.md](STATIC_ANALYSIS.md)), но не прогоном.
+> Привязка `flagship/src/` здесь не собирается — её проверит сборка во флагмане.
+
 <!-- cds:test-report:begin (раздел обновляет `python tools/codesys/cds.py report`) -->
 ## Последний прогон в CODESYS
 
@@ -169,7 +178,7 @@ _Нет._
 | `FB_IiotFunctions_Test` | `CommandNamesKindsAndTexts` | имена команд (enum схемы, с учётом регистра), вид value, тексты reason и cmd_result |
 | `FB_IiotFunctions_Test` | `SchemaMajorParsing` | мажорная версия из MAJOR.MINOR; не по формату — -1 |
 | `FB_IiotFunctions_Test` | `CmdIdNameAndOriginPatterns` | шаблоны схемы: cmd_id [A-Za-z0-9_-]{8,36}, устройство, команда, origin |
-| `FB_IiotFunctions_Test` | `AlarmStateFromWords` | состояние тревоги по словам: OOS, отложена, активна/неквитирована, вернулась, норма |
+| `FB_IiotFunctions_Test` | `AlarmStateFromWords` | состояние тревоги по словам: OOS, подавлена логикой (старше «отложена»), отложена, активна/неквитирована, вернулась, норма |
 | `FB_IiotFunctions_Test` | `AlarmReasonByTransition` | причина события по переходу состояний и для снимка |
 | `FB_IiotFunctions_Test` | `TopicJoinAndLimit` | топик <префикс>/<хвост>; без префикса — хвост; длиннее 127 — пустая строка |
 | `FB_IiotFunctions_Test` | `ClockValidityRange` | часы ПЛК пригодны для ts: 2020-01-01 .. 2100-01-01 UTC включительно |
@@ -194,6 +203,10 @@ _Нет._
 | `FB_MqttAlarms_Test` | `ChangeWhileOfflineIsEventAfterReconnect` | тревога сработала без связи — после переподключения событие с текущим ts |
 | `FB_MqttAlarms_Test` | `BudgetAndDisabledPriority` | не больше uiMaxPerCycle за вызов; приоритет None — тревога пропускается |
 | `FB_MqttAlarms_Test` | `WordsOutOfTableMeanNormal` | строка слов вне таблицы — тревога в норме, без выхода за массив |
+| `FB_MqttAlarms_Test` | `StationAlarmIdAndLongSuffix` | тревога станции `KNS1.NOAUTO`: номер 100009 (больше UINT), суффикс из шести знаков, бит `slot − 1`, точный JSON (не запускался в CODESYS) |
+| `FB_MqttAlarms_Test` | `SuppressedByDesignFromWords` | бит `wSuppressed` — состояние `SuppressedByDesign` и причины `Suppressed`/`Unsuppressed` (не запускался в CODESYS) |
+| `FB_IiotMap_Test` | `MapTablesFollowSchema` | таблицы GVL_IiotMap совпадают со схемой данных: 139 метрик, 86 команд, 88 тревог (не запускался в CODESYS) |
+| `FB_IiotMap_Test` | `StationRowsFollowFlagship` | строки станции и LIC101: метрики, команды станции, номер и бит тревоги станции, суффикс без обрезки (не запускался в CODESYS) |
 | `FB_MqttCommands_Test` | `SubscribesToCommandTopicsAndResubscribes` | подписка <site>/<area>/<unit>/+/cmd/+ с QoS 1; заново после переподключения |
 | `FB_MqttCommands_Test` | `AcceptedStartWaitsForDeviceThenOk` | Start прошёл шлюз: stCmd, ответа нет до обработки устройством, затем ok |
 | `FB_MqttCommands_Test` | `DeviceRejectedCarriesCmdResult` | устройство отказало — device_rejected и cmd_result по E_CmdResult |
@@ -221,12 +234,6 @@ _Нет._
 | `FB_MqttDiag_Test` | `DegradedWhenPublishFailuresGrow` | рост отказов публикаций за окно — M; нет роста — снова Good |
 | `FB_MqttDiag_Test` | `DisableWhileConnectedPublishesShutdown` | выключение при связи: offline/shutdown, затем разрыв в следующем вызове |
 | `FB_MqttDiag_Test` | `TimeGoingBackwardsRestartsTimeout` | время пошло назад — отсчёт тайм-аута заново, без зависания |
-| `FB_KnsShim_Test` | `StsSizesMatchExchangeLayout` | размеры заглушек Sts совпадают с таблицей API 4.6 (карта обмена флагмана) |
-| `FB_KnsShim_Test` | `MapTablesFollowSchema` | таблицы GVL_IiotMap совпадают со схемой данных (каталог, белый список, тревоги) |
-| `FB_KnsShim_Test` | `PrgIiotPublishesFlagshipTagsAndAppliesCommands` | PRG_Iiot с подменным клиентом: рождение, метрики и тревоги тегов флагмана, команда до ответа ok |
-| `FB_KnsShim_Test` | `PrgIiotWithoutTransportReportsFailure` | PRG_Iiot с клиентом без транспорта: отказ подключения с кодом -1 |
-| `FB_KnsShim_Test` | `MapIgnoresTooSmallTable` | FB_IiotKnsMap: массив меньше перечня метрик или слов тревог не заполняется (нет выхода за границы) |
-| `FB_KnsShim_Test` | `VfdCommLossMeansBadQuality` | потеря связи с ПЧ — quality bad у метрик ПЧ: и как отказ (wFault), и как предупреждение (wWarning) |
 
 ## Проверки без CODESYS
 
@@ -234,6 +241,13 @@ _Нет._
 
 | Проверка | Итог | Примечание |
 |---|---|---|
+| `ruff check`, `ruff format --check`, `mypy --strict`, `pytest` (корень) после привязки к флагману | пройдено, 2026-10-19, локально | pytest без поднятого стенда: 849 пройдено, 15 пропущено (14 интеграционных тестов стенда и 1 тест только для POSIX); с поднятым локальным стендом — 863 пройдено, 1 пропущен; в том числе `tests_stack/test_flagship_binding.py` (27 тестов: пути и права по снимку флагмана) и интеграционные с настоящими iec_checker и RuSTy |
+| эмулятор `emulator/`: mypy, pytest | пройдено, 2026-10-19, локально | 101 тест, в том числе станция KNS1 и LIC101 (`test_station.py`) |
+| отчёт `report/`: mypy, pytest | пройдено, 2026-10-19, локально | 89 пройдено, 1 пропущен без стенда; на локальном стенде — 90 из 90 |
+| `gen_plc_iiot.py --check`, `gen_config.py --check`, `flagship_snapshot.py --check` | пройдено, 2026-10-19, локально | снимок снят с `main` (`0fedf61`); интерфейс тот же у `505ce14` и у более позднего `6459c7c` |
+| `tools/check/st_lint.py --strict` | пройдено, 2026-10-19, локально | 496 файлов `src/`, `tests/`, `flagship/src/`, `adapters/sd_mqtt_1_0/src/`, 0 замечаний |
+| iec_checker 0.4, `run_iec_checker.py --tests` | пройдено, 2026-10-19, локально | 70 объектов; необоснованных 0, ошибок разбора 0, неиспользованных обоснований 0, обоснованных 1177 |
+| RuSTy 1.0.6, `run_rusty.py` (необязательно) | 293 ошибки, 15 предупреждений, 2026-10-19 | те же расширения CODESYS, что 16.10.2026; от изменений ядра — ни одной |
 | `ruff check`, `ruff format --check`, `mypy --strict`, `pytest` (корень) | пройдено, 2026-10-16, локально | pytest без поднятого стенда: 804 пройдено, 13 пропущено (12 интеграционных тестов стенда и 1 тест только для POSIX); отключённых тестов шаблона нет; интеграционные с настоящими iec_checker и RuSTy выполнялись, в том числе `test_integration_repository_sources` (исходники проекта с его обоснованиями) |
 | эмулятор `emulator/`: mypy, pytest | пройдено, 2026-10-16, локально | 93 теста |
 | отчёт `report/`: mypy, pytest | пройдено, 2026-10-16, локально | 89 пройдено, 1 пропущен без стенда (`test_live_influx.py`); на локальном стенде — 90 из 90 |
@@ -249,4 +263,7 @@ _Нет._
 | локальный стенд без Docker (`tools_project/local_stack.ps1 start -Emulator`): InfluxDB 2.9.1, Telegraf 1.39.3, Grafana 12.4.12 (сборки для Windows), брокер amqtt 0.12.1, эмулятор | пройдено, 2026-10-16 | данные на дашбордах через 5 с после запуска эмулятора; отличия от compose — [ARCHITECTURE.md](ARCHITECTURE.md#10-локальный-стенд-без-docker) |
 | `python -m pytest -m stack tests_stack` на локальном стенде | 12 из 12, 2026-10-16 | все 115 метрик каталога по MQTT, путь OPC UA (115 узлов, `StatusGood`), ACL, фильтр мажорной версии, завещание (LWT), аудит команд, отказ `not_whitelisted` сквозь базу, `out_of_range`, принятая команда, задача прореживания (среднее, взвешенное по времени, против расчёта по сырым точкам) |
 | `tools_project/check_dashboards.py` на локальном стенде | 42 из 42, 2026-10-16 | без отказов — 39–41 панель с данными и 1–3 пустых списка отклонений (сколько отклонений есть в данный момент); с отказами, включёнными через OPC UA (`Simulation.Inject`), данные у всех 42 |
+| локальный стенд с нуля после привязки к флагману, `python -m pytest -m stack tests_stack` | 14 из 14, 2026-10-19 | добавлены проверки: все 133 узла OPC UA каталога (станция KNS1, регулятор LIC101), одинаковое значение `K1/general_alarm` по MQTT и OPC UA, команда станции `KNS1/SetLevelPid` — `accepted`; отдельно — тревога `KNS1.NOAUTO` (номер 100009) дошла до InfluxDB с русским текстом |
+| `tools_project/check_dashboards.py`, 2026-10-19 | 42 из 42 | 38–39 панелей с данными (два прогона), остальные — пустые списки отклонений, ошибок нет |
+| стенд против флагмана в CODESYS (OPC UA, MANUAL_STEPS.md, раздел 12) | не выполнялся | рантайм флагмана занят прогоном ПМИ |
 | `make demo DEV=1`, `make test-stack`, отчёт по данным стенда в docker compose | ждёт CI | задание `stack` в `.github/workflows/ci.yml` (Linux); на машине разработки Docker нет |

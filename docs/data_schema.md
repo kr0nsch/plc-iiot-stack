@@ -1,6 +1,6 @@
 # Схема данных стенда: топики MQTT, сообщения, хранение
 
-Версия схемы: **1.0**. Документ — контракт между ПЛК (сторона ST, `src/`), эмулятором, брокером,
+Версия схемы: **1.1**. Документ — контракт между ПЛК (сторона ST, `src/` и `flagship/src/`), эмулятором, брокером,
 Telegraf, InfluxDB, Grafana и отчётом. Машиночитаемая часть лежит в `schema/`:
 
 | Файл | Что задаёт |
@@ -14,7 +14,9 @@ Telegraf, InfluxDB, Grafana и отчётом. Машиночитаемая ча
 | `schema/telemetry_catalog.csv` | каталог метрик: устройство, метрика, вид, единицы, зона нечувствительности, путь в ПЛК |
 | `schema/command_whitelist.csv` | белый список команд MQTT с диапазонами значений |
 | `schema/examples/*.json` | примеры сообщений: `{topic, qos, retain, payload}` |
-| `schema/source/scada_tags.csv`, `scada_alarms.csv` | перечень тегов и тревог флагмана — выход генератора iolistgen, вручную не правится |
+| `schema/source/scada_tags.csv`, `scada_alarms.csv` | теги и тревоги устройств флагмана — выход генератора iolistgen флагмана, вручную не правится |
+| `schema/source/station_tags.csv`, `station_alarms.csv` | теги станции KNS1 и регулятора LIC101 (`GVL_Station`) и тревоги станции `KNS1.*` в том же формате |
+| `schema/source/flagship_symbols.json` | снимок интерфейса флагмана: коммит, объявления глобальных списков, типы, правила символьной конфигурации OPC UA |
 
 Тесты `tests_stack/` проверяют, что схемы корректны, примеры им соответствуют, а Telegraf, дашборды
 и каталог ссылаются только на объявленные здесь имена.
@@ -26,6 +28,12 @@ Telegraf, InfluxDB, Grafana и отчётом. Машиночитаемая ча
 перечню сигналов (`schema/source/scada_tags.csv`): экземпляры `GVL_Devices.fb<DEV>` и команды
 `GVL_Hmi.st<DEV>Cmd` библиотеки plc-process-lib. Схема данных не вводит своих имён устройств: только
 имена метрик (раздел 3) и классы сообщений.
+
+Кроме устройств перечня в схеме есть станция `KNS1` (состояние `GVL_Station.stStationSts`, команды
+`stStationCmd`) и регулятор уровня `LIC101` (`GVL_Station.fbLIC101`, команды `stLIC101Cmd`) — имена
+флагмана (DESIGN 3.1 и 4.1 kns-pump-station). Все пути, их типы и права записи по OPC UA сверены со
+снимком интерфейса флагмана (`schema/source/flagship_symbols.json`, `tools_project/flagship_snapshot.py`):
+по MQTT и OPC UA пишутся только структуры команд.
 
 ## 2. Топики
 
@@ -41,7 +49,7 @@ Telegraf, InfluxDB, Grafana и отчётом. Машиночитаемая ча
 | `site` | `[a-z][a-z0-9_]{0,31}` — предприятие | `vodokanal` |
 | `area` | то же — площадка, объект | `kns1` |
 | `unit` | то же — технологическая установка | `station` (на КНС одна установка) |
-| `device` | `[A-Z][A-Z0-9_]{0,15}` — позиция по перечню | `LT101`, `P101`, `K1`; узел ПЛК — `PLC1` |
+| `device` | `[A-Z][A-Z0-9_]{0,15}` — позиция по перечню | `LT101`, `P101`, `K1`; станция — `KNS1`, регулятор — `LIC101`; узел ПЛК — `PLC1` |
 | `metric` | `[a-z][a-z0-9_]{0,31}` — имя метрики из каталога | `level`, `running`, `run_hours` |
 
 Пример: `vodokanal/kns1/station/LT101/level` — уровень в приёмном резервуаре.
@@ -87,7 +95,7 @@ Telegraf, InfluxDB, Grafana и отчётом. Машиночитаемая ча
 ### 3.1 Сообщение
 
 ```json
-{"schema_version": "1.0", "ts": 1792137600250, "value": 2.31, "quality": "good", "unit": "m"}
+{"schema_version": "1.1", "ts": 1792137600250, "value": 2.31, "quality": "good", "unit": "m"}
 ```
 
 | Поле | Тип | Обязательно | Смысл |
@@ -129,7 +137,14 @@ Telegraf, InfluxDB, Grafana и отчётом. Машиночитаемая ча
 0 стоп, 1 пуск, 2 работа, 3 останов, 4 отказ); `counter` — накопительный счётчик; `integer` —
 целое, которое может убывать. Единицы — ASCII (`m3/h`, `degC`, `%LEL`), подписи на русском —
 в дашбордах. Метрики `PLC1/*` — диагностика связи шлюза MQTT в ПЛК (сторона ST); пути в ПЛК у них
-задаёт приложение, а не перечень.
+задаёт приложение, а не перечень. Метрики `KNS1/*` и `LIC101/*` — состояние станции и регулятора уровня
+флагмана; качество у метрик станции всегда `good` (это расчётные значения логики, а не измерения), у
+LIC101 — по его NE 107.
+
+Колонка `invert` каталога: `1` — значение метрики обратно сигналу ПЛК. Так у `K1/general_alarm`: реле
+«Общая авария» K1 во флагмане в норме под напряжением (`GVL_IO.xK1 = TRUE`), а метрика — «общая авария»
+(1 — авария). ПЛК и эмулятор публикуют по MQTT уже инвертированное значение, путь OPC UA читает `xK1`
+как есть и инвертирует его в Telegraf (`processors.starlark` в `telegraf/telegraf.d/opcua.conf`).
 
 <!-- BEGIN GENERATED: telemetry-catalog -->
 | Устройство | Метрика | Вид | Ед. | Зона нечувств. | Диапазон | Тег SCADA | Описание |
@@ -248,7 +263,25 @@ Telegraf, InfluxDB, Grafana и отчётом. Машиночитаемая ча
 | `YS405` | `fire` | discrete |  |  |  | `YS405.Value` | Пожар (сигнал прибора пожарной сигнализации): значение для логики |
 | `YS405` | `mode` | enum |  |  |  | `YS405.Mode` | Пожар (сигнал прибора пожарной сигнализации): режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService |
 | `YS405` | `ne107` | enum |  |  |  | `YS405.Ne107` | Пожар (сигнал прибора пожарной сигнализации): статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F |
-| `K1` | `general_alarm` | discrete |  |  |  | `K1` | Реле «Общая авария» (сухой контакт в диспетчерскую) |
+| `K1` | `general_alarm` | discrete |  |  |  | `K1` | Общая авария: реле K1 «Общая авария» обесточено (в норме реле под напряжением, сухой контакт в диспетчерскую) |
+| `KNS1` | `mode` | enum |  |  |  | `KNS1.Mode` | Станция КНС-1: режим: 1 Auto, 2 Manual |
+| `KNS1` | `method` | enum |  |  |  | `KNS1.Method` | Станция КНС-1: способ регулирования: 1 ступенчатое, 2 ПИД уровня |
+| `KNS1` | `control` | enum |  |  |  | `KNS1.ControlAct` | Станция КНС-1: действующее управление: 0 ручное, 1 ступенчатое, 2 ПИД уровня, 3 по поплавкам, 4 аварийный уровень, 5 сухой ход, 6 нет напряжения, 7 перезапуск |
+| `KNS1` | `ne107` | enum |  |  |  | `KNS1.Ne107` | Станция КНС-1: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F |
+| `KNS1` | `state` | integer |  |  |  | `KNS1.State` | Станция КНС-1: слово состояния (биты STN_ST_* флагмана) |
+| `KNS1` | `pumps_required` | integer |  |  |  | `KNS1.PumpsRequired` | Станция КНС-1: требуется насосов |
+| `KNS1` | `pumps_running` | integer |  |  |  | `KNS1.PumpsRunning` | Станция КНС-1: насосов в работе |
+| `KNS1` | `pumps_available` | integer |  |  |  | `KNS1.PumpsAvailable` | Станция КНС-1: насосов доступно в автомате |
+| `KNS1` | `lead` | integer |  |  |  | `KNS1.LeadPump` | Станция КНС-1: ведущий насос: 1–3, 0 — нет |
+| `KNS1` | `seq_remain` | integer | s |  |  | `KNS1.SeqRemain` | Станция КНС-1: до следующего шага последовательного пуска |
+| `KNS1` | `level` | analog | m | 0.01 |  | `KNS1.Level` | Станция КНС-1: уровень, по которому работает станция |
+| `KNS1` | `level_sp` | analog | m | 0.01 |  | `KNS1.LevelSp` | Станция КНС-1: действующее задание уровня |
+| `KNS1` | `speed_sp` | analog | % | 0.5 |  | `KNS1.SpeedSp` | Станция КНС-1: общее задание частоты насосам |
+| `LIC101` | `pv` | analog | m | 0.01 |  | `LIC101.Pv` | Регулятор уровня LIC101: регулируемая величина (уровень) |
+| `LIC101` | `sp` | analog | m | 0.01 |  | `LIC101.Sp` | Регулятор уровня LIC101: действующее задание |
+| `LIC101` | `out` | analog | % | 0.5 |  | `LIC101.Out` | Регулятор уровня LIC101: выход (задание частоты) |
+| `LIC101` | `mode` | enum |  |  |  | `LIC101.Mode` | Регулятор уровня LIC101: режим: 1 Auto, 2 Manual, 3 Local, 4 OutOfService |
+| `LIC101` | `ne107` | enum |  |  |  | `LIC101.Ne107` | Регулятор уровня LIC101: статус NE 107: 0 Good, 1 M, 2 S, 3 C, 4 F |
 | `PLC1` | `uptime` | counter | s |  |  | — | Шлюз MQTT ПЛК: время работы ПЛК с последнего запуска приложения |
 | `PLC1` | `reconnects` | counter |  |  |  | — | Шлюз MQTT ПЛК: переподключений к брокеру MQTT с запуска |
 | `PLC1` | `queue` | integer |  |  |  | — | Шлюз MQTT ПЛК: сообщений в очереди на отправку |
@@ -266,14 +299,14 @@ Telegraf, InfluxDB, Grafana и отчётом. Машиночитаемая ча
 Топик `vodokanal/kns1/station/LT101/alarm/HH`:
 
 ```json
-{"schema_version": "1.0", "ts": 1792137605000, "id": 1010, "code": "LT101.HH", "priority": "High",
+{"schema_version": "1.1", "ts": 1792137605000, "id": 1010, "code": "LT101.HH", "priority": "High",
  "state": "ActiveUnack", "prev_state": "Normal", "reason": "Activated", "value": 4.03}
 ```
 
 | Поле | Смысл |
 |---|---|
-| `id` | `udiId` тревоги = `dev_no · 10 + слот` (перечень iolistgen) |
-| `code` | `<DEVICE>.<SUFFIX>`; DEVICE и SUFFIX совпадают с уровнями топика |
+| `id` | `udiId` тревоги: у устройств `dev_no · 10 + слот` (перечень iolistgen), у станции `100000 + slot` (`KNS1.EHL` — 100001 … `KNS1.SIM` — 100013) |
+| `code` | `<DEVICE>.<SUFFIX>`; DEVICE и SUFFIX совпадают с уровнями топика; суффикс — `[A-Z][A-Z0-9]{0,7}` (`HH`, `FTS`, `NOAUTO`, `UL1`) |
 | `priority` | `Low`, `Medium`, `High`, `Critical` (E_AlarmPriority) |
 | `state`, `prev_state` | состояние после и до события (E_AlarmState): `Normal`, `ActiveUnack`, `ActiveAck`, `RtnUnack`, `Shelved`, `SuppressedByDesign`, `OutOfService` |
 | `reason` | причина (E_AlarmEventReason): `Activated`, `Cleared`, `Acked`, `Shelved`, `Unshelved`, `ShelveExpired`, `Suppressed`, `Unsuppressed`, `OosOn`, `OosOff` |
@@ -288,7 +321,10 @@ Telegraf, InfluxDB, Grafana и отчётом. Машиночитаемая ча
   узла, — снимок с `prev_state = state`.
 - Русского текста в сообщении нет: строки в ПЛК 3.5.17 — Windows-1252 (API plc-process-lib,
   раздел 19). Текст по коду добавляет Telegraf (тег `text`) из `telegraf/lookup/alarm_texts.json`,
-  который генерируется из `schema/source/scada_alarms.csv`.
+  который генерируется из `schema/source/scada_alarms.csv` и `station_alarms.csv`.
+- Тревоги станции (`KNS1.*`, 13 тревог, источник — `docs/05_alarm_list.csv` флагмана) публикуются так
+  же, по словам `GVL_Station.stStationSts.wAlmActive`, `wAlmUnack`, `wAlmShelved` (бит = slot − 1).
+  Тревога регулятора `LIC101.PVF` во флагмане выключена (приоритет None) и в перечень не входит.
 
 ## 5. Команды
 
@@ -297,7 +333,7 @@ Telegraf, InfluxDB, Grafana и отчётом. Машиночитаемая ча
 Топик `vodokanal/kns1/station/P101/cmd/SpeedSp`:
 
 ```json
-{"schema_version": "1.0", "cmd_id": "b0e7c3d1-5a2f-4e8b-8c61-9d4a7f2e1b33", "ts": 1792137621000,
+{"schema_version": "1.1", "cmd_id": "b0e7c3d1-5a2f-4e8b-8c61-9d4a7f2e1b33", "ts": 1792137621000,
  "origin": "operator1@grafana", "command": "SpeedSp", "value": 75.0}
 ```
 
@@ -333,7 +369,10 @@ Telegraf, InfluxDB, Grafana и отчётом. Машиночитаемая ча
 ### 5.2 Белый список
 
 По MQTT разрешён минимальный набор: режим Авто/Ручной, пуск, стоп и задание скорости насосов,
-квитирование и сброс. Не разрешены и отклоняются как `not_whitelisted`: `SetOos` (вывод из работы),
+квитирование и сброс устройств; у станции `KNS1` — режим, способ регулирования, общее квитирование,
+общий сброс и «Отключить звук», у регулятора `LIC101` — режим Авто/Ручной. Выгрузка журнала, откат
+уставок станции и номера тревог (`ExportLog`, `RevertCfg`, `udiAckId`…) — только с местной HMI и по
+OPC UA. Не разрешены и отклоняются как `not_whitelisted`: `SetOos` (вывод из работы),
 `ResetMaint` (сброс счётчиков ТО), `SubstValue` (подмена значения), `ShelveReq`/`UnshelveReq`/`AckReq`
 (маски тревог) — это действия обслуживающего персонала с местной HMI.
 
@@ -343,6 +382,8 @@ Telegraf, InfluxDB, Grafana и отчётом. Машиночитаемая ча
 | `P101`, `P102`, `P103` | `SetAuto`, `SetManual`, `Start`, `Stop`, `SpeedSp` (0…100 %), `Ack`, `Reset` |
 | `V1` | `SetAuto`, `SetManual`, `Start`, `Stop`, `Ack`, `Reset` |
 | `LT101`, `LS102`, `LS103`, `IT111`, `TS112`, `MS113`, `IT121`, `TS122`, `MS123`, `IT131`, `TS132`, `MS133`, `PT201`, `FT202`, `LS203`, `ES301`, `YS302`, `YS303`, `AT401`, `AT402`, `TT403`, `ZS404`, `YS405`, `HS501`, `HS502` | `Ack`, `Reset` |
+| `KNS1` | `SetAuto`, `SetManual`, `SetStepped`, `SetLevelPid`, `AckAll`, `ResetAll`, `Silence` |
+| `LIC101` | `SetAuto`, `SetManual` |
 <!-- END GENERATED: command-whitelist -->
 
 Полный список с путями в ПЛК — `schema/command_whitelist.csv`.
@@ -352,7 +393,7 @@ Telegraf, InfluxDB, Grafana и отчётом. Машиночитаемая ча
 Топик `vodokanal/kns1/station/P101/cmd_ack/SetOos`:
 
 ```json
-{"schema_version": "1.0", "cmd_id": "c4d9e1f2-7b3a-4d6c-9e85-1a2b3c4d5e6f", "ts": 1792137622010,
+{"schema_version": "1.1", "cmd_id": "c4d9e1f2-7b3a-4d6c-9e85-1a2b3c4d5e6f", "ts": 1792137622010,
  "command": "SetOos", "result": "rejected", "reason": "not_whitelisted"}
 ```
 
@@ -441,16 +482,22 @@ from(bucket: "kns_raw")
 3. Переименование метрики — MAJOR: история в InfluxDB привязана к тегу `metric`.
 4. Изменения схемы фиксируются в `CHANGELOG.md` и в `$id` файлов (`urn:plc-iiot-stack:schema:<класс>:<MAJOR>`).
 
+| Версия | Что изменилось |
+|---|---|
+| 1.0 | первая версия: устройства перечня сигналов флагмана, узел PLC1 |
+| 1.1 | привязка к флагману kns-pump-station: метрики станции `KNS1/*` и регулятора `LIC101/*`, команды `SetStepped`, `SetLevelPid`, `AckAll`, `ResetAll`, `Silence`, тревоги станции `KNS1.*` (номер до 4294967295, суффикс `[A-Z][A-Z0-9]{0,7}` вместо `[A-Z]{1,4}`), колонка `invert` каталога; смысл `K1/general_alarm` (1 — общая авария) не менялся — во флагмане реле K1 в норме под напряжением, и метрика теперь это учитывает. Сообщения 1.0 остаются действительными |
+
 ## 9. Проверки
 
 | Что | Где |
 |---|---|
 | схемы — валидный JSON Schema 2020-12, примеры им соответствуют, топики примеров разбираются | `tests_stack/test_schema.py` |
 | каталог и белый список сходятся с перечнем iolistgen | `tests_stack/test_catalog.py` |
+| пути каталога, белого списка, тегов эмулятора, узлов Telegraf и сгенерированного ST — настоящие символы флагмана с тем же типом; писать можно только в структуры команд (обе сборки флагмана) | `tests_stack/test_flagship_binding.py` |
 | Telegraf пишет только объявленные measurement, теги и поля; подписки совпадают с `topics.json` | `tests_stack/test_telegraf.py` |
 | запросы дашбордов ссылаются на объявленные measurement, поля, теги и метрики каталога | `tests_stack/test_grafana.py` |
 | образы закреплены по версии, секретов в отслеживаемых файлах нет | `tests_stack/test_compose.py` |
 | сгенерированные файлы актуальны, `make env`, ожидание готовности, `Makefile` и `make.ps1` согласованы | `tests_stack/test_tools.py` |
-| сквозной путь «эмулятор → брокер → Telegraf → InfluxDB → запрос» на поднятом стенде: все метрики каталога по MQTT, путь OPC UA, ACL, версия схемы, команда вне белого списка и вне диапазона, агрегаты задачи прореживания против расчёта по сырым точкам | `tests_stack/test_stack_integration.py` (`make test-stack`) |
+| сквозной путь «эмулятор → брокер → Telegraf → InfluxDB → запрос» на поднятом стенде: все метрики каталога по MQTT и все узлы OPC UA каталога, ACL, версия схемы, команда вне белого списка и вне диапазона, команда станции, агрегаты задачи прореживания против расчёта по сырым точкам | `tests_stack/test_stack_integration.py` (`make test-stack`) |
 | каждая панель трёх дашбордов возвращает данные (запросы выполняет Grafana) | `tools_project/check_dashboards.py` (`make test-stack`) |
 | локальный стенд без Docker повторяет конфигурацию compose (пользователи и ACL брокера, переменные, тома) | `tests_stack/test_local_stack.py` |

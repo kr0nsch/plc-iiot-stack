@@ -1,15 +1,15 @@
 # Ручные шаги
 
 Шаги, которые выполняет человек в консоли Windows и в IDE CODESYS. Всё, что можно выполнить без
-CODESYS (сборка текстов, линтер, статанализ), описано в [README](../README.md#быстрый-старт-без-железа)
+CODESYS (сборка текстов, линтер, статанализ), описано в [README](../README.md#быстрый-старт)
 и выполняется в CI.
 
 Команды разделов 3–7 проверены прогоном на CODESYS V3.5 SP17 Patch 3 (3.5.17.30, 32-битная сборка
 ОВЕН) и CODESYS Control Win V3 в пользовательском процессе (16.10.2026), включая сборку, установку
 и удаление библиотек и сборку зависимостей из соседних репозиториев. Что не проверено — отмечено
 явно. Подробности об инструменте — [tools/README.md](../tools/README.md#codesyscdspy--codesys-из-консоли).
-Разделы 9–11 — ПЛК-часть IIoT-стека: библиотека MQTT, символьная конфигурация для OPC UA и
-встраивание во флагман; что в них проверено, а что нет, тоже отмечено.
+Разделы 9–12 — ПЛК-часть IIoT-стека: библиотека MQTT, символьная конфигурация для OPC UA,
+встраивание во флагман и стенд против флагмана в CODESYS; что в них проверено, а что нет, тоже отмечено.
 
 ## 1. Установка CODESYS 3.5.17.30
 
@@ -400,26 +400,32 @@ Control Win V3): 15 предупреждений «библиотека … не
 ## 10. Символьная конфигурация для OPC UA
 
 Что видно клиентам OPC UA-сервера CODESYS (Telegraf, SCADA, `kns-report`), задаёт объект Symbol
-Configuration приложения с включённой опцией «Support OPC UA features». Состав — по
-[security.md](security.md) (раздел 3.3): чтение везде, кроме структур команд.
+Configuration приложения с включённой опцией «Support OPC UA features». Узлы, которые читает стенд, —
+переменные флагмана КНС-1; во флагмане объект создаёт и настраивает его импорт по правилам
+`tools_project/codesys/symbol_rules.json` (DESIGN 13 флагмана), вручную ничего делать не нужно.
 
-| Что выгружать | Доступ | Зачем |
+Что нужно стенду из этих правил (полный перечень узлов — `telegraf/telegraf.d/opcua.conf`, 133 узла):
+
+| Что выгружается во флагмане | Доступ | Что берёт стенд |
 |---|---|---|
-| `GVL_Devices` — все экземпляры `fb<TAG>` | чтение | состояния устройств (`stSts`), значения — узлы OPC UA Telegraf |
-| `GVL_Hmi.st<TAG>Cmd` — структуры команд | чтение и запись | команды с HMI/SCADA по OPC UA |
-| прочие переменные `GVL_Hmi` | чтение | — |
-| `GVL_IO`: `uiP101_FCODE`, `uiP102_FCODE`, `uiP103_FCODE`, `xHA1`, `xHL1`, `xK1` | чтение | коды отказа ПЧ и дискретные сигналы, которые читает Telegraf (`telegraf/`, генерируется из `schema/`) |
-| `GVL_Iiot.stIiotCfg`, `GVL_Iiot.stIiotSts` | чтение (атрибут `{attribute 'symbol' := 'read'}` в исходнике) | настройки и состояние MQTT для HMI |
-| `GVL_Const`, `GVL_IiotMap`, программы, локальные переменные | не выгружаются | — |
+| `GVL_Devices` — все экземпляры `fb<TAG>` | чтение | состояние и значения устройств (`stSts`, `xRunning`, `xValue`) |
+| `GVL_Hmi.st<TAG>Cmd`, `xApplyProjectCfg` | чтение и запись | команды устройствам (SCADA по OPC UA; по MQTT их пишет `PRG_Iiot`) |
+| `GVL_IO` — все | чтение | `uiP101_FCODE`…`uiP103_FCODE`, `xK1` |
+| `GVL_Station.stStationSts`, `fbLIC101` | чтение | станция KNS1 и регулятор LIC101 |
+| `GVL_Station.stStationCmd`, `stLIC101Cmd` | чтение и запись | команды станции и регулятора |
+| `GVL_Log`, `GVL_Persist`, `GVL_Sim`, `GVL_Time` | по правилам флагмана | стенд не читает |
+| `GVL_Iiot.stIiotCfg`, `GVL_Iiot.stIiotSts` | чтение (атрибут `{attribute 'symbol' := 'read'}` в исходнике) | настройки и состояние MQTT для HMI; после встраивания — правило в `symbol_rules.json` флагмана (раздел 11, шаг 6) |
 
 Пароль брокера `stIiotCfg.stBroker.sPassword` помечен `{attribute 'symbol' := 'none'}` и не выгружается
 даже вместе со структурой. Узлы сервера: `ns=4;s=|var|<устройство>.Application.<GVL>.<путь>`, например
-`ns=4;s=|var|CODESYS Control Win V3.Application.GVL_Devices.fbLT101.stSts.rValue_EU` (имя устройства у
-ПЛК210 — другое, сверить по обзору сервера; [ASSUMPTIONS.md](ASSUMPTIONS.md), E11).
+`ns=4;s=|var|CODESYS Control Win V3.Application.GVL_Station.stStationSts.eMode` (имя устройства у ПЛК210 —
+другое, сверить по обзору сервера; [ASSUMPTIONS.md](ASSUMPTIONS.md), E11). Что каждый узел стенда есть в
+символах флагмана с тем же типом, проверяет `tests_stack/test_flagship_binding.py` по снимку его
+интерфейса; обзор сервера живым клиентом — раздел 12.
 
 ### 10.1. В IDE
 
-1. Открыть проект (раздел 6). «Application → Добавить объект → Символьная конфигурация» (Add Object →
+1. Открыть проект флагмана. «Application → Добавить объект → Символьная конфигурация» (Add Object →
    Symbol Configuration), отметить «Support OPC UA features», «Клиентская раскладка» — оптимизированная
    (Optimized layout).
 2. «Собрать» (Build) в редакторе символьной конфигурации — появится дерево переменных.
@@ -427,18 +433,22 @@ Configuration приложения с включённой опцией «Suppor
 4. Сохранить проект, «Онлайн → Логин» и загрузка. Права пользователей рантайма на объект
    `OPCUAServer` — [security.md](security.md), раздел 3.2.
 
-_Названия пунктов меню — сверить с русской IDE 3.5.17.30; этот путь в IDE не проходился, проверен
-скриптовый (10.2)._
+_Названия пунктов меню — сверить с русской IDE 3.5.17.30; этот путь в IDE не проходился: во флагмане
+объект создаёт скрипт (10.2)._
 
-### 10.2. Скриптом (проверено)
+### 10.2. Скриптом
 
-Символьную конфигурацию можно создать и настроить из CODESYS Scripting (`ScriptSymbolConfigObject`,
-есть с 3.5.10): `application.create_symbol_config(export_comments_to_xml, support_opc_ua,
+Символьную конфигурацию создают и настраивают из CODESYS Scripting (`ScriptSymbolConfigObject`, есть с
+3.5.10): `application.create_symbol_config(export_comments_to_xml, support_opc_ua,
 client_side_layout_calculator)`, доступ — свойство `configured_access` переменных из
-`get_all_signatures()`. Объект сохраняется в `.project` (`cds.py import` объекты вне раскладки не
-трогает), но не в `src/`: после пересоздания проекта — повторить.
+`get_all_signatures()`. Объект сохраняется в `.project`, но не в `src/`: после пересоздания проекта —
+повторить. Во флагмане это делает `tools_project/codesys/symbol_config.py` по `symbol_rules.json` (его
+основа — скрипт ниже); прогон 19.10.2026 по данным флагмана: `GVL_Devices` — 29 Read, `GVL_Hmi` — 30
+ReadWrite, `GVL_IO` — 86 Read.
 
-Скрипт (IronPython 2.7; проект — в переменной `IIOT_PROJECT`):
+Исходный скрипт этого репозитория (IronPython 2.7; проект — в переменной `IIOT_PROJECT`); проверен
+16.10.2026 на копии `build\plc-iiot-stack.project`, когда ПЛК-часть собиралась здесь с заглушкой
+флагмана (`KnsShim`, удалена при привязке к флагману):
 
 ```python
 # -*- coding: utf-8 -*-
@@ -483,41 +493,88 @@ proj.save()
 proj.close()
 ```
 
-Запуск (cmd, из корня репозитория, после `python tools\codesys\cds.py import`; IDE с проектом
-закрыта; скрипт сохранён, например, как `%TEMP%\symbol_config.py`):
-
-```bat
-set IIOT_PROJECT=%CD%\build\plc-iiot-stack.project
-"%CODESYS_EXE%" --profile="CODESYS V3.5 SP17 Patch 3" --noUI --runscript="%TEMP%\symbol_config.py"
-```
-
-Проверено 16.10.2026 на копии `build\plc-iiot-stack.project` (с заглушкой флагмана): объект создан,
-сборка — 0 ошибок, после повторного открытия настроены `GVL_Devices`, `GVL_Hmi`, `GVL_IO`. По файлу
-символов, который пишет генерация кода (`<проект>.Device.Application.xml`, настройки
-`SupportOPCUA, LayoutCalculator=OptimizedClientSideLayoutCalculator`): `GVL_Devices` — 29 переменных
-`Read`, `GVL_Hmi` — 29 структур команд `ReadWrite` и `xApplyProjectCfg` `Read`, `GVL_IO` — 6 `Read`,
-`GVL_Iiot` — 2 `Read` (по атрибутам); в типе `ST_MqttBrokerCfg` 10 полей из 11 — `sPassword` нет.
-_Не проверено: обзор узлов настоящим клиентом OPC UA (UaExpert, Telegraf) — рантайм с OPC UA-сервером
-и клиентом в этой проверке не запускались._
-
-После `cds.py import` с `--force` (или если `.project` создан заново) скрипт нужно запустить снова.
+Тогда по файлу символов (`<проект>.Device.Application.xml`, настройки `SupportOPCUA,
+LayoutCalculator=OptimizedClientSideLayoutCalculator`): `GVL_Devices` — 29 переменных `Read`, `GVL_Hmi` —
+29 структур команд `ReadWrite` и `xApplyProjectCfg` `Read`, `GVL_IO` — 6 `Read`, `GVL_Iiot` — 2 `Read`
+(по атрибутам); в типе `ST_MqttBrokerCfg` 10 полей из 11 — `sPassword` нет.
 
 ## 11. Встраивание во флагман
 
-`PRG_Iiot` и `FB_IiotKnsMap` написаны с именами флагмана КНС-1, поэтому переносятся без правок текста.
+ПЛК-часть стека — две части ([plc_mqtt.md](plc_mqtt.md#привязка-к-флагману)): ядро в `src/` (от
+флагмана не зависит) и привязка в `flagship/src/` (`PRG_Iiot`, сгенерированный `FB_IiotKnsMap` — пути
+к переменным флагмана, типы `PL.*`). Встраивание — копирование обеих в репозиторий kns-pump-station.
 
-1. Скопировать в репозиторий флагмана `src/` этого репозитория, кроме `src/*/KnsShim/` и `PRG_Main`
-   (у флагмана свой). `GVL_Const` объединить с константами флагмана (имена не пересекаются — сверить).
-2. Типы флагмана (`PL.ST_MotorSts`, `PL.E_DeviceMode` и т. д.) `PRG_Iiot` и `FB_IiotKnsMap` по имени
-   не используют: только поля через `GVL_Devices`, `GVL_Hmi`, `GVL_IO` и числовые коды из `GVL_Const`
-   (`DEV_MODE_OOS`, `CMD_RESULT_*`, `MOT_FLT_COMM`, `MOT_WRN_COMM` — совпадают с перечислениями и
-   `GVL_Const` plc-process-lib на 16.10.2026; при обновлении библиотеки сверить). Если имена экземпляров
-   или пути во флагмане другие — поправить колонку `plc_path` в `schema/` и перегенерировать
-   `FB_IiotKnsMap` (`python tools_project/gen_plc_iiot.py`).
-3. В задаче флагмана вызвать `PRG_Iiot()` после `PRG_Devices` (тот же цикл), адаптер MQTT — раздел 9.
-4. Библиотека SysTimeRtc — в менеджер библиотек флагмана (плейсхолдер, разрешается профилем).
-5. Символьная конфигурация — раздел 10 (`GVL_Iiot` добавляется атрибутами).
-6. Тесты: наборы `tests/` этого репозитория переносятся вместе с `FB_MqttClientFake`; набор
-   `FB_KnsShim_Test` проверяет заглушку — во флагмане его заменяют проверки на настоящих ФБ.
+1. **Сверить снимок.** `python tools_project/flagship_snapshot.py --check` (флагман рядом, `../kns-pump-station`,
+   или путь в `KNS_REPO`): «снимок актуален» — пути привязки совпадают с флагманом. Есть расхождения —
+   `python tools_project/flagship_snapshot.py`, затем `python tools_project/gen_plc_iiot.py`,
+   `python tools_project/gen_config.py` и `python -m pytest tests_stack` (проверки привязки).
+2. **Скопировать ST** в `src/` флагмана: из этого репозитория — `src/` без `src/POUs/PRG_Main` (у флагмана
+   свои программы задач) и `flagship/src/` целиком (`POUs/Iiot/PRG_Iiot`, `POUs/Iiot/FB_IiotKnsMap`).
+   Каталоги `src/POUs/Iiot` обеих частей сливаются.
+3. **Константы.** `src/GVLs/GVL_Const.gvl.st` этого репозитория — раздел «IIoT» в `GVL_Const` флагмана
+   (один файл на проект). Пересечений имён нет (сверено с флагманом `main` при снятии снимка); коды
+   plc-process-lib привязка берёт из самой библиотеки (`PL.GVL_Const.MOT_FLT_COMM_LOSS`,
+   `MOT_WRN_COMM_LOSS`, `PL.E_DeviceMode.OutOfService`). `src/GVLs/GVL_Iiot.gvl.st` и
+   `src/GVLs/Generated/GVL_IiotMap.gvl.st` копируются как есть.
+4. **Задача и библиотеки** (`tools/codesys/config.json` флагмана): `PRG_Iiot` — в `MainTask` после
+   `PRG_Devices` (значения устройств текущего цикла, команда из `GVL_Hmi` и `GVL_Station` выполняется в
+   следующем цикле, как команда с HMI); библиотека `systimertc` у флагмана уже подключена.
+5. **Клиент MQTT.** Без адаптера `PRG_Iiot` работает с клиентом без транспорта: обмена нет, состояние —
+   «нет связи». Адаптер на библиотеку MQTT ПЛК — раздел 9, присваивание
+   `PRG_Iiot.itfClientOverride := fbMyClient;` до первого вызова.
+6. **Символы.** `GVL_Iiot` — правило `{"gvl": "GVL_Iiot", "vars": ["stIiotCfg", "stIiotSts"], "access":
+   "Read"}` в `tools_project/codesys/symbol_rules.json` флагмана (сейчас там «по атрибутам проекта 06 после
+   встраивания»); сверить по файлу символов, что `sPassword` не выгружается.
+7. **Тесты.** Наборы `tests/` этого репозитория переносятся вместе с `FB_MqttClientFake` и `F_TestContains`;
+   в `PRG_Tests` флагмана — их экземпляры. Набор `FB_IiotMap_Test` проверяет таблицы, тест привязки на
+   настоящих ФБ флагмана — дальнейший шаг (сейчас пути проверяет pytest по снимку).
+8. **Сборка и прогон во флагмане:** `cds.py build --tests`, `cds.py test`; затем раздел 12 — живой обмен.
 
-_Встраивание не выполнялось: флагман в этой проверке не собирался._
+_Встраивание не выполнялось: флагман в этой работе не собирался (его рантайм занят прогоном ПМИ).
+Компиляцию `PRG_Iiot` и `FB_IiotKnsMap` с типами `PL.*` проверит только сборка во флагмане._
+
+## 12. Стенд против флагмана в CODESYS (OPC UA)
+
+Путь OPC UA работает с флагманом без встраивания: Telegraf читает узлы символьной конфигурации
+приложения имитации флагмана. Путь MQTT (публикация из ПЛК и команды) — только после встраивания
+`PRG_Iiot` (раздел 11) с адаптером MQTT (раздел 9).
+
+1. **Флагман в имитации.** В репозитории kns-pump-station (один раз — `python tools/codesys/cds.py runtime
+   init`): `python tools_project/codesys/sim.py start` — импорт, символьная конфигурация сборки `sim`,
+   рантайм, сертификат OPC UA-сервера, загрузка и «Старт» приложения имитации (подробно — DESIGN 16 и
+   MANUAL_STEPS флагмана). Сервер предлагает Basic256Sha256 (Sign, SignAndEncrypt) со входом по имени и
+   паролю.
+2. **Настройки стенда** в `.env`:
+
+   ```ini
+   # docker compose: OPC UA-сервер на хосте; локальный стенд без Docker: opc.tcp://127.0.0.1:4840
+   OPCUA_ENDPOINT=opc.tcp://host.docker.internal:4840
+   OPCUA_SECURITY_POLICY=Basic256Sha256
+   OPCUA_SECURITY_MODE=SignAndEncrypt
+   OPCUA_AUTH_METHOD=UserName
+   OPCUA_USERNAME=<пользователь рантайма с правом чтения>
+   OPCUA_PASSWORD=<его пароль>
+   ```
+
+3. **Стенд без эмулятора:** `make up` (docker compose) или
+   `powershell -ExecutionPolicy Bypass -File tools_project\local_stack.ps1 start` (без `-Emulator`).
+4. **Доверие сертификату Telegraf.** Первое подключение сервер отклоняет: сертификат клиента — в
+   карантине рантайма. Перенести его в доверенные (экран безопасности IDE или хранилище `.pki`
+   рантайма; [security.md](security.md#42-сертификаты-и-списки-доверия)) и перезапустить рантайм; у
+   Telegraf сертификат в томе `telegraf-pki` сохраняется, доверие — один раз.
+5. **Проверка.** Grafana, переменная «Источник» = `opcua`: уровень, насосы, станция. Сколько узлов
+   пишут данные (ожидается 133 — все узлы каталога), — запрос в Data Explorer InfluxDB или
+   `influx query`:
+
+   ```flux
+   from(bucket: "kns_raw") |> range(start: -2m)
+     |> filter(fn: (r) => r._measurement == "telemetry" and r.source == "opcua" and r._field == "value")
+     |> last() |> group() |> count()
+   ```
+
+   Тревоги, команды по MQTT и узел PLC1 без встраивания `PRG_Iiot` не появятся: они идут по MQTT.
+
+_Не проверялось: стенд с настоящим рантаймом флагмана не соединялся (рантайм занят прогоном ПМИ).
+Что сверить при первом прогоне: номер пространства имён и префикс узлов (`OPCUA_NAMESPACE`,
+`OPCUA_ID_PREFIX`), политику и вход по имени, доверие сертификату Telegraf, все 133 узла со статусом
+`StatusGood`, совпадение типов (перечисления флагмана — Int16), инверсию `K1/general_alarm`._

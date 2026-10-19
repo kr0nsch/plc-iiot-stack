@@ -1,10 +1,19 @@
 # ПЛК-часть стека: MQTT в CODESYS
 
-ST-код в `src/` публикует телеметрию, события тревог и состояние узла КНС-1 в брокер MQTT и
-принимает команды по контракту [data_schema.md](data_schema.md). Тексты сообщений, топики, коды и
-порядок проверок команд совпадают с эмулятором (`emulator/iiot_emulator/`) и JSON Schema в `schema/`;
-совпадение имён и кодов проверяет `tests_stack/test_plc_contract.py`, поведение — 87 тестов coUnit
-в CODESYS Control Win V3 ([TEST_REPORT.md](TEST_REPORT.md)).
+ST-код публикует телеметрию, события тревог и состояние узла КНС-1 в брокер MQTT и принимает
+команды по контракту [data_schema.md](data_schema.md). Он из двух частей:
+
+- **ядро шлюза** в `src/` — ФБ MQTT, JSON, таблицы схемы; от флагмана не зависит, собирается и
+  тестируется в этом репозитории (`cds.py build`, `cds.py test`);
+- **привязка к флагману** в `flagship/src/` — программа `PRG_Iiot` и сгенерированный `FB_IiotKnsMap`
+  с путями к настоящим переменным kns-pump-station (`GVL_Devices`, `GVL_Hmi`, `GVL_IO`, `GVL_Station`,
+  типы `PL.*` plc-process-lib). Собирается только во флагмане (раздел «Привязка к флагману»).
+
+Тексты сообщений, топики, коды и порядок проверок команд совпадают с эмулятором
+(`emulator/iiot_emulator/`) и JSON Schema в `schema/`; совпадение имён и кодов проверяет
+`tests_stack/test_plc_contract.py`, пути привязки — `tests_stack/test_flagship_binding.py` по снимку
+интерфейса флагмана, поведение ядра — тесты coUnit ([TEST_REPORT.md](TEST_REPORT.md): последний прогон
+в CODESYS Control Win V3 — 16.10.2026, до привязки к флагману).
 
 Транспорт MQTT спрятан за интерфейсом `I_MqttClient`. Логика не зависит от библиотеки и проверена с
 подменным клиентом; адаптер на библиотеку CODESYS-MQTT написан, но не собран с ней: на CODESYS
@@ -16,7 +25,8 @@ ST-код в `src/` публикует телеметрию, события тр
 
 | Объект | Что делает |
 |---|---|
-| `PRG_Iiot` | обвязка: время, клиент, ФБ ниже, теги флагмана; вызывается из `PRG_Main` (во флагмане — после `PRG_Devices`) |
+| `PRG_Iiot` (`flagship/src/`) | обвязка во флагмане: время, клиент, ФБ ниже, теги флагмана; задача `MainTask` после `PRG_Devices` |
+| `PRG_Main` | служебная программа рабочей сборки этого репозитория: признак «часы ПЛК установлены» для проверки онлайн |
 | `FB_MqttDiag` | связь с брокером: подключение, повторы с паузой, завещание (LWT), рождение и штатное отключение, счётчики, сводный статус NE 107 |
 | `FB_MqttTelemetry` | телеметрия: по изменению с зоной нечувствительности и периодически |
 | `FB_MqttAlarms` | события тревог по словам тревог устройств и снимок после рождения |
@@ -24,9 +34,9 @@ ST-код в `src/` публикует телеметрию, события тр
 | `FB_JsonBuilder`, `FB_JsonFlatParser` | сборка и разбор плоского JSON без ограничения 255 символов стандартных строковых функций |
 | `F_Iiot*` | тексты кодов схемы, качество по NE 107, зона нечувствительности, проверки форматов, топики, время |
 | `I_MqttClient`, `FB_MqttClientNone` | интерфейс транспорта и клиент без транспорта (нулевой объект) |
-| `GVL_IiotMap`, `FB_IiotKnsMap` | таблицы метрик, команд и тревог и привязка к тегам флагмана — генерируются из `schema/` |
+| `GVL_IiotMap` | таблицы метрик, команд и тревог — генерируются из `schema/` |
+| `FB_IiotKnsMap` (`flagship/src/`) | привязка к переменным флагмана: значения, качество, слова тревог, запись команд — генерируется из `schema/` |
 | `GVL_Iiot` | настройки `stIiotCfg` и состояние `stIiotSts` для HMI и SCADA |
-| `src/*/KnsShim/` | заглушка флагмана: типы и GVL с именами флагмана, чтобы проект собирался и тестировался отдельно |
 | `adapters/sd_mqtt_1_0/` | адаптер `FB_MqttClientSdMqtt` на CODESYS-MQTT 1.0.0.0 — вне `src/`, не компилировался с библиотекой |
 
 Время работы ФБ — монотонное `LTIME()` (через `F_IiotNow`), а не счёт циклов; поле `ts` — календарное
@@ -95,9 +105,9 @@ ST-код в `src/` публикует телеметрию, события тр
 Качество (`F_IiotQuality`, [data_schema.md, 3.2](data_schema.md#32-достоверность)): `eNe107` = Failure —
 `bad`; CheckFunction или OutOfSpecification — `uncertain`; Good или MaintenanceRequired при `xValid` —
 `good`, без `xValid` — `bad`. У метрик ПЧ (`speed`, `vfd_fault_code`) потеря связи даёт `bad`: бит
-`MOT_FLT_COMM` в `wFault` или, если потеря связи настроена предупреждением (`xCommLossIsFault = FALSE`),
-бит `MOT_WRN_COMM` в `wWarning` (значения — как `MOT_FLT_COMM_LOSS` и `MOT_WRN_COMM_LOSS` в
-`GVL_Const` plc-process-lib). Значение не конечно (NaN, ±Inf; устройства библиотеки так не отдают, но
+`PL.GVL_Const.MOT_FLT_COMM_LOSS` в `wFault` или, если потеря связи настроена предупреждением
+(`xCommLossIsFault = FALSE`), бит `PL.GVL_Const.MOT_WRN_COMM_LOSS` в `wWarning` — константы самой
+библиотеки, своих копий кодов у привязки нет. Значение не конечно (NaN, ±Inf; устройства библиотеки так не отдают, но
 метрику может заполнить и приложение): `value` по схеме — всегда число, поэтому передаётся последнее
 опубликованное конечное значение (`lrLastFinite`) с `quality = bad` — как требует
 [data_schema.md, 3.2](data_schema.md#32-достоверность); `null` в телеметрию не попадает (тест
@@ -105,8 +115,7 @@ ST-код в `src/` публикует телеметрию, события тр
 
 ## Тревоги
 
-`FB_MqttAlarms` ведёт состояние каждой тревоги перечня по словам тревог устройства (`wAlmActive`,
-`wAlmUnack`, `wAlmShelved` из `stSts.stCommon`, режим OutOfService) и публикует событие
+`FB_MqttAlarms` ведёт состояние каждой тревоги перечня по словам тревог источника и публикует событие
 [data_schema.md, 4.1](data_schema.md#41-сообщение) при смене состояния с прошлой публикации:
 
 ```json
@@ -114,9 +123,15 @@ ST-код в `src/` публикует телеметрию, события тр
  "state":"ActiveUnack","prev_state":"Normal","reason":"Activated"}
 ```
 
-- Состояние слота (`F_IiotAlarmStateOf`): вывод из работы → `OutOfService`, бит в `wAlmShelved` →
-  `Shelved`, активна и не квитирована → `ActiveUnack`, активна → `ActiveAck`, не квитирована →
-  `RtnUnack`, иначе `Normal`.
+- Слова источника (`ST_IiotAlarmWords`): у устройств — `wAlmActive`, `wAlmUnack`, `wAlmShelved`,
+  `wAlmSuppressed` из `stSts.stCommon` (plc-process-lib 1.0) и режим OutOfService; у станции KNS1 —
+  `GVL_Station.stStationSts.wAlmActive`, `wAlmUnack`, `wAlmShelved` (бит = slot − 1; в `wAlmShelved`
+  станции флагман объединяет отложенные, подавленные и выведенные — они публикуются как `Shelved`).
+- Состояние слота (`F_IiotAlarmStateOf`, старшинство plc-process-lib): вывод из работы →
+  `OutOfService`, бит в `wSuppressed` → `SuppressedByDesign`, бит в `wShelved` → `Shelved`, активна и не
+  квитирована → `ActiveUnack`, активна → `ActiveAck`, не квитирована → `RtnUnack`, иначе `Normal`.
+- Номер тревоги — `UDINT` (`ST_IiotAlarmCfg.udiId`): у станции 100001…100013; суффикс — до 8 знаков
+  (`IIOT_SUFFIX_LEN`: `NOAUTO`, `UL1`).
 - Причина — по переходу (`F_IiotAlarmReason`): в `ActiveUnack` — `Activated`; `ActiveUnack → ActiveAck`
   и `RtnUnack → Normal` — `Acked`; в `RtnUnack` и `ActiveAck → Normal` — `Cleared`; в `Shelved` и
   обратно — `Shelved`/`Unshelved`, в `OutOfService` и обратно — `OosOn`/`OosOff` (проверяет тест
@@ -165,7 +180,7 @@ escape-последовательностями ASCII, числа по грам�
 | 7 | часы ПЛК установлены и `|время ПЛК − ts| ≤ 30 с` | `expired` |
 | 8 | `cmd_id` не встречался среди последних 16 команд (запоминаются все проверенные, кроме самих повторов) | `duplicate` |
 | 9 | не больше 10 команд за 10 с (скользящее окно по `LTIME`) | `rate_limited` |
-| 10 | команда записана в `GVL_Hmi.st<DEV>Cmd`, устройство её обработало | `ok` / `device_rejected` / `timeout` |
+| 10 | команда записана в `GVL_Hmi.st<DEV>Cmd` (станция — `GVL_Station.stStationCmd`, регулятор — `stLIC101Cmd`), устройство её обработало | `ok` / `device_rejected` / `timeout` |
 
 Без ответа (ответить некуда или нечем связать ответ с командой) — счётчик `udiDropped` и метрика
 `PLC1/cmd_rejected`:
@@ -272,10 +287,10 @@ TCP) подключается так же: ФБ с `IMPLEMENTS I_MqttClient` и 
 3. Время: `F_IiotNow()` — монотонное; `SysTimeRtcHighResGet` — UTC в мс; `F_IiotClockValid` — часы в
    диапазоне схемы (2020…2100), иначе обмен не начинается (`MQTT_ERR_NO_CLOCK`).
 4. `FB_IiotKnsMap.FillPoints` и `FillAlarmWords` — значения, качество и слова тревог из
-   `GVL_Devices.fb<TAG>` и `GVL_IO`; метрики узла `PLC1` (uptime, переподключения, очередь, отброшено,
-   принятые и отклонённые команды).
+   `GVL_Devices.fb<TAG>`, `GVL_IO` и `GVL_Station` (станция, регулятор LIC101); метрики узла `PLC1`
+   (uptime, переподключения, очередь, отброшено, принятые и отклонённые команды).
 5. `FB_MqttDiag`, затем `FB_MqttTelemetry` и `FB_MqttAlarms` (публикуют только при `xReady`).
-6. `FB_MqttCommands`; прошедшая команда пишется в `GVL_Hmi.st<TAG>Cmd` в том же цикле.
+6. `FB_MqttCommands`; прошедшая команда пишется в `GVL_Hmi.st<TAG>Cmd` или `GVL_Station` в том же цикле.
 7. Состояние — в `GVL_Iiot.stIiotSts`.
 
 Во флагмане `PRG_Iiot` вызывается в той же задаче после `PRG_Devices`: значения устройств — текущего
@@ -287,30 +302,40 @@ TCP) подключается так же: ФБ с `IMPLEMENTS I_MqttClient` и 
 `tools_project/gen_plc_iiot.py` генерирует из `schema/` (каталог метрик, белый список команд, перечень
 тревог, теги флагмана):
 
-- `src/GVLs/Generated/GVL_IiotMap.gvl.st` — константы `POINT_COUNT` (121), `RULE_COUNT` (77),
-  `ALARM_COUNT` (75), индексы `PT_<DEVICE>_<METRIC>` и таблицы `POINT_CFG`, `RULE_CFG`, `ALARM_CFG`;
-- `src/POUs/Generated/FB_IiotKnsMap/` — методы `FillPoints`, `FillAlarmWords` (пути `plc_path`
+- `src/GVLs/Generated/GVL_IiotMap.gvl.st` — константы `POINT_COUNT` (139), `RULE_COUNT` (86),
+  `ALARM_COUNT` (88), индексы `PT_<DEVICE>_<METRIC>` и таблицы `POINT_CFG`, `RULE_CFG`, `ALARM_CFG`;
+- `flagship/src/POUs/Iiot/FB_IiotKnsMap/` — методы `FillPoints`, `FillAlarmWords` (пути `plc_path`
   каталога), `ApplyCommand` (пути белого списка в `GVL_Hmi`), `DeviceCmdState` (`uiCmdSeq`, `eCmdResult`).
   Массив короче перечня методы `Fill*` не заполняют (проверка `LOWER_BOUND`/`UPPER_BOUND`).
 
 Файлы руками не правятся: `python tools_project/gen_plc_iiot.py` после изменения `schema/`,
 `--check` — проверка актуальности (тест `test_generated_plc_tables_are_up_to_date`, CI).
 
-## Заглушка флагмана
+## Привязка к флагману
 
-Флагман (КНС-1 на библиотеке plc-process-lib) — отдельный репозиторий. Чтобы ПЛК-часть собиралась и
-тестировалась здесь, `src/DUTs/KnsShim/`, `src/GVLs/KnsShim/` и `src/POUs/KnsShim/` повторяют то, что
-читает и пишет `PRG_Iiot`:
+Флагман (КНС-1 на библиотеке plc-process-lib, репозиторий kns-pump-station) — отдельный проект. Раньше
+ПЛК-часть собиралась здесь вместе с заглушкой его типов и списков (`KnsShim`); теперь заглушки нет, а
+привязка ссылается на настоящие символы флагмана:
 
-- типы `ST_DeviceSts`, `ST_MotorSts`, `ST_AnalogInputSts`, `ST_DigitalInputSts`, команды и перечисления —
-  поля и порядок по API plc-process-lib; размеры Sts сверены с таблицей обмена API 4.6 тестом
-  `StsSizesMatchExchangeLayout` (28, 68, 44, 30 байт);
-- `GVL_Devices` (экземпляры `fb<TAG>`), `GVL_Hmi` (`st<TAG>Cmd`), `GVL_IO` — с именами флагмана;
-- ФБ-заглушки без логики: значения, которые у настоящих ФБ — выходы, здесь входы (выход ФБ снаружи
-  не записать, C0037) — их задают тесты, а `PRG_Iiot` читает той же записью `GVL_Devices.fb<TAG>.<имя>`.
+| Что | Путь во флагмане | Доступ OPC UA (правила символов флагмана) |
+|---|---|---|
+| значения и состояние устройств | `GVL_Devices.fb<TAG>.stSts.*`, выходы `xRunning`, `xValue`, `xValid` (`PL.FB_*`) | чтение |
+| команды устройствам | `GVL_Hmi.st<TAG>Cmd.*` (`PL.ST_*Cmd`) | запись |
+| сигналы без ФБ | `GVL_IO.xK1` (реле «Общая авария», в норме под напряжением), `GVL_IO.uiP10n_FCODE` | чтение |
+| станция KNS1 | `GVL_Station.stStationSts.*` (`ST_StationSts`, DESIGN 3.1 флагмана) | чтение |
+| команды станции | `GVL_Station.stStationCmd.*` (`ST_StationCmd`) | запись |
+| регулятор уровня LIC101 | `GVL_Station.fbLIC101.stSts.*` (`PL.ST_PidSts`), команды `GVL_Station.stLIC101Cmd.stCommon.*` | чтение / запись |
+| константы | `PL.GVL_Const.MOT_FLT_COMM_LOSS`, `MOT_WRN_COMM_LOSS`, `PL.E_DeviceMode.OutOfService` | — |
 
-Поэтому текст `PRG_Iiot` и `FB_IiotKnsMap` во флагмане тот же. При встраивании папки `KnsShim`
-удаляются.
+Интерфейс флагмана снят в `schema/source/` командой `python tools_project/flagship_snapshot.py`
+(читает `git show <rev>:<путь>`, рабочую копию флагмана не трогает): теги и тревоги устройств iolistgen,
+теги и тревоги станции, объявления списков, типы и правила символьной конфигурации; коммит —
+`schema/source/flagship_symbols.json`. По снимку `tests_stack/test_flagship_binding.py` проверяет
+каждый путь каталога, белого списка, узлов Telegraf, тегов эмулятора и сгенерированного ST: переменная
+есть, выгружается в символы, тип совпадает, а писать можно только в структуры команд.
+
+Компиляцию привязки проверяет только CODESYS во флагмане: здесь её типы `PL.*` и глобальные списки
+недоступны. Шаги встраивания — [MANUAL_STEPS.md, раздел 11](MANUAL_STEPS.md#11-встраивание-во-флагман).
 
 ## Настройки и состояние
 
@@ -346,3 +371,8 @@ TCP) подключается так же: ФБ с `IMPLEMENTS I_MqttClient` и 
 - Адаптер CODESYS-MQTT не собран и не проверен на брокере; работа по сети, TLS и поведение при обрыве —
   после подключения настоящей библиотеки (раздел «Адаптер I_MqttClient»).
 - Часы ПЛК должны синхронизироваться по NTP: без этого `ts` неверен, а команды получают `expired`.
+- Привязка к флагману (`flagship/src/`) в CODESYS не компилировалась: её пути и типы сверены со снимком
+  интерфейса флагмана, а сборка, тесты и живой обмен по OPC UA и MQTT — после встраивания
+  ([MANUAL_STEPS.md, раздел 11](MANUAL_STEPS.md#11-встраивание-во-флагман)).
+- Изменения ядра после прогона 16.10.2026 (номер тревоги `UDINT`, суффикс до 8 знаков, слово
+  `wSuppressed`, команды станции, версия схемы 1.1) проверены RuSTy и iec_checker, но не в CODESYS.
