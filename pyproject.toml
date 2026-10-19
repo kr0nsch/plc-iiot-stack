@@ -3,7 +3,7 @@
 # правила, которые предлагают синтаксис Python 3 (pyupgrade и др.).
 
 [project]
-name = "plc-repo-template-tools"
+name = "plc-iiot-stack-tools"
 version = "0.1.0"
 description = "Инструменты шаблона ПЛК-репозитория: раскладка ST, сборка, линтер, проверки"
 requires-python = ">=3.11"
