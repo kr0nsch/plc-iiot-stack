@@ -302,6 +302,35 @@ def test_opcua_path_covers_catalog_nodes(db: Db, plc_online: str) -> None:
     assert set(by_source) == {"mqtt", "opcua"} and by_source["mqtt"] == by_source["opcua"], by_source
 
 
+def test_opcua_catalog_nodes_status_good(db: Db) -> None:
+    """Все узлы каталога по OPC UA со статусом Good — без узла PLC1 и пути MQTT.
+
+    Так проверяется стенд против OPC UA-сервера рантайма флагмана, пока ПЛК не публикует по MQTT
+    (docs/MANUAL_STEPS.md, раздел 12): пространство имён, префикс узлов, вход и доверие сертификату
+    Telegraf, пределы операций сервера (узлы делятся на входы до 100).
+    """
+    expected = {(m.device, m.metric) for m in sc.load_catalog() if m.plc_path}
+    base = (
+        f'from(bucket: "{db.bucket}") |> range(start: -2m)'
+        ' |> filter(fn: (r) => r._measurement == "telemetry" and r.source == "opcua")'
+    )
+
+    def status() -> dict[tuple[str, str], str]:
+        rows = db.rows(
+            base + ' |> filter(fn: (r) => r._field == "opcua_status") |> last() |> group()'
+            ' |> keep(columns: ["device", "metric", "_value"])'
+        )
+        return {(r["device"], r["metric"]): r["_value"] for r in rows}
+
+    if not wait_until(lambda: len(status()), timeout=40):
+        unavailable("нет данных OPC UA за 2 мин: OPC UA-сервер рантайма или эмулятора не опрашивается")
+    wait_until(lambda: int(expected <= set(status())), timeout=40)
+    seen = status()
+    assert not expected - set(seen), f"нет по OPC UA: {sorted(expected - set(seen))}"
+    bad = {k: v for k, v in seen.items() if "StatusGood" not in v}
+    assert not bad, f"статус не Good: {bad}"
+
+
 def test_node_birth_recorded(db: Db, plc_online: str) -> None:
     assert plc_online in ("emulator", "codesys")
 

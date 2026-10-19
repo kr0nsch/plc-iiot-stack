@@ -50,6 +50,12 @@ exclude = [
     '^tools/tests/fixtures/',
 ]
 
+# tools_project/opcua_live_check.py: клиент OPC UA для ручной сверки с рантаймом; в CI корня asyncua и
+# cryptography не ставятся (их ставят пакеты emulator/ и report/), импорт — внутри функций
+[[tool.mypy.overrides]]
+module = ["asyncua", "asyncua.*", "cryptography", "cryptography.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["tools/tests", "tests_stack"]
 pythonpath = ["tools", "tools/codesys", "tools/check", "tools_project", "tests_stack"]

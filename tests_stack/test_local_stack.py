@@ -89,6 +89,15 @@ def test_unquote_matches_compose_env_file() -> None:
     assert ls.unquote("plain") == "plain"
 
 
+def test_load_env_prefers_process_environment(tmp_path: Path) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text('OPCUA_USERNAME=\nOPCUA_PASSWORD="from-file"\nMQTT_PORT=1883\n', encoding="utf-8")
+    shell = {"OPCUA_USERNAME": "reader", "OPCUA_PASSWORD": "from-shell", "NOT_IN_FILE": "x"}
+    values = ls.load_env(env_file, environ=shell)
+    assert values == {"OPCUA_USERNAME": "reader", "OPCUA_PASSWORD": "from-shell", "MQTT_PORT": "1883"}
+    assert ls.load_env(env_file, environ={})["OPCUA_PASSWORD"] == "from-file"
+
+
 def test_components_match_compose_images() -> None:
     images = {s.get("image") for s in ls.compose_services().values()}
     for c in ls.COMPONENTS:

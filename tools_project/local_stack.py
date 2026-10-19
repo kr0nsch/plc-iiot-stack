@@ -131,11 +131,17 @@ def unquote(value: str) -> str:
     return value
 
 
-def load_env(path: Path | None = None) -> dict[str, str]:
+def load_env(path: Path | None = None, environ: Mapping[str, str] | None = None) -> dict[str, str]:
+    """Значения ``.env``; переменная окружения процесса с тем же именем важнее файла, как у docker compose.
+
+    Так секрет, которого не должно быть в ``.env`` (например, вход OPC UA пользователя рантайма CODESYS),
+    передаётся только окружению запуска.
+    """
     path = path or ROOT / ".env"
     if not path.exists():
         raise StackError(f"нет {path}: выполните python tools_project/make_env.py (make env)")
-    return {k: unquote(v) for k, v in parse_keys(path.read_text(encoding="utf-8")).items()}
+    shell = os.environ if environ is None else environ
+    return {k: shell.get(k, unquote(v)) for k, v in parse_keys(path.read_text(encoding="utf-8")).items()}
 
 
 _VAR_RE = re.compile(r"\$\$|\$\{([A-Za-z_][A-Za-z0-9_]*)(?:(:?[-?])([^}]*))?\}|\$([A-Za-z_][A-Za-z0-9_]*)")

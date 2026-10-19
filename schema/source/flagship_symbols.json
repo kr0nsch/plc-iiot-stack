@@ -6,18 +6,18 @@
  "flagship": {
   "repository": "kns-pump-station",
   "rev": "main",
-  "commit": "0fedf619ee4b11e80f120d5fc486b0d619366824",
+  "commit": "f750cea373ac1fd1a07dbf46a1e049c2e5a6e970",
   "date": "2026-10-19",
-  "subject": "fix: И0 ждёт свободного окна «пусков в час» насосов",
+  "subject": "docs: GIF проверок без CODESYS из чистого клона, вывод сверки в примере уставки",
   "plc_process_lib": "plc-process-lib 1.0.0 (выпуск 1.0.0.0, тег v1.0.0, коммит bd9df2a)",
   "files": {
-   "docs/05_alarm_list.csv": "cb650ae4f9ccfbe55e56ffee07643122c1fb9435dfae3ab5d6fe7592f28e5c0a",
+   "docs/05_alarm_list.csv": "74eb7b0d1d3177a4ea252280e4abfc386807dad0c504f953e079b3617f95384e",
    "scada/scada_alarms.csv": "0ffd55f435be5da36ea13ffffe89b960f68c23a616e151a843483093f5508ecc",
    "scada/scada_tags.csv": "e67316bba99e64be1092aa5000617f6ab2bc9383175c6a917575316c1837c129",
    "tools_project/codesys/symbol_rules.json": "59557cd4137659412fc11b22014e9abdbcadff0f92d86f803e371b33c14131c3",
    "tools_project/data/plc_process_lib.json": "d3d9b218805cf6bdbd14fb70cd93fff48495aafc179286a6f5147755645f5b27",
-   "src/GVLs/**": "a147f777b35c773400879cdea69fbd21854d5ccde3d73d0cb531c369d4fb074c",
-   "src/DUTs/**": "dedccab7209b9e1d83d5ecaf29df2eec9c6aa12cef8c5cb52a390f6e6a16773b"
+   "src/GVLs/**": "03b69aad0d60c63fd2b0f1a2a281c7a68934a7457db88ba0dcee1274be27bf6b",
+   "src/DUTs/**": "003fcb39d900b6a32d8f05a2e35c9967773c000f1385e7b57b808daf236881fa"
   }
  },
  "node_prefix": "ns=4;s=|var|CODESYS Control Win V3.",

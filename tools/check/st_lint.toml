@@ -4,7 +4,7 @@
 # Шаблоны путей (exclude) — fnmatch по пути от корня репозитория; '*' захватывает и '/'.
 
 [lint]
-paths = ["src", "tests", "flagship/src", "adapters/sd_mqtt_1_0/src"]  # раскладка (docs/LAYOUT.md), привязка к флагману и адаптер
+paths = ["src", "tests", "flagship/src", "flagship/tests", "adapters/sd_mqtt_1_0/src"]  # раскладка, привязка к флагману и её тесты, адаптер
 exclude = []                    # файлы, которые не проверяются вовсе
 max_line_length = 120           # STL003
 
@@ -89,7 +89,7 @@ DATE_AND_TIME = "dt"
 [rules.STL008]
 allowed_values = [0, 1, 2]      # сравниваются по значению: 0.0, 1.0, 2.0 тоже допустимы
 exempt_objects = ["GVL_Const"]
-exclude = ["tests/*"]           # в тестах ожидаемые значения — это данные, а не логика
+exclude = ["tests/*", "flagship/tests/*"]  # в тестах ожидаемые значения — это данные, а не логика
 
 [rules.STL011]
 name_pattern = "(?i)(cycle|cyc|scan|tick)"                  # счётчик с таким именем
