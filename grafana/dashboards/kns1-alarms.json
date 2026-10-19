@@ -28,7 +28,7 @@
         "name": "priority",
         "label": "Приоритет",
         "type": "custom",
-        "query": "Critical,High,Medium,Low",
+        "query": "Критический : Critical,Высокий : High,Средний : Medium,Низкий : Low",
         "multi": true,
         "includeAll": true,
         "allValue": ".*",
@@ -158,8 +158,8 @@
     },
     {
       "type": "stat",
-      "title": "Срабатываний в час, среднее",
-      "description": "Пороги 6 и 12 в час — ориентиры нагрузки на оператора из ISA-18.2 (сверить с редакцией стандарта); здесь — на всю станцию",
+      "title": "Срабатываний в час",
+      "description": "Среднее за выбранный период. Пороги 6 и 12 в час — ориентиры нагрузки на оператора из ISA-18.2 (сверить с редакцией стандарта); здесь — на всю станцию",
       "datasource": {
         "type": "influxdb",
         "uid": "influx-kns"
@@ -395,7 +395,7 @@
           "unit": "none",
           "color": {
             "mode": "fixed",
-            "fixedColor": "#2E3A46"
+            "fixedColor": "text"
           },
           "custom": {
             "drawStyle": "bars",
@@ -451,9 +451,9 @@
       }
     },
     {
-      "type": "barchart",
+      "type": "bargauge",
       "title": "Срабатывания по приоритетам",
-      "description": "",
+      "description": "Подпись и цвет полосы — приоритет тревоги; полосы — по убыванию серьёзности",
       "datasource": {
         "type": "influxdb",
         "uid": "influx-kns"
@@ -465,22 +465,17 @@
             "type": "influxdb",
             "uid": "influx-kns"
           },
-          "query": "from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"alarm\" and r._field == \"reason\" and r.priority =~ /^${priority:regex}$/)\n  |> filter(fn: (r) => r._value == \"Activated\", onEmpty: \"keep\")\n  |> group(columns: [\"priority\"])\n  |> count()\n  |> group()\n  |> keep(columns: [\"priority\", \"_value\"])\n"
+          "query": "import \"array\"\n\nzeros = array.from(rows: [{priority: \"Critical\", _value: 0}, {priority: \"High\", _value: 0}, {priority: \"Medium\", _value: 0}, {priority: \"Low\", _value: 0}])\n  |> filter(fn: (r) => r.priority =~ /^${priority:regex}$/)\n\ncounts = from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"alarm\" and r._field == \"reason\" and r.priority =~ /^${priority:regex}$/)\n  |> filter(fn: (r) => r._value == \"Activated\", onEmpty: \"keep\")\n  |> group(columns: [\"priority\"])\n  |> count()\n  |> group()\n  |> keep(columns: [\"priority\", \"_value\"])\n\nunion(tables: [counts, zeros])\n  |> group(columns: [\"priority\"])\n  |> sum()\n  |> group()\n  |> map(fn: (r) => ({r with rank: if r.priority == \"Critical\" then 1 else if r.priority == \"High\" then 2 else if r.priority == \"Medium\" then 3 else 4}))\n  |> sort(columns: [\"rank\"])\n  |> keep(columns: [\"priority\", \"_value\"])\n"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "none",
           "decimals": 0,
+          "min": 0,
           "color": {
             "mode": "fixed",
             "fixedColor": "#6B7785"
-          },
-          "custom": {
-            "fillOpacity": 85,
-            "lineWidth": 0,
-            "gradientMode": "none",
-            "axisSoftMin": 0
           },
           "thresholds": {
             "mode": "absolute",
@@ -492,26 +487,123 @@
             ]
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Critical"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Критический"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#8E0E1A"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "High"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Высокий"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#D32F2F"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Medium"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Средний"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F08C00"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Low"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Низкий"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#C9B400"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
-        "xField": "priority",
         "orientation": "horizontal",
-        "showValue": "always",
-        "barWidth": 0.6,
-        "groupWidth": 0.7,
-        "stacking": "none",
-        "xTickLabelRotation": 0,
-        "legend": {
-          "showLegend": false,
-          "displayMode": "list",
-          "placement": "bottom"
+        "displayMode": "basic",
+        "valueMode": "text",
+        "namePlacement": "top",
+        "showUnfilled": true,
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "maxVizHeight": 300,
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
         },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
+        "text": {
+          "titleSize": 14
         }
       },
+      "transformations": [
+        {
+          "id": "rowsToFields",
+          "options": {
+            "mappings": [
+              {
+                "fieldName": "priority",
+                "handlerKey": "field.name"
+              },
+              {
+                "fieldName": "_value",
+                "handlerKey": "field.value"
+              }
+            ]
+          }
+        }
+      ],
       "id": 8,
       "gridPos": {
         "h": 7,
@@ -519,6 +611,19 @@
         "x": 16,
         "y": 6
       }
+    },
+    {
+      "type": "row",
+      "id": 9,
+      "title": "Частые и текущие тревоги",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "panels": []
     },
     {
       "type": "table",
@@ -536,6 +641,21 @@
             "uid": "influx-kns"
           },
           "query": "from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"alarm\" and r._field == \"reason\" and r.priority =~ /^${priority:regex}$/)\n  |> filter(fn: (r) => r._value == \"Activated\", onEmpty: \"keep\")\n  |> group(columns: [\"code\", \"text\", \"priority\"])\n  |> count()\n  |> group()\n  |> filter(fn: (r) => r._value > 0)\n  |> sort(columns: [\"_value\"], desc: true)\n  |> limit(n: 10)\n  |> rename(columns: {_value: \"count\"})\n  |> keep(columns: [\"code\", \"text\", \"priority\", \"count\"])\n"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "indexByName": {
+              "code": 0,
+              "text": 1,
+              "priority": 2,
+              "count": 3
+            },
+            "excludeByName": {},
+            "renameByName": {}
+          }
         }
       ],
       "fieldConfig": {
@@ -576,7 +696,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 110
+                "value": 100
               }
             ]
           },
@@ -589,6 +709,10 @@
               {
                 "id": "displayName",
                 "value": "Текст"
+              },
+              {
+                "id": "custom.wrapText",
+                "value": true
               }
             ]
           },
@@ -640,7 +764,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 110
+                "value": 105
               }
             ]
           },
@@ -672,18 +796,18 @@
           ]
         }
       },
-      "id": 9,
+      "id": 10,
       "gridPos": {
-        "h": 8,
-        "w": 12,
+        "h": 10,
+        "w": 24,
         "x": 0,
-        "y": 13
+        "y": 14
       }
     },
     {
       "type": "table",
       "title": "Текущее состояние тревог",
-      "description": "",
+      "description": "Последнее событие каждой тревоги за 30 сут, кроме «Норма»; фильтр — приоритет",
       "datasource": {
         "type": "influxdb",
         "uid": "influx-kns"
@@ -696,6 +820,22 @@
             "uid": "influx-kns"
           },
           "query": "from(bucket: v.defaultBucket)\n  |> range(start: -30d)\n  |> filter(fn: (r) => r._measurement == \"alarm\" and r._field == \"state\" and r.priority =~ /^${priority:regex}$/)\n  |> group(columns: [\"code\"])\n  |> last()\n  |> group()\n  |> filter(fn: (r) => r._value != \"Normal\")\n  |> rename(columns: {_value: \"state\"})\n  |> keep(columns: [\"_time\", \"code\", \"text\", \"priority\", \"state\"])\n  |> sort(columns: [\"_time\"], desc: true)\n"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "indexByName": {
+              "_time": 0,
+              "code": 1,
+              "text": 2,
+              "priority": 3,
+              "state": 4
+            },
+            "excludeByName": {},
+            "renameByName": {}
+          }
         }
       ],
       "fieldConfig": {
@@ -735,8 +875,12 @@
                 "value": "Время"
               },
               {
+                "id": "unit",
+                "value": "time:YYYY-MM-DD HH:mm:ss"
+              },
+              {
                 "id": "custom.width",
-                "value": 170
+                "value": 160
               }
             ]
           },
@@ -752,7 +896,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 110
+                "value": 100
               }
             ]
           },
@@ -765,6 +909,10 @@
               {
                 "id": "displayName",
                 "value": "Текст"
+              },
+              {
+                "id": "custom.wrapText",
+                "value": true
               }
             ]
           },
@@ -816,7 +964,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 110
+                "value": 105
               }
             ]
           },
@@ -883,7 +1031,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 200
+                "value": 190
               }
             ]
           }
@@ -899,24 +1047,24 @@
           ]
         }
       },
-      "id": 10,
+      "id": 11,
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 13
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 24
       }
     },
     {
       "type": "row",
-      "id": 11,
+      "id": 12,
       "title": "Журнал",
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 21
+        "y": 31
       },
       "panels": []
     },
@@ -936,6 +1084,25 @@
             "uid": "influx-kns"
           },
           "query": "from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"alarm\" and r.priority =~ /^${priority:regex}$/)\n  |> filter(fn: (r) => r._field == \"state\" or r._field == \"prev_state\" or r._field == \"reason\" or r._field == \"value\")\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> group()\n  |> keep(columns: [\"_time\", \"code\", \"text\", \"priority\", \"reason\", \"prev_state\", \"state\", \"value\"])\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 1000)\n"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "indexByName": {
+              "_time": 0,
+              "code": 1,
+              "text": 2,
+              "priority": 3,
+              "reason": 4,
+              "prev_state": 5,
+              "state": 6,
+              "value": 7
+            },
+            "excludeByName": {},
+            "renameByName": {}
+          }
         }
       ],
       "fieldConfig": {
@@ -975,8 +1142,12 @@
                 "value": "Время"
               },
               {
+                "id": "unit",
+                "value": "time:YYYY-MM-DD HH:mm:ss"
+              },
+              {
                 "id": "custom.width",
-                "value": 170
+                "value": 160
               }
             ]
           },
@@ -992,7 +1163,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 110
+                "value": 100
               }
             ]
           },
@@ -1005,6 +1176,10 @@
               {
                 "id": "displayName",
                 "value": "Текст"
+              },
+              {
+                "id": "custom.wrapText",
+                "value": true
               }
             ]
           },
@@ -1056,7 +1231,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 110
+                "value": 105
               }
             ]
           },
@@ -1138,7 +1313,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 170
+                "value": 165
               }
             ]
           },
@@ -1205,7 +1380,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 200
+                "value": 190
               }
             ]
           },
@@ -1272,7 +1447,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 200
+                "value": 190
               }
             ]
           },
@@ -1288,7 +1463,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 100
+                "value": 80
               }
             ]
           }
@@ -1304,12 +1479,12 @@
           ]
         }
       },
-      "id": 12,
+      "id": 13,
       "gridPos": {
         "h": 12,
         "w": 24,
         "x": 0,
-        "y": 22
+        "y": 32
       }
     }
   ]

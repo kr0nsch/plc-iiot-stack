@@ -180,8 +180,8 @@
     },
     {
       "type": "stat",
-      "title": "Возраст данных",
-      "description": "Сколько секунд назад пришло последнее значение LT101. Контрольная публикация — раз в 60 с, больше 180 с — данные устарели",
+      "title": "Обновлено",
+      "description": "Возраст данных: сколько секунд назад пришло последнее значение LT101. Контрольная публикация — раз в 60 с, больше 180 с — данные устарели",
       "datasource": {
         "type": "influxdb",
         "uid": "influx-kns"
@@ -198,7 +198,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
+          "unit": "suffix: с назад",
           "color": {
             "mode": "thresholds"
           },
@@ -588,7 +588,7 @@
           "unit": "suffix: м",
           "color": {
             "mode": "fixed",
-            "fixedColor": "#2E3A46"
+            "fixedColor": "text"
           },
           "custom": {
             "drawStyle": "line",
@@ -773,7 +773,8 @@
           "decimals": 0,
           "min": 0,
           "color": {
-            "mode": "thresholds"
+            "mode": "fixed",
+            "fixedColor": "#6B7785"
           },
           "thresholds": {
             "mode": "absolute",
@@ -787,12 +788,58 @@
           "displayName": "${__field.labels.device}",
           "max": 100
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?P101([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#02A671"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?P102([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#A167F1"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?P103([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B52A8E"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "orientation": "horizontal",
         "displayMode": "basic",
-        "valueMode": "color",
+        "valueMode": "text",
         "namePlacement": "left",
         "showUnfilled": true,
         "sizing": "auto",
@@ -938,7 +985,7 @@
           "unit": "suffix: м³/ч",
           "color": {
             "mode": "fixed",
-            "fixedColor": "#2E3A46"
+            "fixedColor": "text"
           },
           "custom": {
             "drawStyle": "line",
@@ -1020,7 +1067,7 @@
           "unit": "suffix: бар",
           "color": {
             "mode": "fixed",
-            "fixedColor": "#2E3A46"
+            "fixedColor": "text"
           },
           "custom": {
             "drawStyle": "line",
@@ -1262,7 +1309,7 @@
     },
     {
       "type": "stat",
-      "title": "Камера задвижек LS203",
+      "title": "Камера LS203",
       "description": "",
       "datasource": {
         "type": "influxdb",
@@ -1482,7 +1529,7 @@
     },
     {
       "type": "stat",
-      "title": "Температура TT403",
+      "title": "Воздух TT403",
       "description": "",
       "datasource": {
         "type": "influxdb",
@@ -1714,6 +1761,22 @@
           "query": "from(bucket: v.defaultBucket)\n  |> range(start: -30d)\n  |> filter(fn: (r) => r._measurement == \"alarm\" and r._field == \"state\")\n  |> group(columns: [\"code\"])\n  |> last()\n  |> group()\n  |> filter(fn: (r) => r._value != \"Normal\")\n  |> rename(columns: {_value: \"state\"})\n  |> keep(columns: [\"_time\", \"code\", \"text\", \"priority\", \"state\"])\n  |> sort(columns: [\"_time\"], desc: true)\n"
         }
       ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "indexByName": {
+              "_time": 0,
+              "code": 1,
+              "text": 2,
+              "priority": 3,
+              "state": 4
+            },
+            "excludeByName": {},
+            "renameByName": {}
+          }
+        }
+      ],
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1751,8 +1814,12 @@
                 "value": "Время"
               },
               {
+                "id": "unit",
+                "value": "time:YYYY-MM-DD HH:mm:ss"
+              },
+              {
                 "id": "custom.width",
-                "value": 170
+                "value": 160
               }
             ]
           },
@@ -1768,7 +1835,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 110
+                "value": 100
               }
             ]
           },
@@ -1781,6 +1848,10 @@
               {
                 "id": "displayName",
                 "value": "Текст"
+              },
+              {
+                "id": "custom.wrapText",
+                "value": true
               }
             ]
           },
@@ -1832,7 +1903,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 110
+                "value": 105
               }
             ]
           },
@@ -1899,7 +1970,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 200
+                "value": 190
               }
             ]
           }
@@ -1941,6 +2012,20 @@
           "query": "from(bucket: v.defaultBucket)\n  |> range(start: -1d)\n  |> filter(fn: (r) => r._measurement == \"telemetry\" and r._field == \"value\" and r.source == \"${source}\")\n  |> filter(fn: (r) => r.metric == \"ne107\")\n  |> last()\n  |> group()\n  |> filter(fn: (r) => r._value > 0.0)\n  |> keep(columns: [\"_time\", \"device\", \"_value\"])\n  |> sort(columns: [\"device\"])\n"
         }
       ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "indexByName": {
+              "_time": 0,
+              "device": 1,
+              "_value": 2
+            },
+            "excludeByName": {},
+            "renameByName": {}
+          }
+        }
+      ],
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1978,8 +2063,12 @@
                 "value": "Время"
               },
               {
+                "id": "unit",
+                "value": "time:YYYY-MM-DD HH:mm:ss"
+              },
+              {
                 "id": "custom.width",
-                "value": 170
+                "value": 160
               }
             ]
           },
@@ -1995,7 +2084,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 110
+                "value": 105
               }
             ]
           },
@@ -2049,6 +2138,14 @@
                 "value": {
                   "type": "color-text"
                 }
+              },
+              {
+                "id": "custom.wrapText",
+                "value": true
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
               }
             ]
           }

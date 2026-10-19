@@ -65,6 +65,8 @@ R_COL = re.compile(r"\br\.([A-Za-z_][A-Za-z0-9_]*)")
 R_RE = re.compile(r"\br\.([A-Za-z_][A-Za-z0-9_]*)\s*=~\s*/((?:[^/\\]|\\.)*)/")
 R_LIST = re.compile(r"\b(?:columns|rowKey|columnKey)\s*:\s*\[([^\]]*)\]")
 R_RENAME = re.compile(r"rename\(columns:\s*\{([^}]*)\}\)")
+# Столбец, добавленный в map: {r with rank: ...}
+R_WITH = re.compile(r"\{\s*r\s+with\s+([A-Za-z_][A-Za-z0-9_]*)\s*:")
 R_VAR = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::[a-z]+)?\}")
 
 
@@ -84,6 +86,7 @@ def flux_refs(query: str) -> FluxRefs:
         for old, new in re.findall(r"([A-Za-z_][A-Za-z0-9_]*)\s*:\s*\"([^\"]+)\"", body):
             refs.listed_columns.add(old)
             refs.renamed_to.add(new)
+    refs.renamed_to |= set(R_WITH.findall(query))
     refs.variables = set(R_VAR.findall(query))
     return refs
 

@@ -251,9 +251,9 @@
       "panels": []
     },
     {
-      "type": "barchart",
+      "type": "bargauge",
       "title": "Наработка за период, ч",
-      "description": "Сумма приращений счётчика наработки за период; сброс счётчика не даёт отрицательных значений. Равные столбцы — чередование по моточасам работает",
+      "description": "Сумма приращений счётчика наработки за период; сброс счётчика не даёт отрицательных значений. Равные полосы — чередование по моточасам работает",
       "datasource": {
         "type": "influxdb",
         "uid": "influx-kns"
@@ -265,7 +265,231 @@
             "type": "influxdb",
             "uid": "influx-kns"
           },
-          "query": "from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"telemetry\" and r._field == \"value\" and r.source == \"${source}\")\n  |> filter(fn: (r) => r.metric == \"run_hours\" and (r.device == \"P101\" or r.device == \"P102\" or r.device == \"P103\"))\n  |> difference(nonNegative: true)\n  |> sum()\n  |> group()\n  |> keep(columns: [\"device\", \"_value\"])\n  |> sort(columns: [\"device\"])\n"
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"telemetry\" and r._field == \"value\" and r.source == \"${source}\")\n  |> filter(fn: (r) => r.metric == \"run_hours\" and (r.device == \"P101\" or r.device == \"P102\" or r.device == \"P103\"))\n  |> difference(nonNegative: true)\n  |> sum()\n  |> keep(columns: [\"device\", \"_value\"])\n"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: ч",
+          "decimals": 1,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#6B7785"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#6B7785",
+                "value": null
+              }
+            ]
+          },
+          "displayName": "${__field.labels.device}"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?P101([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#02A671"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?P102([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#A167F1"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?P103([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B52A8E"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "valueMode": "text",
+        "namePlacement": "left",
+        "showUnfilled": true,
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "maxVizHeight": 300,
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      },
+      "id": 5,
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      }
+    },
+    {
+      "type": "bargauge",
+      "title": "Пусков за период",
+      "description": "",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influx-kns"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influx-kns"
+          },
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"telemetry\" and r._field == \"value\" and r.source == \"${source}\")\n  |> filter(fn: (r) => r.metric == \"starts\" and (r.device == \"P101\" or r.device == \"P102\" or r.device == \"P103\"))\n  |> difference(nonNegative: true)\n  |> sum()\n  |> keep(columns: [\"device\", \"_value\"])\n"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#6B7785"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#6B7785",
+                "value": null
+              }
+            ]
+          },
+          "displayName": "${__field.labels.device}"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?P101([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#02A671"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?P102([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#A167F1"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?P103([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B52A8E"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "valueMode": "text",
+        "namePlacement": "left",
+        "showUnfilled": true,
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "maxVizHeight": 300,
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      },
+      "id": 6,
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      }
+    },
+    {
+      "type": "barchart",
+      "title": "Наработка по суткам, ч",
+      "description": "Сутки — по часовому поясу станции (Europe/Moscow)",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influx-kns"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influx-kns"
+          },
+          "query": "import \"timezone\"\nimport \"date\"\n\noption location = timezone.location(name: \"${tz}\")\n\nfrom(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"telemetry\" and r._field == \"value\" and r.source == \"${source}\")\n  |> filter(fn: (r) => r.metric == \"run_hours\" and (r.device == \"P101\" or r.device == \"P102\" or r.device == \"P103\"))\n  |> difference(nonNegative: true)\n  |> aggregateWindow(every: 1d, fn: sum, createEmpty: true, timeSrc: \"_start\")\n  |> keep(columns: [\"_time\", \"_value\", \"device\"])\n  |> group()\n  |> map(fn: (r) => {\n        months = [\"янв\", \"фев\", \"мар\", \"апр\", \"мая\", \"июн\", \"июл\", \"авг\", \"сен\", \"окт\", \"ноя\", \"дек\"]\n        return {r with day: string(v: date.monthDay(t: r._time)) + \" \" + months[date.month(t: r._time) - 1]}\n    })\n  |> pivot(rowKey: [\"_time\", \"day\"], columnKey: [\"device\"], valueColumn: \"_value\")\n  |> sort(columns: [\"_time\"])\n  |> drop(columns: [\"_time\"])\n"
         }
       ],
       "fieldConfig": {
@@ -292,38 +516,98 @@
             ]
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "day"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?P101([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#02A671"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?P102([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#A167F1"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?P103([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B52A8E"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
-        "xField": "device",
-        "orientation": "horizontal",
-        "showValue": "always",
-        "barWidth": 0.6,
+        "xField": "day",
+        "orientation": "vertical",
+        "showValue": "never",
+        "barWidth": 0.8,
         "groupWidth": 0.7,
         "stacking": "none",
         "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0,
         "legend": {
-          "showLegend": false,
+          "showLegend": true,
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "calcs": []
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
-      "id": 5,
+      "id": 7,
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 12,
         "x": 0,
-        "y": 6
+        "y": 12
       }
     },
     {
       "type": "barchart",
-      "title": "Пусков за период",
-      "description": "",
+      "title": "Пусков по суткам",
+      "description": "Сутки — по часовому поясу станции (Europe/Moscow)",
       "datasource": {
         "type": "influxdb",
         "uid": "influx-kns"
@@ -335,7 +619,7 @@
             "type": "influxdb",
             "uid": "influx-kns"
           },
-          "query": "from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"telemetry\" and r._field == \"value\" and r.source == \"${source}\")\n  |> filter(fn: (r) => r.metric == \"starts\" and (r.device == \"P101\" or r.device == \"P102\" or r.device == \"P103\"))\n  |> difference(nonNegative: true)\n  |> sum()\n  |> group()\n  |> keep(columns: [\"device\", \"_value\"])\n  |> sort(columns: [\"device\"])\n"
+          "query": "import \"timezone\"\nimport \"date\"\n\noption location = timezone.location(name: \"${tz}\")\n\nfrom(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"telemetry\" and r._field == \"value\" and r.source == \"${source}\")\n  |> filter(fn: (r) => r.metric == \"starts\" and (r.device == \"P101\" or r.device == \"P102\" or r.device == \"P103\"))\n  |> difference(nonNegative: true)\n  |> aggregateWindow(every: 1d, fn: sum, createEmpty: true, timeSrc: \"_start\")\n  |> keep(columns: [\"_time\", \"_value\", \"device\"])\n  |> group()\n  |> map(fn: (r) => {\n        months = [\"янв\", \"фев\", \"мар\", \"апр\", \"мая\", \"июн\", \"июл\", \"авг\", \"сен\", \"окт\", \"ноя\", \"дек\"]\n        return {r with day: string(v: date.monthDay(t: r._time)) + \" \" + months[date.month(t: r._time) - 1]}\n    })\n  |> pivot(rowKey: [\"_time\", \"day\"], columnKey: [\"device\"], valueColumn: \"_value\")\n  |> sort(columns: [\"_time\"])\n  |> drop(columns: [\"_time\"])\n"
         }
       ],
       "fieldConfig": {
@@ -362,171 +646,75 @@
             ]
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "day"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?P101([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#02A671"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?P102([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#A167F1"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?P103([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B52A8E"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
-        "xField": "device",
-        "orientation": "horizontal",
-        "showValue": "always",
-        "barWidth": 0.6,
+        "xField": "day",
+        "orientation": "vertical",
+        "showValue": "never",
+        "barWidth": 0.8,
         "groupWidth": 0.7,
         "stacking": "none",
         "xTickLabelRotation": 0,
-        "legend": {
-          "showLegend": false,
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "id": 6,
-      "gridPos": {
-        "h": 6,
-        "w": 12,
-        "x": 12,
-        "y": 6
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "Наработка по суткам, ч",
-      "description": "Сутки — по часовому поясу станции (Europe/Moscow)",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influx-kns"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "influxdb",
-            "uid": "influx-kns"
-          },
-          "query": "import \"timezone\"\n\noption location = timezone.location(name: \"${tz}\")\n\nfrom(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"telemetry\" and r._field == \"value\" and r.source == \"${source}\")\n  |> filter(fn: (r) => r.metric == \"run_hours\" and (r.device == \"P101\" or r.device == \"P102\" or r.device == \"P103\"))\n  |> difference(nonNegative: true)\n  |> aggregateWindow(every: 1d, fn: sum, createEmpty: true, timeSrc: \"_start\")\n  |> keep(columns: [\"_time\", \"_value\", \"device\"])\n"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "suffix: ч",
-          "color": {
-            "mode": "shades",
-            "fixedColor": "#2E3A46"
-          },
-          "custom": {
-            "drawStyle": "bars",
-            "lineWidth": 2,
-            "fillOpacity": 70,
-            "showPoints": "never",
-            "lineInterpolation": "linear",
-            "spanNulls": 180000,
-            "barAlignment": 1,
-            "axisPlacement": "auto",
-            "axisSoftMin": 0,
-            "thresholdsStyle": {
-              "mode": "off"
-            },
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "gradientMode": "none"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "transparent",
-                "value": null
-              }
-            ]
-          },
-          "displayName": "${__field.labels.device}",
-          "decimals": 1
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "showLegend": true,
-          "displayMode": "list",
-          "placement": "bottom",
-          "calcs": []
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "id": 7,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 12
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "Пусков по суткам",
-      "description": "",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influx-kns"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "influxdb",
-            "uid": "influx-kns"
-          },
-          "query": "import \"timezone\"\n\noption location = timezone.location(name: \"${tz}\")\n\nfrom(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"telemetry\" and r._field == \"value\" and r.source == \"${source}\")\n  |> filter(fn: (r) => r.metric == \"starts\" and (r.device == \"P101\" or r.device == \"P102\" or r.device == \"P103\"))\n  |> difference(nonNegative: true)\n  |> aggregateWindow(every: 1d, fn: sum, createEmpty: true, timeSrc: \"_start\")\n  |> keep(columns: [\"_time\", \"_value\", \"device\"])\n"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "color": {
-            "mode": "shades",
-            "fixedColor": "#2E3A46"
-          },
-          "custom": {
-            "drawStyle": "bars",
-            "lineWidth": 2,
-            "fillOpacity": 70,
-            "showPoints": "never",
-            "lineInterpolation": "linear",
-            "spanNulls": 180000,
-            "barAlignment": 1,
-            "axisPlacement": "auto",
-            "axisSoftMin": 0,
-            "thresholdsStyle": {
-              "mode": "off"
-            },
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "gradientMode": "none"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "transparent",
-                "value": null
-              }
-            ]
-          },
-          "displayName": "${__field.labels.device}",
-          "decimals": 0
-        },
-        "overrides": []
-      },
-      "options": {
+        "xTickLabelSpacing": 0,
         "legend": {
           "showLegend": true,
           "displayMode": "list",
@@ -581,8 +769,8 @@
         "defaults": {
           "unit": "none",
           "color": {
-            "mode": "shades",
-            "fixedColor": "#2E3A46"
+            "mode": "fixed",
+            "fixedColor": "text"
           },
           "custom": {
             "drawStyle": "line",
@@ -615,7 +803,53 @@
           "decimals": 0,
           "min": 0
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?P101([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#02A671"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?P102([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#A167F1"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?P103([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B52A8E"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "legend": {
@@ -659,8 +893,8 @@
         "defaults": {
           "unit": "suffix: А",
           "color": {
-            "mode": "shades",
-            "fixedColor": "#2E3A46"
+            "mode": "fixed",
+            "fixedColor": "text"
           },
           "custom": {
             "drawStyle": "line",
@@ -701,7 +935,53 @@
           "decimals": 1,
           "min": 0
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?IT111([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#02A671"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?IT121([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#A167F1"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?IT131([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B52A8E"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "legend": {
@@ -847,7 +1127,8 @@
           "decimals": 1,
           "min": 0,
           "color": {
-            "mode": "thresholds"
+            "mode": "fixed",
+            "fixedColor": "#6B7785"
           },
           "thresholds": {
             "mode": "absolute",
@@ -860,12 +1141,58 @@
           },
           "displayName": "${__field.labels.device}"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?P101([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#02A671"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?P102([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#A167F1"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?P103([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B52A8E"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "orientation": "horizontal",
         "displayMode": "basic",
-        "valueMode": "color",
+        "valueMode": "text",
         "namePlacement": "left",
         "showUnfilled": true,
         "sizing": "auto",
@@ -912,7 +1239,8 @@
           "decimals": 0,
           "min": 0,
           "color": {
-            "mode": "thresholds"
+            "mode": "fixed",
+            "fixedColor": "#6B7785"
           },
           "thresholds": {
             "mode": "absolute",
@@ -925,12 +1253,58 @@
           },
           "displayName": "${__field.labels.device}"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?P101([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#02A671"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?P102([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#A167F1"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(.*[^A-Za-z0-9])?P103([^A-Za-z0-9].*)?$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B52A8E"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "orientation": "horizontal",
         "displayMode": "basic",
-        "valueMode": "color",
+        "valueMode": "text",
         "namePlacement": "left",
         "showUnfilled": true,
         "sizing": "auto",

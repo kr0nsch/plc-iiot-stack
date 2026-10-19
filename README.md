@@ -38,27 +38,62 @@ Grafana, а команды оператора идут обратно и про�
 железа, CODESYS 3.5.17.30 и CODESYS Control Win V3. Макетов нет.
 
 <p align="center">
-  <img alt="Дашборд Grafana «КНС-1: обзор станции» наполняется данными эмулятора ПЛК: уровень LT101 с зонами LL, L, H, HH — приток поднимает его выше H 3.5 м, насосы откачивают; расход, давление, скорость и состояние трёх насосов" src="docs/media/demo-grafana-overview.gif" width="900">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/demo-grafana-overview-dark.gif">
+    <source media="(prefers-color-scheme: light)" srcset="docs/media/demo-grafana-overview-light.gif">
+    <img alt="Дашборд Grafana «КНС-1: обзор станции» наполняется данными эмулятора ПЛК: уровень LT101 на фоне зон уставок LL, L, H, HH поднимается притоком до 2.9 м и откачивается — на пике работают два насоса, полоса скорости цветом насоса; связь с ПЛК, возраст данных, расход и давление" src="docs/media/demo-grafana-overview-light.gif" width="900">
+  </picture>
 </p>
-<p align="center"><sub>Grafana 12.4.12 на локальном стенде: кадр раз в 15 с в течение 14 мин, окно «последние 15 минут»; модельное время эмулятора ускорено в 60 раз</sub></p>
+<p align="center"><sub>Grafana 12.4.12 на локальном стенде: кадр раз в 15 с в течение 14 мин, окно 15 минут
+зафиксировано от начала съёмки — графики заполняются слева направо; модельное время эмулятора ускорено
+в 60 раз. GIF и снимки ниже — в теме оформления GitHub у читателя (светлая или тёмная)</sub></p>
 
 <table>
 <tr>
-<td width="50%"><a href="docs/media/shot-grafana-pumps-light.png"><img alt="Дашборд «Насосы: моточасы и пуски»: наработка и пуски P101–P103 всего, за выбранный период и по суткам" src="docs/media/shot-grafana-pumps-top-light.png" width="100%"></a></td>
-<td width="50%"><a href="docs/media/shot-grafana-alarms-light.png"><img alt="Дашборд «Тревоги за период»: срабатывания за период и в час, распределение по приоритетам, топ-10 тревог и активная внешняя авария насоса P101" src="docs/media/shot-grafana-alarms-top-light.png" width="100%"></a></td>
+<td width="50%"><a href="docs/media/shot-grafana-pumps-light.png"><picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/shot-grafana-pumps-top-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/media/shot-grafana-pumps-top-light.png">
+    <img alt="Дашборд «Насосы: моточасы и пуски»: наработка и пуски P101–P103 всего, за выбранный период и по суткам; у каждого насоса свой цвет" src="docs/media/shot-grafana-pumps-top-light.png" width="100%">
+  </picture></a></td>
+<td width="50%"><a href="docs/media/shot-grafana-alarms-light.png"><picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/shot-grafana-alarms-top-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/media/shot-grafana-alarms-top-light.png">
+    <img alt="Дашборд «Тревоги за период»: срабатывания за период и в час, распределение по приоритетам от критического к низкому, топ-10 тревог за период" src="docs/media/shot-grafana-alarms-top-light.png" width="100%">
+  </picture></a></td>
 </tr>
 <tr>
-<td align="center"><sub>«Насосы: моточасы и пуски» за последние 30 минут (≈ 30 ч модельного времени)</sub></td>
-<td align="center"><sub>«Тревоги за период»: события ISA-18.2, восстановленные из слов тревог устройств</sub></td>
+<td align="center"><sub>«Насосы: моточасы и пуски» за последние 30 минут (≈ 30 ч модельного времени); цвет насоса — один на всех дашбордах</sub></td>
+<td align="center"><sub>«Тревоги за период»: события ISA-18.2, восстановленные из слов тревог устройств; приоритеты — по серьёзности</sub></td>
 </tr>
 </table>
 
 <details>
-<summary>Полные снимки трёх дашбордов — обзор станции в момент аварии насоса P101</summary>
-<p align="center"><img alt="Дашборд «КНС-1: обзор станции» целиком в момент аварии P101: общая авария K1, состояние «Отказ», активная тревога P101.EXT и статус NE 107 «F — отказ»; ниже коллектор, электроснабжение и газоанализ" src="docs/media/shot-grafana-overview-light.png" width="100%"></p>
-<p align="center"><img alt="Дашборд «Насосы: моточасы и пуски» целиком: наработка, пуски, пуски за скользящий час, ток двигателей IT111–IT131, состояние насосов и счётчики до ТО" src="docs/media/shot-grafana-pumps-light.png" width="100%"></p>
-<p align="center"><img alt="Дашборд «Тревоги за период» целиком: показатели, распределение по часам и приоритетам, топ-10, текущее состояние и журнал событий тревог" src="docs/media/shot-grafana-alarms-light.png" width="100%"></p>
-<p align="center"><sub>Снято подряд, окно «последние 30 минут»; авария ПЧ насоса P101 (тревога P101.EXT) — событие автоматического сценария отказов эмулятора, <code>emulator/iiot_emulator/faults.py</code></sub></p>
+<summary>Полные снимки трёх дашбордов — обзор станции в момент аварии насоса P103</summary>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/shot-grafana-overview-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/media/shot-grafana-overview-light.png">
+    <img alt="Дашборд «КНС-1: обзор станции» целиком в момент аварии ПЧ насоса P103: общая авария K1, состояние «Отказ», активная тревога P103.EXT и статус NE 107 «F — отказ»; ниже коллектор, электроснабжение и газоанализ" src="docs/media/shot-grafana-overview-light.png" width="100%">
+  </picture>
+</p>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/shot-grafana-pumps-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/media/shot-grafana-pumps-light.png">
+    <img alt="Дашборд «Насосы: моточасы и пуски» целиком: наработка и пуски за период и по суткам, пуски за скользящий час, ток двигателей IT111–IT131 цветом своего насоса, состояние насосов и счётчики до ТО" src="docs/media/shot-grafana-pumps-light.png" width="100%">
+  </picture>
+</p>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/shot-grafana-alarms-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/media/shot-grafana-alarms-light.png">
+    <img alt="Дашборд «Тревоги за период» целиком: 7 срабатываний за 30 минут, распределение по часам и приоритетам, топ-10, текущее состояние с активной тревогой P103.EXT и журнал — потеря связи с ПЧ насоса P102 и отказ сигнала тока IT121 перед аварией P103" src="docs/media/shot-grafana-alarms-light.png" width="100%">
+  </picture>
+</p>
+<p align="center"><sub>Снято подряд, окно «последние 30 минут», светлая и тёмная тема — одновременно; авария ПЧ насоса P103
+(тревога P103.EXT) — событие автоматического сценария отказов эмулятора, <code>emulator/iiot_emulator/faults.py</code>.
+Файлы целиком: обзор — <a href="docs/media/shot-grafana-overview-light.png">светлая</a> · <a href="docs/media/shot-grafana-overview-dark.png">тёмная</a>, насосы — <a href="docs/media/shot-grafana-pumps-light.png">светлая</a> · <a href="docs/media/shot-grafana-pumps-dark.png">тёмная</a>,
+тревоги — <a href="docs/media/shot-grafana-alarms-light.png">светлая</a> · <a href="docs/media/shot-grafana-alarms-dark.png">тёмная</a></sub></p>
 </details>
 
 <p align="center">
