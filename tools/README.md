@@ -430,7 +430,7 @@ Win V3 в пользовательском процессе и coUnit 1.2.0.0.
 | `import_sources.py`, `export_sources.py`, `build.py`, `run_tests.py` | IronPython 2.7 (CODESYS) | шаги `import`, `export`, `build`, `test` |
 | `check_sources.py` | IronPython 2.7 (CODESYS) | шаг `check` (все объекты в пуле проекта без устройства, «Проверить все объекты пула») |
 | `make_library.py`, `library_repo.py` | IronPython 2.7 (CODESYS) | шаги `library` (сборка и установка библиотеки), `deps` и `uninstall` (репозиторий библиотек) |
-| `config.json` | — | проект, устройство, задачи и библиотеки по режимам, библиотека репозитория (`library`), репозиторий библиотек, рантайм, тесты, блокировка |
+| `config.json` | — | проект, устройство, задачи и библиотеки по режимам, библиотека репозитория (`library`), репозиторий библиотек, рантайм, тесты, блокировка. `device.keep_tasks` — задачи, которые создаёт само устройство (у ОВЕН ПЛК210 и СПК210 — `OwenCloudTask`): импорт их не удаляет, хотя в `modes.*.tasks` их нет; без него сборка на ПЛК210 даёт предупреждение C0373 «Необходимая задача 'OwenCloudTask' не существует» |
 
 ### Импорт и экспорт: правила
 
@@ -772,7 +772,8 @@ default library»), а потребителю эта настройка не п�
 | `CDS_TIMEOUT_S` | таймаут процесса CODESYS, с | 900 |
 | `CDS_PROJECT_NAME` | имя проекта | имя каталога репозитория |
 | `CDS_PROJECT`, `CDS_TEST_PROJECT` | файлы проектов | `build/{name}.project`, `build/{name}-tests.project` |
-| `CDS_DEVICE_TYPE`, `CDS_DEVICE_ID`, `CDS_DEVICE_VERSION` | устройство проекта | 4096, `0000 0001` (Control Win V3, 32 бит), `3.5.17.30`; x64 — `0000 0004`, RTE — `0000 0002` |
+| `CDS_DEVICE_TYPE`, `CDS_DEVICE_ID`, `CDS_DEVICE_VERSION` | устройство проекта | 4096, `0000 0001` (Control Win V3, 32 бит), `3.5.17.30`; x64 — `0000 0004`, RTE — `0000 0002`; ОВЕН ПЛК210 — `1628 0083`, `3.5.17.35`, СПК210 — `1628 0073`, `3.5.17.34` (пакет OwenTargets 3.5.17.36); REGUL R500 61 — `109B 0008`, `11.7.2.60` (Astra.IDE 1.7.2.2) |
+| `CDS_DEVICE_TITLE` | название устройства в отчётах `build.json`, `TEST_REPORT.md` | `CODESYS Control Win V3` |
 | `COUNIT_LIBRARY` | `counit.library` для установки, если её нет в репозиториях | — |
 | `CDS_LIBRARY`, `CDS_COMPILED_LIBRARY` | файлы библиотеки этого репозитория (рабочая копия) | `build/{name}.library`, `build/{name}.compiled-library` |
 | `CDS_LIBRARY_VERSION` | версия библиотеки на одну сборку (рабочая копия) | `library.version` из `config.json` |

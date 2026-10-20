@@ -29,13 +29,18 @@
     "type": {"env": "CDS_DEVICE_TYPE", "default": 4096},
     "id": {"env": "CDS_DEVICE_ID", "default": "0000 0001"},
     "version": {"env": "CDS_DEVICE_VERSION", "default": "3.5.17.30"},
-    "title": "CODESYS Control Win V3",
+    "title": {"env": "CDS_DEVICE_TITLE", "default": "CODESYS Control Win V3"},
+    "keep_tasks": ["OwenCloudTask"],
+    "_keep_tasks": "Задачи, которые создаёт само устройство (у ОВЕН ПЛК210 и СПК210 — OwenCloudTask с OwenStorage.CLOUD_PRG): импорт их не удаляет, хотя в modes.*.tasks их нет. У CODESYS Control Win таких задач нет — ключ ни на что не влияет.",
     "_alternatives": {
-      "CODESYS Control Win V3 (32 бит, по умолчанию — рантайм сборки ОВЕН 3.5.17.30)": "type 4096, id 0000 0001",
+      "CODESYS Control Win V3 (32 бит, по умолчанию — рантайм сборки ОВЕН 3.5.17.30)": "type 4096, id 0000 0001, version 3.5.17.30",
       "CODESYS Control Win V3 x64": "type 4096, id 0000 0004",
       "CODESYS Control RTE V3": "type 4096, id 0000 0002",
       "CODESYS Control RTE V3 x64": "type 4096, id 0000 0022",
-      "ОВЕН ПЛК210": "type/id/version — из таргет-файла ОВЕН после установки пакета (docs/MANUAL_STEPS.md)"
+      "ОВЕН ПЛК210-11…15, -4G (пакет OwenTargets 3.5.17.36 с ftp.owen.ru, CODESYS 3.5.17.30)": "CDS_DEVICE_TYPE=4096, CDS_DEVICE_ID='1628 0083', CDS_DEVICE_VERSION=3.5.17.35, CDS_DEVICE_TITLE='ОВЕН ПЛК210'; встроенный ввод-вывод — модуль-слот PLC210-1x (по умолчанию PLC210-11)",
+      "ОВЕН СПК210 (тот же пакет)": "CDS_DEVICE_TYPE=4096, CDS_DEVICE_ID='1628 0073', CDS_DEVICE_VERSION=3.5.17.34, CDS_DEVICE_TITLE='ОВЕН СПК210'",
+      "REGUL R500 61 (Astra.IDE 1.7.2.2; ещё CODESYS_EXE, CODESYS_PROFILE=Astra.IDE_V1.7.2.2 и свой учёт библиотек — docs/USAGE.md)": "CDS_DEVICE_TYPE=4096, CDS_DEVICE_ID='109B 0008', CDS_DEVICE_VERSION=11.7.2.60, CDS_DEVICE_TITLE='REGUL R500 61'",
+      "REGUL R500 71-W (Astra.IDE 1.7.2.2)": "CDS_DEVICE_TYPE=4096, CDS_DEVICE_ID='109B 000B', CDS_DEVICE_VERSION=11.7.2.60"
     }
   },
   "modes": {

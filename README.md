@@ -14,7 +14,7 @@
 
 <p align="center"><a href="#что-это-и-зачем">Что это</a> · <a href="#как-это-выглядит">Как выглядит</a> · <a href="#быстрый-старт">Быстрый старт</a> · <a href="#как-использовать-в-своём-проекте">В своём проекте</a> · <a href="#как-устроено">Как устроено</a> · <a href="#документация">Документация</a> · <a href="#summary-en">Summary (EN)</a></p>
 
-**От датчика до дашборда: данные ПЛК насосной станции КНС-1 (CODESYS) по OPC UA и MQTT — в InfluxDB
+**От датчика до дашборда: данные ПЛК насосной станции КНС-1 (CODESYS V3.5 SP17 — среда ОВЕН ПЛК210) по OPC UA и MQTT — в InfluxDB
 и на дашборды Grafana, команды оператора — обратно в ПЛК с проверкой по белому списку.** Обычно такой
 стенд собирают под один объект руками, и теги, топики, узлы OPC UA и дашборды расходятся с программой
 ПЛК. Здесь стенд описан кодом, всё выводится из одного контракта данных и сверено с символами
@@ -51,9 +51,13 @@ plc-process-lib): уровнемер, три насоса с ПЧ, коллек�
 - Безопасность описана, а не подразумевается: пользователи рантайма, политики OPC UA, TLS и ACL MQTT,
   зоны и каналы в духе МЭК 62443 ([docs/security.md](docs/security.md)).
 
-**Для кого.** Инженеры АСУ ТП и SCADA, техлиды у интеграторов и вендоров ПЛК — как пример того, как
-вывести данные ПЛК в базу временных рядов и на дашборды и вернуть команды обратно так, чтобы имена и
-права сходились с программой ПЛК, и как проверять это без железа.
+**Для кого.** Инженеры АСУ ТП и SCADA, техлиды у интеграторов на ОВЕН и REGUL — как пример того, как
+вывести данные ПЛК в свою базу временных рядов и на дашборды без облака вендора (OwenCloud отдаёт данные по API
+только опросом, не чаще 10 запросов за 10 секунд) и вернуть команды обратно так, чтобы имена и права сходились с
+программой ПЛК, и как проверять это без железа. OPC UA-сервер и символьная конфигурация — штатные CODESYS
+3.5.17; на ПЛК210 и REGUL стек не проверялся. Ядро ПЛК-части (`src/`) 20.10.2026 собрано на целевых ПЛК: ОВЕН ПЛК210
+(пакет OwenTargets 3.5.17.36) — 0 ошибок, 0 предупреждений, полная проверка 70 объектов `src/` и `tests/`; REGUL
+R500 61 (Astra.IDE 1.7.2.2) — 0/0, проверка 57 объектов; в ПЛК не загружалось.
 
 <details>
 <summary>Термины: OPC UA, символьная конфигурация, MQTT, retain, LWT, QoS, NE 107, ISA-18.2, Telegraf, Flux</summary>
@@ -205,8 +209,8 @@ plc-process-lib): уровнемер, три насоса с ПЧ, коллек�
    задачи прореживания. Остановка — `make down` или `local_stack.ps1 stop`.
 
 Проверки без стенда (как в CI): `python -m ruff check .`, `python -m ruff format --check .`,
-`python -m mypy`, `python -m pytest` — увидите `849 passed, 15 skipped` (пропущены 14 интеграционных
-тестов стенда и один тест только для POSIX; с поднятым стендом — `863 passed, 1 skipped`). Подробно, с примерами вывода и частыми проблемами, —
+`python -m mypy`, `python -m pytest` — увидите `867 passed, 16 skipped` (пропущены 15 интеграционных
+тестов стенда и один тест только для POSIX; с поднятым стендом они проходят — 19.10.2026: 15 из 15). Подробно, с примерами вывода и частыми проблемами, —
 [docs/USAGE.md](docs/USAGE.md).
 
 <details>
@@ -455,9 +459,9 @@ guide. Docs are in Russian.
 
 ---
 
-<p align="center"><b>Портфолио АСУ ТП</b></p>
+<p align="center"><b>Портфолио АСУ ТП</b> · <sub>инструменты и практики для ПЛК ОВЕН и REGUL</sub></p>
 <table>
-<tr><td width="33%"><a href="https://github.com/kr0nsch/plc-repo-template">01 · plc-repo-template</a><br><sub>ST в git, сборка проекта скриптом, CI</sub></td><td width="33%"><a href="https://github.com/kr0nsch/plc-process-lib">02 · plc-process-lib</a><br><sub>ФБ: AI, двигатель, ПЧ, задвижка, ПИД, тревоги</sub></td><td width="33%"><a href="https://github.com/kr0nsch/kns-pump-station">03 · kns-pump-station</a><br><sub>флагман: КНС, три насоса с ПЧ, модель, ПМИ</sub></td></tr>
-<tr><td width="33%"><a href="https://github.com/kr0nsch/kns-port-domestic">04 · kns-port-domestic</a><br><sub>перенос на Astra.IDE / MasterSCADA 4D</sub></td><td width="33%"><a href="https://github.com/kr0nsch/plc-iiot-stack"><b>05 · plc-iiot-stack</b></a><br><sub>OPC UA / MQTT → InfluxDB → Grafana</sub></td><td width="33%"><a href="https://github.com/kr0nsch/iolistgen">06 · iolistgen</a><br><sub>перечень сигналов → ST, карты Modbus, SCADA</sub></td></tr>
+<tr><td width="33%"><a href="https://github.com/kr0nsch/plc-repo-template">01 · plc-repo-template</a><br><sub>ST в git, сборка для ПЛК210 и R500, CI</sub></td><td width="33%"><a href="https://github.com/kr0nsch/plc-process-lib">02 · plc-process-lib</a><br><sub>ФБ: AI, двигатель, ПЧ, задвижка, ПИД, тревоги</sub></td><td width="33%"><a href="https://github.com/kr0nsch/kns-pump-station">03 · kns-pump-station</a><br><sub>флагман: КНС, ПМИ на модели, сборка ПЛК210</sub></td></tr>
+<tr><td width="33%"><a href="https://github.com/kr0nsch/kns-port-domestic">04 · kns-port-domestic</a><br><sub>перенос КНС на REGUL R500 (Astra.IDE)</sub></td><td width="33%"><a href="https://github.com/kr0nsch/plc-iiot-stack"><b>05 · plc-iiot-stack</b></a><br><sub>OPC UA / MQTT → InfluxDB → Grafana</sub></td><td width="33%"><a href="https://github.com/kr0nsch/iolistgen">06 · iolistgen</a><br><sub>перечень сигналов → ST, карты Modbus, SCADA</sub></td></tr>
 <tr><td width="33%"><a href="https://github.com/kr0nsch/plc-ci-toolkit">07 · plc-ci-toolkit</a><br><sub>линтеры, сборка CODESYS, тесты, JUnit</sub></td><td width="33%"><a href="https://github.com/kr0nsch/s7-to-codesys">08 · s7-to-codesys</a><br><sub>конвертер SCL → ST с отчётом о переносе</sub></td><td width="33%"><a href="https://github.com/kr0nsch/sis-interlock-demo">09 · sis-interlock-demo</a><br><sub>ПАЗ: MooN, матрица причин и следствий</sub></td></tr>
 </table>

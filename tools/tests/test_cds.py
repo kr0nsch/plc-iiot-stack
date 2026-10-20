@@ -196,6 +196,28 @@ def test_same_key_in_mode_and_library_is_one_reference(tmp_path: Path) -> None:
     assert s.referenced_library_keys() == ["standard", "counit"]
 
 
+def test_keep_tasks_device_tasks(tmp_path: Path) -> None:
+    """device.keep_tasks: задачи устройства (OwenCloudTask у ОВЕН ПЛК210) уходят в задание импорта."""
+    s = settings_for(tmp_path)
+    assert s.mode_config("normal")["keep_tasks"] == ["OwenCloudTask"]
+    data = template_config()
+    del data["device"]["keep_tasks"]
+    assert settings_for(tmp_path, config=data).mode_config("test")["keep_tasks"] == []
+    data["device"]["keep_tasks"] = "OwenCloudTask"
+    with pytest.raises(cli.CdsError) as err:
+        settings_for(tmp_path, config=data).mode_config("normal")
+    assert err.value.code == cli.EXIT_USAGE
+
+
+def test_device_title_override(tmp_path: Path) -> None:
+    """Название устройства в отчётах меняется вместе с CDS_DEVICE_* (CDS_DEVICE_TITLE)."""
+    env = {"CDS_DEVICE_ID": "1628 0083", "CDS_DEVICE_VERSION": "3.5.17.35", "CDS_DEVICE_TITLE": "ОВЕН ПЛК210"}
+    s = settings_for(tmp_path, env)
+    assert s.device() == {"name": "Device", "type": 4096, "id": "1628 0083", "version": "3.5.17.35"}
+    assert s.device_label() == "ОВЕН ПЛК210 (4096 / 1628 0083 / 3.5.17.35)"
+    assert settings_for(tmp_path).device_label() == "CODESYS Control Win V3 (4096 / 0000 0001 / 3.5.17.30)"
+
+
 def test_unknown_mode_is_usage_error(tmp_path: Path) -> None:
     with pytest.raises(cli.CdsError) as err:
         settings_for(tmp_path).mode_config("nope")

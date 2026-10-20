@@ -8,6 +8,13 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Инструменты шаблона plc-repo-template: `device.keep_tasks` (импорт не удаляет задачу `OwenCloudTask` устройства
+  ОВЕН ПЛК210 и СПК210), `CDS_DEVICE_TITLE`, варианты устройств ПЛК210, СПК210 и REGUL R500 в `config.json`.
+- README: ядро ПЛК-части собрано на ОВЕН ПЛК210 (OwenTargets 3.5.17.36) — 0 ошибок, полная проверка 70 объектов;
+  на REGUL R500 61 (Astra.IDE 1.7.2.2) — 0 ошибок, проверка 57 объектов. В ПЛК не загружалось.
+
 ### Fixed
 
 - Интеграционные тесты стенда в docker compose: полный каталог по MQTT и `K1/general_alarm` по обоим путям

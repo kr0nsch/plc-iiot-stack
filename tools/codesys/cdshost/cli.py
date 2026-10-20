@@ -378,10 +378,24 @@ class Settings:
                 keys.append(key)
         return keys
 
+    def keep_tasks(self) -> list[str]:
+        """Задачи устройства (device.keep_tasks), которые импорт не удаляет; ключа нет — пустой список."""
+        device = self.config.get("device")
+        if not isinstance(device, Mapping) or "keep_tasks" not in device:
+            return []
+        raw = self.value("device.keep_tasks")
+        if not isinstance(raw, list) or not all(isinstance(x, str) for x in raw):
+            raise CdsError(
+                f"config.json: device.keep_tasks — ожидался список имён задач / expected a list of names: {raw!r}",
+                EXIT_USAGE,
+            )
+        return [str(x) for x in raw]
+
     def mode_config(self, mode: str) -> dict[str, Any]:
         keys = self.mode_library_keys(mode)  # заодно проверяет, что режим есть
         return {
             "tasks": list(self.node("modes")[mode].get("tasks", [])),
+            "keep_tasks": self.keep_tasks(),
             "libraries": [self.library_spec(k) for k in keys],
         }
 

@@ -478,8 +478,10 @@ def _task_pou_names(task):
     return names
 
 
-def sync_tasks(app, tasks_cfg, log, report):
-    # type: (Any, List[Dict[str, Any]], C.Log, Report) -> None
+def sync_tasks(app, tasks_cfg, log, report, keep_tasks=None):
+    # type: (Any, List[Dict[str, Any]], C.Log, Report, Optional[List[str]]) -> None
+    """Задачи режима из config.json; лишние удаляются, кроме задач устройства (device.keep_tasks)."""
+    keep = set(C._text(n).lower() for n in (keep_tasks or []))
     tc = None
     for obj in C.children(app):
         try:
@@ -537,9 +539,15 @@ def sync_tasks(app, tasks_cfg, log, report):
         else:
             report.unchanged += 1
     for key in sorted(existing):
-        if key not in wanted:
-            existing[key].remove()
-            report.add('removed', 'TASK %s (нет в config.json для этого режима)' % C.obj_name(existing[key]))
+        if key in wanted:
+            continue
+        name = C.obj_name(existing[key])
+        if key in keep:
+            log.info('TASK %s оставлена: задача устройства (device.keep_tasks)' % name)
+            report.unchanged += 1
+            continue
+        existing[key].remove()
+        report.add('removed', 'TASK %s (нет в config.json для этого режима)' % name)
 
 
 def _label(spec):
@@ -815,7 +823,7 @@ def run(ctx, step):
             for i in range(1, len(folder_path) + 1):
                 wanted_paths.add(tuple(p.lower() for p in folder_path[:i]))
         syncer.remove_empty_folders(wanted_paths)
-        sync_tasks(app, mode_cfg.get('tasks') or [], log, report)
+        sync_tasks(app, mode_cfg.get('tasks') or [], log, report, mode_cfg.get('keep_tasks') or [])
         libman = find_library_manager(app)
         sync_libraries(libman, resolved, step.get('other_libraries') or [], log, report)
         references.extend(C._text(r.name) for r in libman.references)
